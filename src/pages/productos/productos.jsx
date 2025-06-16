@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { addProduct } from "../../api/coneccion"; // Asegúrate de que esta ruta sea correcta
 
 export function AgregarProducto() {
   const [productoData, setProductoData] = useState({
-    owner: '',
+    empresa: '', // Cambiado de 'owner' a 'empresa'
     codigoInterno: '',
     producto: '',
     descripcion: '',
@@ -26,6 +27,25 @@ export function AgregarProducto() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Efecto para cargar el ID de la empresa desde localStorage al inicio
+  useEffect(() => {
+    const userDataString = localStorage.getItem("userData");
+    
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        console.log(userData)
+        setProductoData(prev => ({
+          ...prev,
+          empresa: userData.empresa || '' // Asume que el ID de la empresa está en userData.id
+        }));
+      } catch (e) {
+        console.error("Error parsing userData from localStorage:", e);
+        setError("Error al cargar los datos del usuario. Por favor, asegúrese de que ha iniciado sesión correctamente.");
+      }
+    }
+  }, []); // El array vacío asegura que este efecto se ejecute solo una vez al montar el componente
 
   const categorias = [
     'Servicios Web',
@@ -81,8 +101,8 @@ export function AgregarProducto() {
 
     try {
       // Validaciones
-      if (!productoData.codigoInterno || !productoData.producto) {
-        throw new Error('Código interno y nombre del producto son requeridos');
+      if (!productoData.codigoInterno || !productoData.producto || !productoData.empresa) {
+        throw new Error('El Código interno, el nombre del producto y el Owner ID son requeridos.');
       }
 
       // Calcular precio lista si no se ingresó manualmente
@@ -92,16 +112,38 @@ export function AgregarProducto() {
       };
 
       console.log('Datos a enviar:', datosEnviar);
-      // Aquí iría la llamada a la API:
-      // const response = await agregarProducto(datosEnviar);
+      
+      // Aquí se realiza la llamada a la API con addProduct
+      const response = await addProduct(datosEnviar);
+      console.log('Respuesta de la API:', response);
       
       setMessage('Producto registrado exitosamente!');
-      setTimeout(() => {
-        // Limpiar formulario o redirigir
-      }, 2000);
+      // Opcional: limpiar el formulario después de un envío exitoso
+      setProductoData({
+        empresa: productoData.empresa, // Mantener la empresa cargada
+        codigoInterno: '',
+        producto: '',
+        descripcion: '',
+        marca: '',
+        categoria: '',
+        unidadMedida: '94',
+        ancho_cm: 0,
+        alto_cm: 0,
+        profundidad_cm: 0,
+        peso_kg: 0,
+        precioCosto: 0,
+        precioLista: 0,
+        alic_IVA: 21,
+        markupPorcentaje: 0,
+        stock_disponible: 0,
+        stockMinimo: 0,
+        ubicacionAlmacen: '',
+        activo: true
+      });
+
     } catch (err) {
-      setError(err.message || 'Error al registrar el producto');
-      console.error("Error:", err);
+      console.error("Error al registrar el producto:", err);
+      setError(err.message || 'Error al registrar el producto. Por favor, inténtelo de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -123,12 +165,13 @@ export function AgregarProducto() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Owner ID*</label>
               <input
                 type="text"
-                name="owner"
-                value={productoData.owner}
+                name="empresa" // Cambiado a 'empresa'
+                value={productoData.empresa}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="ID del propietario"
+                readOnly // Hacerlo de solo lectura ya que se carga de localStorage
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-100 cursor-not-allowed"
+                placeholder="ID del propietario (cargado automáticamente)"
               />
             </div>
 

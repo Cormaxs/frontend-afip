@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { addPointSale } from "../../api/coneccion"; // Asegúrate de que esta ruta sea correcta
 
 export function AgregarPuntoVenta() {
   const [puntoVentaData, setPuntoVentaData] = useState({
-    empresa: '',
+    empresa: '', // Aquí se asignará automáticamente
     numero: '',
     nombre: '',
     activo: true,
@@ -18,6 +19,30 @@ export function AgregarPuntoVenta() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Efecto para cargar el ID de la empresa desde localStorage al inicio
+  useEffect(() => {
+    const userDataString = localStorage.getItem("userData");
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        // Asumiendo que el ID de la empresa está en userData.empresa
+        if (userData && userData.empresa) {
+          setPuntoVentaData(prev => ({
+            ...prev,
+            empresa: userData.empresa // Asignamos userData.empresa
+          }));
+        } else {
+          setError("El 'ID de la Empresa' no se encontró en los datos del usuario. Asegúrate de que los datos de localStorage son correctos.");
+        }
+      } catch (e) {
+        console.error("Error parsing userData from localStorage:", e);
+        setError("Error al cargar los datos del usuario. Por favor, asegúrese de que ha iniciado sesión correctamente.");
+      }
+    } else {
+      setError("No se encontraron datos de usuario en localStorage. Asegúrate de iniciar sesión.");
+    }
+  }, []); // El array vacío asegura que este efecto se ejecute solo una vez al montar el componente
 
   const provinciasArgentina = [
     'Buenos Aires',
@@ -58,7 +83,7 @@ export function AgregarPuntoVenta() {
     const { name, value } = e.target;
     setPuntoVentaData(prev => ({
       ...prev,
-      [name]: value ? parseInt(value) : ''
+      [name]: value === '' ? '' : parseInt(value, 10) || 0 // Manejar cadena vacía para borrar input
     }));
   };
 
@@ -78,32 +103,75 @@ export function AgregarPuntoVenta() {
 
     try {
       // Validaciones
-      if (!puntoVentaData.empresa || !puntoVentaData.numero || !puntoVentaData.nombre) {
-        throw new Error('Empresa, número y nombre son campos obligatorios');
+      if (!puntoVentaData.empresa) {
+        throw new Error('El ID de la Empresa no ha sido cargado. Por favor, recargue la página o inicie sesión.');
+      }
+      if (!puntoVentaData.numero || isNaN(parseInt(puntoVentaData.numero, 10))) {
+        throw new Error('El "Número de Punto" es obligatorio y debe ser un número.');
+      }
+      if (!puntoVentaData.nombre) {
+        throw new Error('El "Nombre" es un campo obligatorio.');
       }
 
       // Preparar datos para enviar
       const datosEnviar = {
-        ...puntoVentaData,
-        numero: parseInt(puntoVentaData.numero),
-        ultimoCbteAutorizado: puntoVentaData.ultimoCbteAutorizado ? parseInt(puntoVentaData.ultimoCbteAutorizado) : 0,
-        fechaUltimoCbte: puntoVentaData.fechaUltimoCbte || null
+        empresa: puntoVentaData.empresa,
+        numero: parseInt(puntoVentaData.numero, 10),
+        nombre: puntoVentaData.nombre,
+        activo: puntoVentaData.activo,
+        ultimoCbteAutorizado: puntoVentaData.ultimoCbteAutorizado ? parseInt(puntoVentaData.ultimoCbteAutorizado, 10) : 0,
+        fechaUltimoCbte: puntoVentaData.fechaUltimoCbte || null,
+        direccion: puntoVentaData.direccion,
+        ciudad: puntoVentaData.ciudad,
+        provincia: puntoVentaData.provincia,
+        codigoPostal: puntoVentaData.codigoPostal,
+        telefono: puntoVentaData.telefono
       };
 
       console.log('Datos a enviar:', datosEnviar);
-      // Aquí iría la llamada a la API:
-      // const response = await agregarPuntoVenta(datosEnviar);
+      
+      // Llamada a la API:
+      const response = await addPointSale(datosEnviar);
+      console.log('Respuesta de la API:', response.message, response.data);
       
       setMessage('Punto de venta registrado exitosamente!');
+      
+      // Limpiar formulario después de un envío exitoso, manteniendo el ID de empresa
+      setPuntoVentaData(prev => ({
+        ...initialPuntoVentaState, // Resetear todos los demás campos
+        empresa: prev.empresa // Mantener el ID de empresa pre-cargado
+      }));
+
+      // Opcional: ocultar mensaje de éxito después de unos segundos
       setTimeout(() => {
-        // Limpiar formulario o redirigir
-      }, 2000);
+        setMessage('');
+      }, 3000);
+
     } catch (err) {
-      setError(err.message || 'Error al registrar el punto de venta');
-      console.error("Error:", err);
+      console.error("Error al registrar el punto de venta:", err);
+      setError(err.message || 'Error al registrar el punto de venta. Por favor, inténtelo de nuevo.');
+      // Opcional: ocultar mensaje de error después de unos segundos
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Estado inicial para limpiar el formulario fácilmente
+  const initialPuntoVentaState = {
+    empresa: '',
+    numero: '',
+    nombre: '',
+    activo: true,
+    ultimoCbteAutorizado: '',
+    fechaUltimoCbte: '',
+    direccion: '',
+    ciudad: '',
+    provincia: '',
+    codigoPostal: '',
+    telefono: ''
   };
 
   return (
@@ -125,8 +193,9 @@ export function AgregarPuntoVenta() {
                   value={puntoVentaData.empresa}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="ID de la empresa"
+                  readOnly // Es de solo lectura porque se carga de localStorage
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-100 cursor-not-allowed"
+                  placeholder="ID de la empresa (cargado automáticamente)"
                 />
               </div>
 

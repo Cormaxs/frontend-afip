@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { addVendedores } from "../../api/coneccion"; // Ensure this path is correct
 
 export function AddVendedores() {
   const [vendedorData, setVendedorData] = useState({
     username: '',
     password: '',
     email: '',
-    owner: '',
+    empresa: '', // Now consistently named 'empresa'
     rol: 'vendedor_activo',
     puntosVentaAsignados: [],
     nombre: '',
@@ -18,6 +19,45 @@ export function AddVendedores() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Estado inicial para limpiar el formulario después del envío
+  // Reflects the initial structure of vendedorData
+  const initialVendedorState = {
+    username: '',
+    password: '',
+    email: '',
+    empresa: '', // This will be overwritten by localStorage on mount
+    rol: 'vendedor_activo',
+    puntosVentaAsignados: [],
+    nombre: '',
+    apellido: '',
+    telefono: '',
+    dni: ''
+  };
+
+  // Efecto para cargar el ID de la empresa desde localStorage al inicio
+  useEffect(() => {
+    const userDataString = localStorage.getItem("userData");
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        // Assuming the company ID is in userData.empresa
+        if (userData && userData.empresa) {
+          setVendedorData(prev => ({
+            ...prev,
+            empresa: userData.empresa // Assign userData.empresa to 'empresa'
+          }));
+        } else {
+          setError("El 'ID de la Empresa' no se encontró en los datos del usuario. Asegúrate de que los datos de localStorage son correctos.");
+        }
+      } catch (e) {
+        console.error("Error parsing userData from localStorage:", e);
+        setError("Error al cargar los datos del usuario. Por favor, asegúrese de que ha iniciado sesión correctamente.");
+      }
+    } else {
+      setError("No se encontraron datos de usuario en localStorage. Asegúrate de iniciar sesión para asignar vendedores.");
+    }
+  }, []); // The empty array ensures this effect runs only once on component mount
 
   const rolesVendedor = [
     { value: 'vendedor_activo', label: 'Vendedor Activo' },
@@ -34,12 +74,13 @@ export function AddVendedores() {
   };
 
   const handlePuntoVentaAdd = () => {
+    // Only add if puntoVentaTemporal is not empty and not already in the list
     if (puntoVentaTemporal && !vendedorData.puntosVentaAsignados.includes(puntoVentaTemporal)) {
-      setVendedorData(prev => ({
+      setVendedorData(prev => ({ // Fixed: Changed setPuntoVentaData to setVendedorData
         ...prev,
         puntosVentaAsignados: [...prev.puntosVentaAsignados, puntoVentaTemporal]
       }));
-      setPuntoVentaTemporal('');
+      setPuntoVentaTemporal(''); // Clear the temporary input
     }
   };
 
@@ -57,31 +98,67 @@ export function AddVendedores() {
     setError('');
 
     try {
-      // Validaciones
+      // Validations
       if (!vendedorData.username || !vendedorData.password || !vendedorData.email) {
         throw new Error('Username, password y email son campos obligatorios');
       }
       if (vendedorData.password.length < 8) {
         throw new Error('La contraseña debe tener al menos 8 caracteres');
       }
+      // Validate that 'empresa' is loaded
+      if (!vendedorData.empresa) { // Changed owner to empresa
+        throw new Error('El ID de la empresa no ha sido cargado. Recargue la página o inicie sesión.');
+      }
 
-      // Preparar datos para enviar
+      // Prepare data to send
+      // The 'empresa' field from vendedorData will now be sent as 'empresa'
       const datosEnviar = {
         ...vendedorData,
-        puntosVentaAsignados: vendedorData.puntosVentaAsignados.filter(Boolean)
+        puntosVentaAsignados: vendedorData.puntosVentaAsignados.filter(Boolean) // Ensures no null or empty values
       };
 
       console.log('Datos a enviar:', datosEnviar);
-      // Aquí iría la llamada a la API:
-      // const response = await agregarVendedor(datosEnviar);
       
-      setMessage('Vendedor registrado exitosamente!');
-      setTimeout(() => {
-        // Limpiar formulario o redirigir
-      }, 2000);
+      // API call:
+      const response = await addVendedores(datosEnviar); // Call addVendedores function
+      console.log('Respuesta de la API:', response);
+      
+      // Process API response
+      if (response && response.data) { // Assuming the response has a 'data' property
+        if (response.data.creado) { // If the API returns 'creado: true'
+          setMessage(response.data.message || 'Vendedor registrado exitosamente!');
+          
+          // Clear form after successful submission, keeping the 'empresa' ID
+          setVendedorData(prev => ({ // Fixed: Changed setPuntoVentaData to setVendedorData
+            ...initialVendedorState, // Reset all other fields
+            empresa: prev.empresa // Keep the pre-loaded 'empresa' ID
+          }));
+          setPuntoVentaTemporal(''); // Clear the temporary point of sale input
+
+          setTimeout(() => {
+            setMessage('');
+          }, 3000); // Success message disappears after 3 seconds
+        } else {
+          // If 'creado' is false or doesn't exist but there's an error message in the response
+          setError(response.data.message || 'Error al registrar el vendedor: Operación no exitosa.');
+          setTimeout(() => {
+            setError('');
+          }, 5000); // Error message disappears after 5 seconds
+        }
+      } else {
+        // If the response does not have the expected structure
+        setError('Error al registrar el vendedor: Formato de respuesta inesperado.');
+        setTimeout(() => {
+          setError('');
+        }, 5000);
+      }
+
     } catch (err) {
-      setError(err.message || 'Error al registrar el vendedor');
-      console.error("Error:", err);
+      console.error("Error submitting form:", err);
+      setError(err.message || 'Error al registrar el vendedor. Por favor, inténtelo de nuevo.');
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     } finally {
       setLoading(false);
     }
@@ -96,7 +173,7 @@ export function AddVendedores() {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Columna 1 */}
+            {/* Column 1 */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información de Cuenta</h2>
               
@@ -156,20 +233,20 @@ export function AddVendedores() {
               </div>
 
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Owner ID*</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ID Empresa*</label>
                 <input
                   type="text"
-                  name="owner"
-                  value={vendedorData.owner}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="ID del propietario"
+                  name="empresa" // Changed name from 'owner' to 'empresa'
+                  value={vendedorData.empresa}
+                  onChange={handleChange} // Allows manual change if not loaded, though readOnly will prevent it
+                  readOnly // Makes it read-only as it's auto-loaded
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-100 cursor-not-allowed"
+                  placeholder="ID de la empresa (cargado automáticamente)"
                 />
               </div>
             </div>
 
-            {/* Columna 2 */}
+            {/* Column 2 */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Personal</h2>
               

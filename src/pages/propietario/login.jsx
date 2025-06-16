@@ -28,8 +28,8 @@ export function LoginPage() {
       
       // Aquí, asume que 'Login' retorna un token o información que indica éxito
       // DEBES IMPLEMENTAR EL ALMACENAMIENTO DEL TOKEN (ej. localStorage) Y REDIRECCIÓN
-      if (response && response.token) { // Ejemplo: si la respuesta incluye un token
-        localStorage.setItem('userToken', response.token); // Almacena el token
+      if (response /*&& response.token*/) { // Ejemplo: si la respuesta incluye un token
+        localStorage.setItem('userData', JSON.stringify(response)/*response.token*/); // Almacena el token
         setMessage('¡Inicio de sesión exitoso! Redirigiendo...');
         setError(''); // Limpia cualquier error previo
         
