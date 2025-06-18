@@ -1,9 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { addPointSale } from "../../api/coneccion"; // Asegúrate de que esta ruta sea correcta
+import React, { useState, useEffect, useContext } from 'react';
+import { apiContext } from "../../context/api_context";
 
 export function AgregarPuntoVenta() {
+  const { createPointSale } = useContext(apiContext); 
+
+  // --- Initialize state for company data from localStorage ---
+  let initialEmpresaId = '';
+  let initialEmpresaName = '';
+
+  try {
+    const userDataString = localStorage.getItem("userData");
+    const dataEmpresaString = localStorage.getItem("dataEmpresa"); // Get dataEmpresa as well
+
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      // Assuming userData has an 'empresa' field with the ID
+      initialEmpresaId = userData.empresa || ''; 
+    }
+
+    if (dataEmpresaString) {
+      const dataEmpresa = JSON.parse(dataEmpresaString);
+      // Assuming dataEmpresa has a 'nombreEmpresa' field
+      initialEmpresaName = dataEmpresa.nombreEmpresa || '';
+    }
+  } catch (e) {
+    console.error("Error parsing data from localStorage on init:", e);
+    // You might set an error state here if needed
+  }
+
   const [puntoVentaData, setPuntoVentaData] = useState({
-    empresa: '', // Aquí se asignará automáticamente
+    empresa: initialEmpresaId, // This will hold the ID that gets sent to the backend
     numero: '',
     nombre: '',
     activo: true,
@@ -16,33 +42,47 @@ export function AgregarPuntoVenta() {
     telefono: ''
   });
 
+  // New state to display the company name in the input field
+  const [displayedEmpresaName, setDisplayedEmpresaName] = useState(initialEmpresaName);
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Efecto para cargar el ID de la empresa desde localStorage al inicio
+  // Efecto para asegurar que los datos de la empresa se carguen y se mantengan actualizados
   useEffect(() => {
-    const userDataString = localStorage.getItem("userData");
-    if (userDataString) {
+    const checkLocalStorage = () => {
+      let currentEmpresaId = '';
+      let currentEmpresaName = '';
       try {
-        const userData = JSON.parse(userDataString);
-        // Asumiendo que el ID de la empresa está en userData.empresa
-        if (userData && userData.empresa) {
-          setPuntoVentaData(prev => ({
-            ...prev,
-            empresa: userData.empresa // Asignamos userData.empresa
-          }));
-        } else {
-          setError("El 'ID de la Empresa' no se encontró en los datos del usuario. Asegúrate de que los datos de localStorage son correctos.");
+        const userDataString = localStorage.getItem("userData");
+        const dataEmpresaString = localStorage.getItem("dataEmpresa");
+
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          currentEmpresaId = userData.empresa || '';
+        }
+        if (dataEmpresaString) {
+          const dataEmpresa = JSON.parse(dataEmpresaString);
+          currentEmpresaName = dataEmpresa.nombreEmpresa || '';
         }
       } catch (e) {
-        console.error("Error parsing userData from localStorage:", e);
-        setError("Error al cargar los datos del usuario. Por favor, asegúrese de que ha iniciado sesión correctamente.");
+        console.error("Error re-parsing localStorage in useEffect:", e);
       }
-    } else {
-      setError("No se encontraron datos de usuario en localStorage. Asegúrate de iniciar sesión.");
-    }
-  }, []); // El array vacío asegura que este efecto se ejecute solo una vez al montar el componente
+
+      if (currentEmpresaId && currentEmpresaId !== puntoVentaData.empresa) {
+        setPuntoVentaData(prev => ({
+          ...prev,
+          empresa: currentEmpresaId
+        }));
+      }
+      if (currentEmpresaName !== displayedEmpresaName) {
+        setDisplayedEmpresaName(currentEmpresaName);
+      }
+    };
+
+    checkLocalStorage(); 
+  }, [puntoVentaData.empresa, displayedEmpresaName]); // Dependencies ensure reactivity
 
   const provinciasArgentina = [
     'Buenos Aires',
@@ -73,6 +113,10 @@ export function AgregarPuntoVenta() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // For the 'empresa' field, prevent changes since it's loaded from localStorage
+    if (name === 'empresa') {
+      return; // Do nothing if trying to change the empresa field
+    }
     setPuntoVentaData(prev => ({
       ...prev,
       [name]: value
@@ -83,7 +127,7 @@ export function AgregarPuntoVenta() {
     const { name, value } = e.target;
     setPuntoVentaData(prev => ({
       ...prev,
-      [name]: value === '' ? '' : parseInt(value, 10) || 0 // Manejar cadena vacía para borrar input
+      [name]: value === '' ? '' : parseInt(value, 10) || 0 
     }));
   };
 
@@ -115,7 +159,7 @@ export function AgregarPuntoVenta() {
 
       // Preparar datos para enviar
       const datosEnviar = {
-        empresa: puntoVentaData.empresa,
+        empresa: puntoVentaData.empresa, // This is the ID, correctly sent to backend
         numero: parseInt(puntoVentaData.numero, 10),
         nombre: puntoVentaData.nombre,
         activo: puntoVentaData.activo,
@@ -130,19 +174,18 @@ export function AgregarPuntoVenta() {
 
       console.log('Datos a enviar:', datosEnviar);
       
-      // Llamada a la API:
-      const response = await addPointSale(datosEnviar);
-      console.log('Respuesta de la API:', response.message, response.data);
+      const response = await createPointSale(datosEnviar); 
+      console.log('Respuesta del Context API:', response); 
       
       setMessage('Punto de venta registrado exitosamente!');
       
-      // Limpiar formulario después de un envío exitoso, manteniendo el ID de empresa
+      // Limpiar formulario después de un envío exitoso, manteniendo el ID y Nombre de empresa
       setPuntoVentaData(prev => ({
-        ...initialPuntoVentaState, // Resetear todos los demás campos
-        empresa: prev.empresa // Mantener el ID de empresa pre-cargado
+        ...initialPuntoVentaState, 
+        empresa: initialEmpresaId // Reset to initial ID
       }));
+      setDisplayedEmpresaName(initialEmpresaName); // Reset to initial name
 
-      // Opcional: ocultar mensaje de éxito después de unos segundos
       setTimeout(() => {
         setMessage('');
       }, 3000);
@@ -150,7 +193,6 @@ export function AgregarPuntoVenta() {
     } catch (err) {
       console.error("Error al registrar el punto de venta:", err);
       setError(err.message || 'Error al registrar el punto de venta. Por favor, inténtelo de nuevo.');
-      // Opcional: ocultar mensaje de error después de unos segundos
       setTimeout(() => {
         setError('');
       }, 5000);
@@ -159,9 +201,9 @@ export function AgregarPuntoVenta() {
     }
   };
 
-  // Estado inicial para limpiar el formulario fácilmente
+  // Estado inicial para limpiar el formulario fácilmente (excluyendo 'empresa' y 'displayedEmpresaName')
   const initialPuntoVentaState = {
-    empresa: '',
+    // empresa: '', // Ya no es necesario aquí, se maneja arriba
     numero: '',
     nombre: '',
     activo: true,
@@ -186,16 +228,16 @@ export function AgregarPuntoVenta() {
             {/* Columna 1 */}
             <div className="space-y-4">
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">ID Empresa*</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa (Owner)*</label>
                 <input
                   type="text"
                   name="empresa"
-                  value={puntoVentaData.empresa}
-                  onChange={handleChange}
+                  value={displayedEmpresaName} // ¡Mostramos el nombre de la empresa aquí!
+                  onChange={handleChange} // Este handler ahora prevendrá cambios para 'empresa'
                   required
-                  readOnly // Es de solo lectura porque se carga de localStorage
+                  readOnly // Sigue siendo de solo lectura
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-100 cursor-not-allowed"
-                  placeholder="ID de la empresa (cargado automáticamente)"
+                  placeholder="Nombre de la empresa (cargado automáticamente)"
                 />
               </div>
 

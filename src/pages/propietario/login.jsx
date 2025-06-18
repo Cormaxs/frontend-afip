@@ -1,14 +1,21 @@
-import { Login } from "../../api/coneccion"; // Asegúrate de que esta ruta sea correcta
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Para redireccionar después del login
-import { Link } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { useNavigate, Link } from 'react-router-dom'; // Agrupamos las importaciones de react-router-dom
+import { apiContext } from "../../context/api_context.jsx"; // ¡Ruta crucial! Asegúrate que sea correcta.
+
+// Ya no necesitamos importar 'Login' directamente aquí porque lo obtendremos del contexto.
+// import { Login } from "../../api/coneccion"; // <-- Puedes eliminar esta línea
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(''); // Mensaje de éxito (ej. "¡Inicio de sesión exitoso!")
-  const [error, setError] = useState('');     // Mensaje de error (ej. "Credenciales inválidas")
+  const [message, setMessage] = useState(''); // Mensaje de éxito
+  const [error, setError] = useState('');     // Mensaje de error
+
+  // Obtenemos la función 'login' del apiContext.
+  // Es mejor desestructurarlo así: 'const { login } = useContext(apiContext);'
+  // Si tu 'apiContext' provee más cosas, podrías obtenerlas aquí también.
+  const { login } = useContext(apiContext);
 
   const navigate = useNavigate(); // Hook para la navegación programática
 
@@ -16,46 +23,58 @@ export function LoginPage() {
     e.preventDefault(); // Evita el envío por defecto del formulario
 
     setLoading(true);
-    setMessage('');
-    setError('');
+    setMessage(''); // Limpia mensajes de éxito anteriores
+    setError('');   // Limpia mensajes de error anteriores
 
     try {
-      // Simula una pequeña demora para ver el estado de carga
-      // await new Promise(resolve => setTimeout(resolve, 1000)); 
+      // 1. Llamada a la función 'login' obtenida del contexto.
+      // Esta función debería manejar la llamada a tu API y la lógica de guardar en localStorage.
+      const response = await login({ username, password });
+      console.log("Respuesta de login desde el Contexto:", response);
 
-      const response = await Login({ username, password }); // Asume que Login devuelve datos del usuario o un token
-      console.log("Respuesta de login:", response);
-      
-      // Aquí, asume que 'Login' retorna un token o información que indica éxito
-      // DEBES IMPLEMENTAR EL ALMACENAMIENTO DEL TOKEN (ej. localStorage) Y REDIRECCIÓN
-      if (response /*&& response.token*/) { // Ejemplo: si la respuesta incluye un token
-        localStorage.setItem('userData', JSON.stringify(response)/*response.token*/); // Almacena el token
+      // 2. Manejo de la respuesta exitosa.
+      // Asumimos que la función `login` del Context ya guardó `userData` en localStorage.
+      // Si `login` retorna el objeto `response` (ej. el objeto de usuario), puedes usarlo aquí.
+      if (response) {
         setMessage('¡Inicio de sesión exitoso! Redirigiendo...');
-        setError(''); // Limpia cualquier error previo
-        
+        // Opcional: podrías usar el 'response' aquí para actualizar algún estado global
+        // si no lo hiciste completamente en el Provider.
+
         // Redirige al dashboard o a la página principal después de un breve retraso
         setTimeout(() => {
           navigate('/'); // Redirige a la ruta principal o al dashboard
-        }, 1500); 
+        }, 1500);
       } else {
-        // Si la API no devuelve un token o una señal clara de éxito
-        setError('Inicio de sesión fallido. Credenciales incorrectas o error del servidor.');
-        setMessage('');
+        // Esto se ejecuta si 'login' no lanzó un error pero tampoco devolvió una respuesta exitosa.
+        // Podría indicar que el 'login' del Context necesita lanzar un error más explícito
+        // o devolver `null` para un fallo.
+        setError('Inicio de sesión fallido. Credenciales incorrectas o error del servidor desconocido.');
       }
 
     } catch (err) {
+      // 3. Manejo de errores.
+      // Los errores lanzados desde la función `login` en tu `api_context.jsx`
+      // serán capturados aquí.
       console.error("Error durante el inicio de sesión:", err);
-      // Puedes refinar el mensaje de error basándote en 'err.response' si usas Axios
-      if (err.response && err.response.status === 401) {
+
+      // Puedes refinar el mensaje de error basándote en la estructura del error
+      // Por ejemplo, si tu API devuelve errores con una propiedad 'message' o 'status'
+      if (err.message === 'Credenciales inválidas') { // Mensaje de error específico de tu Provider
         setError('Credenciales inválidas. Por favor, verifica tu nombre de usuario y contraseña.');
-      } else if (err.response) {
-        setError(`Error del servidor: ${err.response.data.message || 'Intenta de nuevo más tarde.'}`);
+      } else if (err.message === 'No se pudo obtener datos del usuario después del login.') {
+        setError('No se pudo completar el inicio de sesión. Intenta de nuevo.');
+      }
+      // Si usas Axios y el error tiene una propiedad 'response' (ej. err.response.status)
+      else if (err.response && err.response.status === 401) {
+          setError('Credenciales inválidas. Por favor, verifica tu nombre de usuario y contraseña.');
+      } else if (err.response && err.response.data && err.response.data.message) {
+          setError(`Error del servidor: ${err.response.data.message}`);
       } else {
-        setError('Error de conexión. Asegúrate de que el servidor esté funcionando.');
+          setError('Error de conexión o inesperado. Asegúrate de que el servidor esté funcionando.');
       }
       setMessage(''); // Limpia cualquier mensaje de éxito
     } finally {
-      setLoading(false);
+      setLoading(false); // Siempre desactiva el estado de carga al finalizar
     }
   };
 
@@ -78,6 +97,7 @@ export function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Ingresa tu nombre de usuario"
               required
+              disabled={loading} // Deshabilita campos mientras carga
             />
           </div>
 
@@ -94,6 +114,7 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Ingresa tu contraseña"
               required
+              disabled={loading} // Deshabilita campos mientras carga
             />
           </div>
 

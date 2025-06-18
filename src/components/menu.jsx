@@ -85,7 +85,8 @@ export function SidePanel() {
         </svg>
       ),
       items: [
-        { path: "/add-puntoVenta", label: "Agregar", icon: "🏪" }
+        { path: "/add-puntoVenta", label: "Agregar", icon: "🏪" },
+        { path: "/get-puntoVenta", label: "Listado", icon: "📋" }
       ]
     },
     personnel: {
@@ -210,14 +211,6 @@ export function SidePanel() {
           </svg>
         </button>
       )}
-
-      {/* Overlay para móvil (solo visible cuando el panel está abierto en móvil) 
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={togglePanel}
-        />
-      )}*/}
     </div>
   );
-} 
+}

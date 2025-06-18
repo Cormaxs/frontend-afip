@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiContext } from '../../context/api_context'; // Asegúrate de que esta ruta sea correcta
 
 export function EmpresaRegister() {
   const navigate = useNavigate();
+  const { createEmpresa } = useContext(apiContext); // Consume la función createEmpresa del contexto
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -70,6 +73,12 @@ export function EmpresaRegister() {
         }));
       };
       reader.readAsDataURL(files[0]);
+    } else {
+      // Si el usuario cancela la selección o el archivo se borra, asegúrate de limpiar el estado
+      setEmpresaData(prev => ({
+        ...prev,
+        [name]: ''
+      }));
     }
   };
 
@@ -80,31 +89,50 @@ export function EmpresaRegister() {
     setError('');
 
     try {
-      // Validación básica
-      if (!empresaData.cuit || !empresaData.emailContacto) {
-        throw new Error('CUIT y Email de contacto son campos obligatorios');
+      // Validación de campos obligatorios (sin incluir certificados)
+      if (
+        !empresaData.nombreEmpresa || 
+        !empresaData.razonSocial || 
+        !empresaData.cuit || 
+        !empresaData.fechaInicioActividades ||
+        !empresaData.condicionIVA ||
+        !empresaData.actividadAFIP ||
+        !empresaData.telefonoContacto ||
+        !empresaData.emailContacto ||
+        !empresaData.pais ||
+        !empresaData.provincia ||
+        !empresaData.ciudad ||
+        !empresaData.direccion
+      ) {
+        throw new Error('Por favor, completa todos los campos obligatorios marcados con (*).');
       }
 
       // Preparar datos para la API
       const dataToSend = {
         ...empresaData,
         mesInicioFiscal: parseInt(empresaData.mesInicioFiscal),
-        // Convertir fechas a formato ISO si es necesario
         fechaInicioActividades: new Date(empresaData.fechaInicioActividades).toISOString(),
+        // Condicionalmente incluye fechaVencimientoCertificado, certificadoDigital y clavePrivada
         fechaVencimientoCertificado: empresaData.fechaVencimientoCertificado 
           ? new Date(empresaData.fechaVencimientoCertificado).toISOString() 
-          : null
+          : null, // Envía null si no se selecciona fecha
+        certificadoDigital: empresaData.certificadoDigital || null, // Envía null si no se selecciona archivo
+        clavePrivada: empresaData.clavePrivada || null // Envía null si no se selecciona archivo
       };
 
       console.log('Datos a enviar:', dataToSend);
-      // Aquí iría la llamada a la API:
-      // const response = await registerEmpresa(dataToSend);
       
-      setMessage('Empresa registrada exitosamente!');
-      setTimeout(() => navigate('/'), 2000);
+      const result = await createEmpresa(dataToSend); 
+      
+      if (result) {
+        setMessage('Empresa registrada exitosamente!');
+        setTimeout(() => navigate('/'), 2000); 
+      } else {
+        throw new Error('Error desconocido al registrar la empresa. No se recibieron datos de confirmación.');
+      }
     } catch (err) {
-      setError(err.message || 'Error al registrar la empresa');
-      console.error("Error:", err);
+      setError(err.message || 'Error al registrar la empresa. Intenta de nuevo.');
+      console.error("Error al registrar empresa:", err);
     } finally {
       setLoading(false);
     }
@@ -359,23 +387,23 @@ export function EmpresaRegister() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Certificado Digital*</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Certificado Digital</label>
                 <input
                   type="file"
                   name="certificadoDigital"
                   onChange={handleFileChange}
-                  required
+                  // Ya no es required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                 />
               </div>
 
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Clave Privada*</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Clave Privada</label>
                 <input
                   type="file"
                   name="clavePrivada"
                   onChange={handleFileChange}
-                  required
+                  // Ya no es required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                 />
               </div>
@@ -387,6 +415,7 @@ export function EmpresaRegister() {
                   name="fechaVencimientoCertificado"
                   value={empresaData.fechaVencimientoCertificado}
                   onChange={handleChange}
+                  // Ya no es required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                 />
               </div>

@@ -1,51 +1,105 @@
-import React, { useState, useEffect } from 'react';
-import { addProduct } from "../../api/coneccion"; // Asegúrate de que esta ruta sea correcta
+import React, { useState, useEffect, useContext } from 'react';
+// import { addProduct } from "../../api/coneccion"; // Removed direct import
+import { apiContext } from "../../context/api_context"; // Import your apiContext
 
 export function AgregarProducto() {
+  // --- Initialize state for company data from localStorage ---
+  let initialEmpresaId = '';
+  let initialEmpresaName = '';
+
+  // Use useContext to access the createProduct function from your ApiProvider
+  // Make sure you are importing 'apiContext' and not 'ApiProvider' itself here.
+  const { createProduct, userData: contextUserData } = useContext(apiContext); 
+
+  try {
+    const userDataString = localStorage.getItem("userData");
+    const dataEmpresaString = localStorage.getItem("dataEmpresa"); // Get dataEmpresa as well
+
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      // Assuming userData has an 'empresa' field with the ID
+      initialEmpresaId = userData.empresa || ''; 
+    }
+
+    if (dataEmpresaString) {
+      const dataEmpresa = JSON.parse(dataEmpresaString);
+      // Assuming dataEmpresa has a 'nombreEmpresa' field
+      initialEmpresaName = dataEmpresa.nombreEmpresa || '';
+    }
+  } catch (e) {
+    console.error("Error parsing data from localStorage:", e);
+    // You might set an error state here if needed
+  }
+
   const [productoData, setProductoData] = useState({
-    empresa: '', // Cambiado de 'owner' a 'empresa'
+    empresa: initialEmpresaId, // This will hold the ID that gets sent
     codigoInterno: '',
     producto: '',
     descripcion: '',
     marca: '',
     categoria: '',
     unidadMedida: '94',
-    ancho_cm: 0,
-    alto_cm: 0,
-    profundidad_cm: 0,
-    peso_kg: 0,
-    precioCosto: 0,
+    ancho_cm: "", // Changed from "" to "" for number inputs
+    alto_cm: "",
+    profundidad_cm: "",
+    peso_kg: "",
+    precioCosto: "",
     precioLista: 0,
     alic_IVA: 21,
-    markupPorcentaje: 0,
-    stock_disponible: 0,
-    stockMinimo: 0,
+    markupPorcentaje: "",
+    stock_disponible: "",
+    stockMinimo: "",
     ubicacionAlmacen: '',
     activo: true
   });
+
+  // New state to display the company name in the input field
+  const [displayedEmpresaName, setDisplayedEmpresaName] = useState(initialEmpresaName);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Efecto para cargar el ID de la empresa desde localStorage al inicio
+  // Effect to load the company ID and Name from localStorage on component mount
   useEffect(() => {
-    const userDataString = localStorage.getItem("userData");
-    
-    if (userDataString) {
+    const checkLocalStorage = () => {
+      let currentEmpresaId = '';
+      let currentEmpresaName = '';
       try {
-        const userData = JSON.parse(userDataString);
-        console.log(userData)
+        const userDataString = localStorage.getItem("userData");
+        const dataEmpresaString = localStorage.getItem("dataEmpresa");
+
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          currentEmpresaId = userData.empresa || '';
+        }
+        if (dataEmpresaString) {
+          const dataEmpresa = JSON.parse(dataEmpresaString);
+          currentEmpresaName = dataEmpresa.nombreEmpresa || '';
+        }
+      } catch (e) {
+        console.error("Error re-parsing localStorage in useEffect:", e);
+      }
+
+      if (currentEmpresaId && currentEmpresaId !== productoData.empresa) {
         setProductoData(prev => ({
           ...prev,
-          empresa: userData.empresa || '' // Asume que el ID de la empresa está en userData.id
+          empresa: currentEmpresaId
         }));
-      } catch (e) {
-        console.error("Error parsing userData from localStorage:", e);
-        setError("Error al cargar los datos del usuario. Por favor, asegúrese de que ha iniciado sesión correctamente.");
       }
-    }
-  }, []); // El array vacío asegura que este efecto se ejecute solo una vez al montar el componente
+      if (currentEmpresaName !== displayedEmpresaName) {
+        setDisplayedEmpresaName(currentEmpresaName);
+      }
+    };
+
+    checkLocalStorage(); // Run once on mount
+
+    // Optional: listen for storage events if you anticipate changes from other tabs/windows
+    // window.addEventListener('storage', checkLocalStorage);
+    // return () => {
+    //   window.removeEventListener('storage', checkLocalStorage);
+    // };
+  }, [productoData.empresa, displayedEmpresaName]); // Dependencies ensure reactivity
 
   const categorias = [
     'Servicios Web',
@@ -65,6 +119,10 @@ export function AgregarProducto() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // For the 'empresa' field, prevent changes since it's loaded from localStorage
+    if (name === 'empresa') {
+      return; // Do nothing if trying to change the empresa field
+    }
     setProductoData(prev => ({
       ...prev,
       [name]: value
@@ -75,7 +133,7 @@ export function AgregarProducto() {
     const { name, value } = e.target;
     setProductoData(prev => ({
       ...prev,
-      [name]: parseFloat(value) || 0
+      [name]: parseFloat(value) || 0 // Ensure numbers are parsed correctly, default to 0 if invalid
     }));
   };
 
@@ -90,7 +148,7 @@ export function AgregarProducto() {
   const calcularPrecioLista = () => {
     const costo = parseFloat(productoData.precioCosto) || 0;
     const markup = parseFloat(productoData.markupPorcentaje) || 0;
-    return costo * (1 + markup / 100);
+    return (costo * (1 + markup / 100)).toFixed(2); // Format to 2 decimal places
   };
 
   const handleSubmit = async (e) => {
@@ -102,25 +160,27 @@ export function AgregarProducto() {
     try {
       // Validaciones
       if (!productoData.codigoInterno || !productoData.producto || !productoData.empresa) {
-        throw new Error('El Código interno, el nombre del producto y el Owner ID son requeridos.');
+        throw new Error('El Código interno, el nombre del producto y el ID de la empresa son requeridos.');
       }
 
-      // Calcular precio lista si no se ingresó manualmente
+      // Calculate price list if not entered manually
       const datosEnviar = {
         ...productoData,
-        precioLista: productoData.precioLista || calcularPrecioLista()
+        // Ensure precioLista is a number, and use calculated value if not manually set
+        precioLista: productoData.precioLista === 0 ? parseFloat(calcularPrecioLista()) : parseFloat(productoData.precioLista)
       };
 
       console.log('Datos a enviar:', datosEnviar);
       
-      // Aquí se realiza la llamada a la API con addProduct
-      const response = await addProduct(datosEnviar);
-      console.log('Respuesta de la API:', response);
+      // *** THIS IS THE KEY CHANGE: Use createProduct from context ***
+      const response = await createProduct(datosEnviar); 
+      console.log('API response:', response);
       
       setMessage('Producto registrado exitosamente!');
-      // Opcional: limpiar el formulario después de un envío exitoso
+      // Optional: clear the form after a successful submission,
+      // but keep the 'empresa' (ID) and 'displayedEmpresaName' pre-filled.
       setProductoData({
-        empresa: productoData.empresa, // Mantener la empresa cargada
+        empresa: initialEmpresaId, // Keep the pre-loaded ID
         codigoInterno: '',
         producto: '',
         descripcion: '',
@@ -140,10 +200,20 @@ export function AgregarProducto() {
         ubicacionAlmacen: '',
         activo: true
       });
+      // Ensure displayed name also resets correctly if it was user-editable
+      setDisplayedEmpresaName(initialEmpresaName); // Reset to initial name
 
     } catch (err) {
       console.error("Error al registrar el producto:", err);
-      setError(err.message || 'Error al registrar el producto. Por favor, inténtelo de nuevo.');
+      // Improved error message handling
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message); 
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Error al registrar el producto. Por favor, inténtelo de nuevo.');
+      }
+      setMessage('');
     } finally {
       setLoading(false);
     }
@@ -162,16 +232,16 @@ export function AgregarProducto() {
             <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Básica</h2>
             
             <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Owner ID*</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Empresa (Owner)*</label>
               <input
                 type="text"
-                name="empresa" // Cambiado a 'empresa'
-                value={productoData.empresa}
-                onChange={handleChange}
+                name="empresa"
+                value={displayedEmpresaName} // Display the name here
+                onChange={handleChange} // This will now prevent changes for 'empresa'
                 required
-                readOnly // Hacerlo de solo lectura ya que se carga de localStorage
+                readOnly // Keep readOnly as it's auto-filled
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-100 cursor-not-allowed"
-                placeholder="ID del propietario (cargado automáticamente)"
+                placeholder="Nombre de la empresa (cargado automáticamente)"
               />
             </div>
 

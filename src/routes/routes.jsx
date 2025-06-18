@@ -9,6 +9,8 @@ import {AddVendedores} from "../pages/vendedores/create-vendedor.jsx";
 import {CrearFactura} from "../pages/facturas/create-factura.jsx";
 import {GenerarCertificadoDigital} from "../pages/credenciales/key-csr.jsx";
 import {CertificateUploader} from "../pages/credenciales/create-crt.jsx";
+import {GetPointsSales} from "../pages/puntos-venta/get-puntos-venta.jsx";
+import {GetProductsCompany} from "../pages/productos/list_products.jsx";
 
 export function LoadRoutes() {
     return(
@@ -27,10 +29,11 @@ export function LoadRoutes() {
             
             {/* Gestión de Catálogo */}
             <Route path="/add-product" element={<AgregarProducto/>} />
-            <Route path="/productos" element="productos" />
+            <Route path="/productos" element={<GetProductsCompany/>} />
             
             {/* Puntos de Venta */}
             <Route path="/add-puntoVenta" element={<AgregarPuntoVenta/>} />
+            <Route path="/get-puntoVenta" element={<GetPointsSales/>} />
             
             {/* Personal */}
             <Route path="/add-vendedor" element={<AddVendedores/>} />
