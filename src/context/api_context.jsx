@@ -1,7 +1,7 @@
 import { createContext, useState } from "react";
 import { Login, Register, createEmpresaApi, addProduct,
      addPointSale, getPointSales, addVendedores, getProductsCompany,
-     createTiket
+     createTiket, getTikets
     } from "../api/coneccion";
 
 export const apiContext = createContext();
@@ -152,11 +152,9 @@ export const ApiProvider = ({ children }) => {
         }
       };
 
-      const createTiketContext = async (datosTikets) => {
+      const createTiketContext = async (ticketDataForBackend) => {
         try {
-            console.log("API Context: Enviando datos de ticket:", datosTikets);
-            
-            // Get user data from localStorage
+            //console.log("API Context: Datos de ticket recibidos para enviar:", ticketDataForBackend);
             const userDataString = localStorage.getItem("userData");
             let idUsuario = null;
 
@@ -167,21 +165,17 @@ export const ApiProvider = ({ children }) => {
                         idUsuario = user._id;
                     }
                 } catch (e) {
-                    console.error("Error al parsear userData de localStorage:", e);
+                    console.error("Error al parsear userData de localStorage en apiContext:", e);
                 }
             }
 
             if (!idUsuario) {
                 throw new Error("ID de usuario no disponible. Por favor, inicie sesión.");
             }
-
-            // Pass 'datosTikets' as the first argument (which contains 'datos' and 'idEmpresa'
-            // as per your previous setup) and 'idUsuario' as the second argument.
-            // Ensure your `createTiket` function in `axiosConfig.js` is updated to accept
-            // these two arguments: `createTiket(ticketData, idUsuario)`.
-            const response = await createTiket(datosTikets, idUsuario); 
+            const idEmpresa = ticketDataForBackend.idEmpresa; 
+            const response = await createTiket(ticketDataForBackend, idUsuario, idEmpresa); 
             
-            console.log("API Context: Ticket creado, respuesta:", response);
+            //console.log("API Context: Ticket creado, respuesta:", response);
             return response;
         } catch (error) {
             console.error("API Context: Error al crear el ticket:", error);
@@ -189,6 +183,15 @@ export const ApiProvider = ({ children }) => {
         }
     };
 
+    const getTiketsContext = async (id) =>{
+        try{
+            const respuesta = await getTikets(id);
+            console.log(respuesta)
+            return respuesta;
+        }catch(err){
+
+        }
+    }
 
     return (
         <apiContext.Provider value={{
@@ -201,7 +204,8 @@ export const ApiProvider = ({ children }) => {
             getPointsByCompany,
             createVendedor, // Asegúrate de que el nombre aquí coincida con la función definida arriba (createVendedor)
             getProductsEmpresa,
-            createTiketContext,
+            getTiketsContext,createTiketContext
+            ,
             isAuthenticated,
             userData
         }}>

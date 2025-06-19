@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Define la URL base de tu backend
-// Puedes cambiarla por 'http://45.236.128.209:3000/api/v1' para producción o desarrollo remoto
+// Puedes cambiarla por 'http://localhost:3000/api/v1 https://api.facstock.com' para producción o desarrollo remoto
 const URL_BACKEND = 'https://api.facstock.com/api/v1'; 
 
 // --- Función de manejo de errores centralizada ---
@@ -119,24 +119,27 @@ export async function getProductsCompany(idEmpresa) {
 
 // --- Función para Crear Ticket ---
 
-export async function createTiket(datos, idUser) {
+export async function createTiket(ticketDetails, idUserParam, idEmpresaParam) {
     try {
-        console.log("Creando ticket con datos:", datos);
+       // console.log("Creando ticket con detalles:", ticketDetails);
+        //console.log("ID de usuario para URL:", idUserParam);
+        //console.log("ID de empresa para body:", idEmpresaParam);
+
         // Ajusta la URL del endpoint según la configuración de tu backend.
-        // Si tu controlador espera 'idUser' en params y 'idEmpresa', 'datos' en body,
-        // deberías pasar esos parámetros a esta función y construir la URL y el body adecuadamente.
-        // Por ejemplo, si 'datos' ya incluye idUser y idEmpresa:
-        const idEmpresa = datos.idEmpresa; 
-        console.log(idUser)
-        // Asumiendo que tu ruta es POST /api/v1/tickets/:idUser
-        const response = await axios.post(`${URL_BACKEND}/tikets/create/${idUser}`, {
-            datos: datos, // Envía el objeto 'datos' como una propiedad 'datos' en el body
-            idEmpresa: idEmpresa // Envía el idEmpresa también en el body
+        // Asumiendo que tu ruta es POST /api/v1/tikets/create/:idUser
+        const response = await axios.post(`${URL_BACKEND}/tikets/create/${idUserParam}`, {
+            datos: ticketDetails, // Envía el objeto 'ticketDetails' como la propiedad 'datos'
+            idEmpresa: idEmpresaParam // Envía el 'idEmpresa' directamente en el body
         });
         
-        console.log("Ticket creado. Respuesta:", response.data);
+        //console.log("Ticket creado. Respuesta:", response.data);
         return response.data;
     } catch (error) {
         handleError(error, "createTiket");
     }
+}
+
+export async function getTikets(idEmpresa){
+    const response = await axios.get(`${URL_BACKEND}/tikets/get/all/${idEmpresa}`);
+    return response.data;
 }
