@@ -1,6 +1,7 @@
 import { createContext, useState } from "react";
 import { Login, Register, createEmpresaApi, addProduct,
-     addPointSale, getPointSales, addVendedores, getProductsCompany
+     addPointSale, getPointSales, addVendedores, getProductsCompany,
+     createTiket
     } from "../api/coneccion";
 
 export const apiContext = createContext();
@@ -151,6 +152,44 @@ export const ApiProvider = ({ children }) => {
         }
       };
 
+      const createTiketContext = async (datosTikets) => {
+        try {
+            console.log("API Context: Enviando datos de ticket:", datosTikets);
+            
+            // Get user data from localStorage
+            const userDataString = localStorage.getItem("userData");
+            let idUsuario = null;
+
+            if (userDataString) {
+                try {
+                    const user = JSON.parse(userDataString);
+                    if (user._id) {
+                        idUsuario = user._id;
+                    }
+                } catch (e) {
+                    console.error("Error al parsear userData de localStorage:", e);
+                }
+            }
+
+            if (!idUsuario) {
+                throw new Error("ID de usuario no disponible. Por favor, inicie sesión.");
+            }
+
+            // Pass 'datosTikets' as the first argument (which contains 'datos' and 'idEmpresa'
+            // as per your previous setup) and 'idUsuario' as the second argument.
+            // Ensure your `createTiket` function in `axiosConfig.js` is updated to accept
+            // these two arguments: `createTiket(ticketData, idUsuario)`.
+            const response = await createTiket(datosTikets, idUsuario); 
+            
+            console.log("API Context: Ticket creado, respuesta:", response);
+            return response;
+        } catch (error) {
+            console.error("API Context: Error al crear el ticket:", error);
+            throw error;
+        }
+    };
+
+
     return (
         <apiContext.Provider value={{
             login,
@@ -162,6 +201,7 @@ export const ApiProvider = ({ children }) => {
             getPointsByCompany,
             createVendedor, // Asegúrate de que el nombre aquí coincida con la función definida arriba (createVendedor)
             getProductsEmpresa,
+            createTiketContext,
             isAuthenticated,
             userData
         }}>

@@ -11,6 +11,7 @@ import {GenerarCertificadoDigital} from "../pages/credenciales/key-csr.jsx";
 import {CertificateUploader} from "../pages/credenciales/create-crt.jsx";
 import {GetPointsSales} from "../pages/puntos-venta/get-puntos-venta.jsx";
 import {GetProductsCompany} from "../pages/productos/list_products.jsx";
+import {CreateTikets} from "../pages/tikets/create-tiket.jsx";
 
 export function LoadRoutes() {
     return(
@@ -39,6 +40,8 @@ export function LoadRoutes() {
             <Route path="/add-vendedor" element={<AddVendedores/>} />
             <Route path="/usuarios" element="usuarios" />
             
+            <Route path="/tiket/create" element={<CreateTikets/>} />
+
             {/* Operaciones */}
             <Route path="/create-factura" element={<CrearFactura/>} />
         </Routes>

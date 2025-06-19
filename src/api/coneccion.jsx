@@ -1,90 +1,142 @@
-// src/api/axiosConfig.js
 import axios from 'axios';
-const URL_BACKEND = 'http://45.236.128.209/api/v1'; // Cambia esto a la URL de tu backend si es necesario localhost:3000 45.236.128.209
 
+// Define la URL base de tu backend
+// Puedes cambiarla por 'http://45.236.128.209:3000/api/v1' para producción o desarrollo remoto
+const URL_BACKEND = 'https://api.facstock.com/api/v1'; 
 
-export async function Register (data){
-    try{console.log(data)
-        const creado = await axios.post(`${URL_BACKEND}/auth/register`, data);
-        
-        return creado.data; // Retorna los datos de la respuesta del backend
-    }catch(error){
-        console.error("Error en la función Login:", error);
+// --- Función de manejo de errores centralizada ---
+// Esto ayuda a evitar repetir el mismo bloque try/catch y console.error
+function handleError(error, functionName = "API call") {
+    console.error(`Error en la función ${functionName}:`, error);
+    // Puedes agregar lógica para mostrar notificaciones al usuario, loggear en un servicio externo, etc.
+    if (error.response) {
+        // El servidor respondió con un estado fuera del rango 2xx
+        console.error("Data:", error.response.data);
+        console.error("Status:", error.response.status);
+        console.error("Headers:", error.response.headers);
+        throw new Error(error.response.data.message || `Error del servidor (${error.response.status})`);
+    } else if (error.request) {
+        // La solicitud fue hecha pero no se recibió respuesta
+        console.error("No se recibió respuesta del servidor:", error.request);
+        throw new Error("No se pudo conectar con el servidor. Intente de nuevo más tarde.");
+    } else {
+        // Algo más causó el error
+        console.error("Error al configurar la solicitud:", error.message);
+        throw new Error(`Error inesperado: ${error.message}`);
     }
 }
 
+// --- Funciones de Autenticación ---
 
-export async function Login (data){
-  try{
-      const creado = await axios.post(`${URL_BACKEND}/auth/login`, data);
-      console.log("datos devueltos -> ", data)
-      return creado.data; // Retorna los datos de la respuesta del backend
-  }catch(error){
-      console.error("Error en la función Login:", error);
-  }
+export async function Register(data) {
+    try {
+        console.log("Registrando usuario:", data);
+        const response = await axios.post(`${URL_BACKEND}/auth/register`, data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "Register");
+    }
 }
 
-export async function addProduct (data){
-    try{
-        const creado = await axios.post(`${URL_BACKEND}/products/add`, data);
-        console.log("datos devueltos -> ", data)
-        return creado.data; // Retorna los datos de la respuesta del backend
-    }catch(error){
-        console.error("Error en la función Login:", error);
+export async function Login(data) {
+    try {
+        console.log("Intentando iniciar sesión:", data);
+        const response = await axios.post(`${URL_BACKEND}/auth/login`, data);
+        console.log("Login exitoso. Datos devueltos:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "Login");
     }
-  }
-  
-  export async function addPointSale (data){
-    try{
-        const creado = await axios.post(`${URL_BACKEND}/point-sales/create`, data);
-        console.log("datos devueltos -> ", data)
-        return creado.data; // Retorna los datos de la respuesta del backend
-    }catch(error){
-        console.error("Error en la función Login:", error);
-    }
-  }
+}
 
-  export async function addVendedores (data){
-    try{
-        const creado = await axios.post(`${URL_BACKEND}/vendors/register`, data);
-        console.log("datos devueltos -> ", data)
-        return creado.data; // Retorna los datos de la respuesta del backend
-    }catch(error){
-        console.error("Error en la función Login:", error);
-    }
-  }
-  
-  
-  export async function createEmpresaApi (data){
-    try{console.log("datos ingresados -> ", data)
-        const creado = await axios.post(`${URL_BACKEND}/companies/create`, data);
-        
-        return creado.data; // Retorna los datos de la respuesta del backend
-    }catch(error){
-        console.error("Error en la función Login:", error);
-    }
-  }
+// --- Funciones de Gestión de Recursos ---
 
-  export async function getPointSales(idEmpresa){
-    try{
-        console.log(`getPointSales API: Solicitando puntos de venta para ID de empresa: ${idEmpresa}`);
-        // Asumiendo que tu API tiene un endpoint como /point-sales/by-company/:idEmpresa
+export async function addProduct(data) {
+    try {
+        console.log("Agregando producto:", data);
+        const response = await axios.post(`${URL_BACKEND}/products/add`, data);
+        console.log("Producto agregado. Datos devueltos:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "addProduct");
+    }
+}
+
+export async function addPointSale(data) {
+    try {
+        console.log("Agregando punto de venta:", data);
+        const response = await axios.post(`${URL_BACKEND}/point-sales/create`, data);
+        console.log("Punto de venta agregado. Datos devueltos:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "addPointSale");
+    }
+}
+
+export async function addVendedores(data) {
+    try {
+        console.log("Registrando vendedor:", data);
+        const response = await axios.post(`${URL_BACKEND}/vendors/register`, data);
+        console.log("Vendedor registrado. Datos devueltos:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "addVendedores");
+    }
+}
+
+export async function createEmpresaApi(data) {
+    try {
+        console.log("Creando empresa:", data);
+        const response = await axios.post(`${URL_BACKEND}/companies/create`, data);
+        console.log("Empresa creada. Datos devueltos:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "createEmpresaApi");
+    }
+}
+
+export async function getPointSales(idEmpresa) {
+    try {
+        console.log(`Solicitando puntos de venta para ID de empresa: ${idEmpresa}`);
         const response = await axios.get(`${URL_BACKEND}/point-sales/${idEmpresa}`);
-        console.log("getPointSales API: Respuesta recibida:", response.data);
+        console.log("Puntos de venta recibidos:", response.data);
         return response.data;
-    }catch(error){
+    } catch (error) {
         handleError(error, "getPointSales");
     }
 }
 
-export async function getProductsCompany(idEmpresa){
-    try{
-        console.log(`getPointSales API: Solicitando puntos de venta para ID de empresa: ${idEmpresa}`);
-        // Asumiendo que tu API tiene un endpoint como /point-sales/by-company/:idEmpresa
+export async function getProductsCompany(idEmpresa) {
+    try {
+        console.log(`Solicitando productos para ID de empresa: ${idEmpresa}`);
         const response = await axios.get(`${URL_BACKEND}/products/${idEmpresa}`);
-        console.log("getPointSales API: Respuesta recibida:", response.data);
+        console.log("Productos recibidos:", response.data);
         return response.data;
-    }catch(error){
-        handleError(error, "getPointSales");
+    } catch (error) {
+        handleError(error, "getProductsCompany");
+    }
+}
+
+// --- Función para Crear Ticket ---
+
+export async function createTiket(datos, idUser) {
+    try {
+        console.log("Creando ticket con datos:", datos);
+        // Ajusta la URL del endpoint según la configuración de tu backend.
+        // Si tu controlador espera 'idUser' en params y 'idEmpresa', 'datos' en body,
+        // deberías pasar esos parámetros a esta función y construir la URL y el body adecuadamente.
+        // Por ejemplo, si 'datos' ya incluye idUser y idEmpresa:
+        const idEmpresa = datos.idEmpresa; 
+        console.log(idUser)
+        // Asumiendo que tu ruta es POST /api/v1/tickets/:idUser
+        const response = await axios.post(`${URL_BACKEND}/tikets/create/${idUser}`, {
+            datos: datos, // Envía el objeto 'datos' como una propiedad 'datos' en el body
+            idEmpresa: idEmpresa // Envía el idEmpresa también en el body
+        });
+        
+        console.log("Ticket creado. Respuesta:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "createTiket");
     }
 }
