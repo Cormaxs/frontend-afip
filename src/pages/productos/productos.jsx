@@ -23,6 +23,7 @@ export function AgregarProducto() {
 
     if (dataEmpresaString) {
       const dataEmpresa = JSON.parse(dataEmpresaString);
+      console.log("empresa cargada -> ", dataEmpresa)
       // Assuming dataEmpresa has a 'nombreEmpresa' field
       initialEmpresaName = dataEmpresa.nombreEmpresa || '';
     }

@@ -1,7 +1,7 @@
 import { createContext, useState } from "react";
 import { Login, Register, createEmpresaApi, addProduct,
      addPointSale, getPointSales, addVendedores, getProductsCompany,
-     createTiket, getTikets
+     createTiket, getTikets, getEmpresaDataId
     } from "../api/coneccion";
 
 export const apiContext = createContext();
@@ -17,6 +17,9 @@ export const ApiProvider = ({ children }) => {
                 localStorage.setItem("userData", JSON.stringify(responseData));
                 setIsAuthenticated(true); // Update state on successful login
                 setUserData(responseData); // Store user data
+                const dataEmpresa = await getCompanyID(responseData.empresa)
+                console.log("datos de la empresa -> ", dataEmpresa);
+                localStorage.setItem("dataEmpresa", JSON.stringify(dataEmpresa));
                 return responseData;
             } else {
                 throw new Error("No se pudo obtener datos del usuario después del login.");
@@ -193,6 +196,15 @@ export const ApiProvider = ({ children }) => {
         }
     }
 
+    const getCompanyID = async (idEmpresa) =>{
+        try{
+            const respuesta = await getEmpresaDataId(idEmpresa)
+            return respuesta;
+        }catch(err){
+
+        }
+    }
+
     return (
         <apiContext.Provider value={{
             login,
@@ -204,8 +216,8 @@ export const ApiProvider = ({ children }) => {
             getPointsByCompany,
             createVendedor, // Asegúrate de que el nombre aquí coincida con la función definida arriba (createVendedor)
             getProductsEmpresa,
-            getTiketsContext,createTiketContext
-            ,
+            getTiketsContext,createTiketContext,
+            getCompanyID,
             isAuthenticated,
             userData
         }}>

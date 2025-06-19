@@ -143,3 +143,16 @@ export async function getTikets(idEmpresa){
     const response = await axios.get(`${URL_BACKEND}/tikets/get/all/${idEmpresa}`);
     return response.data;
 }
+
+
+
+export async function getEmpresaDataId(idEmpresa) {
+    try {
+        console.log(`Solicitando puntos de venta para ID de empresa: ${idEmpresa}`);
+        const response = await axios.get(`${URL_BACKEND}/companies/get/${idEmpresa}`);
+        console.log("Puntos de venta recibidos:", response.data);
+        return response.data;
+    } catch (error) {
+        handleError(error, "getPointSales");
+    }
+}
