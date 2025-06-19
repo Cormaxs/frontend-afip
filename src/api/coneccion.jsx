@@ -1,6 +1,6 @@
 // src/api/axiosConfig.js
 import axios from 'axios';
-const URL_BACKEND = 'http://45.236.128.209/api/v1'; // Cambia esto a la URL de tu backend si es necesario localhost:3000 45.236.128.209
+const URL_BACKEND = 'https://api.facstock.com/api/v1'; // Cambia esto a la URL de tu backend si es necesario localhost:3000 45.236.128.209
 
 
 export async function Register (data){
