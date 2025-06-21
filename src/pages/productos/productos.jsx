@@ -1,534 +1,92 @@
 import React, { useState, useEffect, useContext } from 'react';
-// import { addProduct } from "../../api/coneccion"; // Removed direct import
-import { apiContext } from "../../context/api_context"; // Import your apiContext
+import { apiContext } from "../../context/api_context";
 
 export function AgregarProducto() {
-  // --- Initialize state for company data from localStorage ---
-  let initialEmpresaId = '';
-  let initialEmpresaName = '';
-
-  // Use useContext to access the createProduct function from your ApiProvider
-  // Make sure you are importing 'apiContext' and not 'ApiProvider' itself here.
-  const { createProduct, userData: contextUserData } = useContext(apiContext); 
-
-  try {
-    const userDataString = localStorage.getItem("userData");
-    const dataEmpresaString = localStorage.getItem("dataEmpresa"); // Get dataEmpresa as well
-
-    if (userDataString) {
-      const userData = JSON.parse(userDataString);
-      // Assuming userData has an 'empresa' field with the ID
-      initialEmpresaId = userData.empresa || ''; 
-    }
-
-    if (dataEmpresaString) {
-      const dataEmpresa = JSON.parse(dataEmpresaString);
-      console.log("empresa cargada -> ", dataEmpresa)
-      // Assuming dataEmpresa has a 'nombreEmpresa' field
-      initialEmpresaName = dataEmpresa.nombreEmpresa || '';
-    }
-  } catch (e) {
-    console.error("Error parsing data from localStorage:", e);
-    // You might set an error state here if needed
-  }
-
-  const [productoData, setProductoData] = useState({
-    empresa: initialEmpresaId, // This will hold the ID that gets sent
-    codigoInterno: '',
-    producto: '',
-    descripcion: '',
-    marca: '',
-    categoria: '',
-    unidadMedida: '94',
-    ancho_cm: "", // Changed from "" to "" for number inputs
-    alto_cm: "",
-    profundidad_cm: "",
-    peso_kg: "",
-    precioCosto: "",
-    precioLista: 0,
-    alic_IVA: 21,
-    markupPorcentaje: "",
-    stock_disponible: "",
-    stockMinimo: "",
-    ubicacionAlmacen: '',
-    activo: true
-  });
-
-  // New state to display the company name in the input field
-  const [displayedEmpresaName, setDisplayedEmpresaName] = useState(initialEmpresaName);
-
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-
-  // Effect to load the company ID and Name from localStorage on component mount
-  useEffect(() => {
-    const checkLocalStorage = () => {
-      let currentEmpresaId = '';
-      let currentEmpresaName = '';
-      try {
-        const userDataString = localStorage.getItem("userData");
-        const dataEmpresaString = localStorage.getItem("dataEmpresa");
-
-        if (userDataString) {
-          const userData = JSON.parse(userDataString);
-          currentEmpresaId = userData.empresa || '';
-        }
-        if (dataEmpresaString) {
-          const dataEmpresa = JSON.parse(dataEmpresaString);
-          currentEmpresaName = dataEmpresa.nombreEmpresa || '';
-        }
-      } catch (e) {
-        console.error("Error re-parsing localStorage in useEffect:", e);
-      }
-
-      if (currentEmpresaId && currentEmpresaId !== productoData.empresa) {
-        setProductoData(prev => ({
-          ...prev,
-          empresa: currentEmpresaId
-        }));
-      }
-      if (currentEmpresaName !== displayedEmpresaName) {
-        setDisplayedEmpresaName(currentEmpresaName);
-      }
+  const { createProduct: cP } = useContext(apiContext);
+  const [d, setD] = useState(() => {
+    const u = JSON.parse(localStorage.getItem("userData") || "{}"), e = JSON.parse(localStorage.getItem("dataEmpresa") || "{}");
+    return {
+      empresa: u.empresa || '', cName: e.nombreEmpresa || '', codigoInterno: '', producto: '', descripcion: '', marca: '', categoria: '', unidadMedida: '94',
+      ancho_cm: '', alto_cm: '', profundidad_cm: '', peso_kg: '', precioCosto: '', precioLista: 0, alic_IVA: 21, markupPorcentaje: '',
+      stock_disponible: '', stockMinimo: '', ubicacionAlmacen: '', activo: true
     };
+  });
+  const [l, setL] = useState(false), [m, setM] = useState(''), [err, setErr] = useState('');
 
-    checkLocalStorage(); // Run once on mount
+  const cats = ['Servicios Web', 'Hosting', 'Dominios', 'Software', 'Hardware', 'Consultoría'];
+  const ums = [{ v: '94', l: 'Unidad' }, { v: '7', l: 'Kg' }, { v: '1', l: 'Mtr' }, { v: '21', l: 'Hr' }];
 
-    // Optional: listen for storage events if you anticipate changes from other tabs/windows
-    // window.addEventListener('storage', checkLocalStorage);
-    // return () => {
-    //   window.removeEventListener('storage', checkLocalStorage);
-    // };
-  }, [productoData.empresa, displayedEmpresaName]); // Dependencies ensure reactivity
+  const hC = e => { const { name, value } = e.target; if (name === 'empresa') return; setD(p => ({ ...p, [name]: value })); };
+  const hNC = e => setD(p => ({ ...p, [e.target.name]: parseFloat(e.target.value) || 0 }));
+  const hChC = e => setD(p => ({ ...p, [e.target.name]: e.target.checked }));
+  const cPL = () => ((parseFloat(d.precioCosto) || 0) * (1 + (parseFloat(d.markupPorcentaje) || 0) / 100)).toFixed(2);
 
-  const categorias = [
-    'Servicios Web',
-    'Hosting',
-    'Dominios',
-    'Software',
-    'Hardware',
-    'Consultoría'
-  ];
-
-  const unidadesMedida = [
-    { value: '94', label: 'Unidad' },
-    { value: '7', label: 'Kilogramo' },
-    { value: '1', label: 'Metro' },
-    { value: '21', label: 'Hora' }
-  ];
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    // For the 'empresa' field, prevent changes since it's loaded from localStorage
-    if (name === 'empresa') {
-      return; // Do nothing if trying to change the empresa field
-    }
-    setProductoData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleNumberChange = (e) => {
-    const { name, value } = e.target;
-    setProductoData(prev => ({
-      ...prev,
-      [name]: parseFloat(value) || 0 // Ensure numbers are parsed correctly, default to 0 if invalid
-    }));
-  };
-
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    setProductoData(prev => ({
-      ...prev,
-      [name]: checked
-    }));
-  };
-
-  const calcularPrecioLista = () => {
-    const costo = parseFloat(productoData.precioCosto) || 0;
-    const markup = parseFloat(productoData.markupPorcentaje) || 0;
-    return (costo * (1 + markup / 100)).toFixed(2); // Format to 2 decimal places
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-    setError('');
-
+  const hS = async e => {
+    e.preventDefault(); setL(true); setM(''); setErr('');
     try {
-      // Validaciones
-      if (!productoData.codigoInterno || !productoData.producto || !productoData.empresa) {
-        throw new Error('El Código interno, el nombre del producto y el ID de la empresa son requeridos.');
-      }
+      if (!d.codigoInterno || !d.producto || !d.empresa) throw new Error('Campos obligatorios faltantes.');
+      const dataToSend = { ...d, precioLista: d.precioLista === 0 ? parseFloat(cPL()) : parseFloat(d.precioLista) };
+      await cP(dataToSend); setM('Producto registrado!');
+      setD(p => ({ ...p, codigoInterno: '', producto: '', descripcion: '', marca: '', categoria: '', ancho_cm: '', alto_cm: '', profundidad_cm: '', peso_kg: '', precioCosto: '', precioLista: 0, markupPorcentaje: '', stock_disponible: '', stockMinimo: '', ubicacionAlmacen: '' }));
+    } catch (e) { setErr(e.response?.data?.message || e.message || 'Error al registrar.'); } finally { setL(false); }
+  };
 
-      // Calculate price list if not entered manually
-      const datosEnviar = {
-        ...productoData,
-        // Ensure precioLista is a number, and use calculated value if not manually set
-        precioLista: productoData.precioLista === 0 ? parseFloat(calcularPrecioLista()) : parseFloat(productoData.precioLista)
-      };
+  const fields = [
+    { t: "s", ti: "Información Básica" },
+    { l: "Empresa (Owner)*", n: "empresa", ty: "text", v: d.cName, ro: true, ph: "Nombre de la empresa (auto)" },
+    { l: "Código Interno*", n: "codigoInterno", ty: "text", v: d.codigoInterno, req: true, ph: "Ej: SERV-INST-WEB" },
+    { l: "Producto/Servicio*", n: "producto", ty: "text", v: d.producto, req: true, ph: "Nombre del producto/servicio" },
+    { l: "Descripción", n: "descripcion", ty: "textarea", v: d.descripcion, rows: "3", ph: "Descripción detallada" },
+    { l: "Marca", n: "marca", ty: "text", v: d.marca, ph: "Marca o proveedor" },
+    { l: "Categoría*", n: "categoria", ty: "select", v: d.categoria, opts: cats, req: true, ph: "Seleccione" },
 
-      console.log('Datos a enviar:', datosEnviar);
-      
-      // *** THIS IS THE KEY CHANGE: Use createProduct from context ***
-      const response = await createProduct(datosEnviar); 
-      console.log('API response:', response);
-      
-      setMessage('Producto registrado exitosamente!');
-      // Optional: clear the form after a successful submission,
-      // but keep the 'empresa' (ID) and 'displayedEmpresaName' pre-filled.
-      setProductoData({
-        empresa: initialEmpresaId, // Keep the pre-loaded ID
-        codigoInterno: '',
-        producto: '',
-        descripcion: '',
-        marca: '',
-        categoria: '',
-        unidadMedida: '94',
-        ancho_cm: 0,
-        alto_cm: 0,
-        profundidad_cm: 0,
-        peso_kg: 0,
-        precioCosto: 0,
-        precioLista: 0,
-        alic_IVA: 21,
-        markupPorcentaje: 0,
-        stock_disponible: 0,
-        stockMinimo: 0,
-        ubicacionAlmacen: '',
-        activo: true
-      });
-      // Ensure displayed name also resets correctly if it was user-editable
-      setDisplayedEmpresaName(initialEmpresaName); // Reset to initial name
+    { t: "s", ti: "Detalles Técnicos" },
+    { l: "Unidad Medida*", n: "unidadMedida", ty: "select", v: d.unidadMedida, opts: ums, ovk: "v", olk: "l" },
+    { l: "Ancho (cm)", n: "ancho_cm", ty: "number", v: d.ancho_cm, min: "0", st: "0.1" },
+    { l: "Alto (cm)", n: "alto_cm", ty: "number", v: d.alto_cm, min: "0", st: "0.1" },
+    { l: "Prof. (cm)", n: "profundidad_cm", ty: "number", v: d.profundidad_cm, min: "0", st: "0.1" },
+    { l: "Peso (kg)", n: "peso_kg", ty: "number", v: d.peso_kg, min: "0", st: "0.1" },
 
-    } catch (err) {
-      console.error("Error al registrar el producto:", err);
-      // Improved error message handling
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message); 
-      } else if (err.message) {
-        setError(err.message);
-      } else {
-        setError('Error al registrar el producto. Por favor, inténtelo de nuevo.');
-      }
-      setMessage('');
-    } finally {
-      setLoading(false);
-    }
+    { t: "s", ti: "Información Económica" },
+    { l: "Precio Costo*", n: "precioCosto", ty: "number", v: d.precioCosto, req: true, min: "0", st: "0.01" },
+    { l: "Markup %", n: "markupPorcentaje", ty: "number", v: d.markupPorcentaje, min: "0", st: "0.1" },
+    { l: "Precio Lista", n: "precioLista", ty: "number", v: d.precioLista || cPL(), ro: true, bg: "bg-gray-50", min: "0", st: "0.01" },
+    { l: "IVA %*", n: "alic_IVA", ty: "number", v: d.alic_IVA, req: true, min: "0", max: "100", st: "0.1" },
+
+    { t: "s", ti: "Inventario", cs: 2 },
+    { l: "Stock Disponible", n: "stock_disponible", ty: "number", v: d.stock_disponible, min: "0" },
+    { l: "Stock Mínimo", n: "stockMinimo", ty: "number", v: d.stockMinimo, min: "0" },
+    { l: "Ubicación Almacén", n: "ubicacionAlmacen", ty: "text", v: d.ubicacionAlmacen, ph: "Ej: Pasillo 2, Estante B" },
+    { l: "Producto activo", n: "activo", ty: "checkbox", v: d.activo }
+  ];
+
+  const rF = (f) => {
+    const cp = { name: f.n, value: f.v, onChange: f.ty === 'number' ? hNC : hC, required: f.req, className: `w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${f.ro ? 'bg-gray-100 cursor-not-allowed' : ''} ${f.bg || ''}` };
+    if (f.ty === 'select') return (<select {...cp}>{f.ph && <option value="">{f.ph}</option>}{f.opts.map(o => <option key={f.ovk ? o[f.ovk] : o} value={f.ovk ? o[f.ovk] : o}>{f.olk ? o[f.olk] : o}</option>)}</select>);
+    if (f.ty === 'textarea') return (<textarea {...cp} rows={f.rows} placeholder={f.ph} />);
+    if (f.ty === 'checkbox') return (<div className="flex items-center"><input type="checkbox" id={f.n} checked={f.v} onChange={hChC} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor={f.n} className="ml-2 block text-sm text-gray-700">{f.l}</label></div>);
+    return (<input type={f.ty} {...cp} readOnly={f.ro} min={f.min} max={f.max} step={f.st} placeholder={f.ph} />);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="p-4 bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-center">
-          <h1 className="text-2xl font-bold text-white">Agregar Producto/Servicio</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Columna 1 */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Básica</h2>
-            
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Empresa (Owner)*</label>
-              <input
-                type="text"
-                name="empresa"
-                value={displayedEmpresaName} // Display the name here
-                onChange={handleChange} // This will now prevent changes for 'empresa'
-                required
-                readOnly // Keep readOnly as it's auto-filled
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-100 cursor-not-allowed"
-                placeholder="Nombre de la empresa (cargado automáticamente)"
-              />
+        <div className="p-6 text-center bg-blue-600 text-white"><h1 className="text-2xl font-bold">Agregar Producto/Servicio</h1></div>
+        <form onSubmit={hS} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {fields.map((f, i) => f.t === "s" ? (<h2 key={i} className={`text-lg font-semibold text-gray-700 border-b pb-2 ${f.cs ? 'md:col-span-2' : ''}`}>{f.ti}</h2>) : (
+            <div key={i} className={`form-group ${f.n.match(/^(ancho_cm|alto_cm|profundidad_cm)$/) ? '' : (f.cs ? 'md:col-span-2' : '')}`}>
+              {f.ty !== 'checkbox' && <label className="block text-sm font-medium text-gray-700 mb-1">{f.l}</label>}
+              {rF(f)}
             </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Código Interno*</label>
-              <input
-                type="text"
-                name="codigoInterno"
-                value={productoData.codigoInterno}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="Ej: SERV-INST-WEB"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Producto/Servicio*</label>
-              <input
-                type="text"
-                name="producto"
-                value={productoData.producto}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="Nombre del producto/servicio"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-              <textarea
-                name="descripcion"
-                value={productoData.descripcion}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="Descripción detallada"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
-              <input
-                type="text"
-                name="marca"
-                value={productoData.marca}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="Marca o proveedor"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Categoría*</label>
-              <select
-                name="categoria"
-                value={productoData.categoria}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              >
-                <option value="">Seleccione una categoría</option>
-                {categorias.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Columna 2 */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Detalles Técnicos</h2>
-            
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unidad de Medida*</label>
-              <select
-                name="unidadMedida"
-                value={productoData.unidadMedida}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              >
-                {unidadesMedida.map(um => (
-                  <option key={um.value} value={um.value}>{um.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ancho (cm)</label>
-                <input
-                  type="number"
-                  name="ancho_cm"
-                  value={productoData.ancho_cm}
-                  onChange={handleNumberChange}
-                  min="0"
-                  step="0.1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Alto (cm)</label>
-                <input
-                  type="number"
-                  name="alto_cm"
-                  value={productoData.alto_cm}
-                  onChange={handleNumberChange}
-                  min="0"
-                  step="0.1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Profundidad (cm)</label>
-                <input
-                  type="number"
-                  name="profundidad_cm"
-                  value={productoData.profundidad_cm}
-                  onChange={handleNumberChange}
-                  min="0"
-                  step="0.1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
-              <input
-                type="number"
-                name="peso_kg"
-                value={productoData.peso_kg}
-                onChange={handleNumberChange}
-                min="0"
-                step="0.1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Económica</h2>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Costo*</label>
-              <input
-                type="number"
-                name="precioCosto"
-                value={productoData.precioCosto}
-                onChange={handleNumberChange}
-                min="0"
-                step="0.01"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Markup %</label>
-              <input
-                type="number"
-                name="markupPorcentaje"
-                value={productoData.markupPorcentaje}
-                onChange={handleNumberChange}
-                min="0"
-                step="0.1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Lista</label>
-              <input
-                type="number"
-                name="precioLista"
-                value={productoData.precioLista || calcularPrecioLista()}
-                onChange={handleNumberChange}
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-gray-50"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Alicuota IVA %*</label>
-              <input
-                type="number"
-                name="alic_IVA"
-                value={productoData.alic_IVA}
-                onChange={handleNumberChange}
-                min="0"
-                max="100"
-                step="0.1"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-          </div>
-
-          {/* Columna 3 - Ocupa todo el ancho */}
-          <div className="md:col-span-2 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Inventario</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stock Disponible</label>
-                <input
-                  type="number"
-                  name="stock_disponible"
-                  value={productoData.stock_disponible}
-                  onChange={handleNumberChange}
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
-                <input
-                  type="number"
-                  name="stockMinimo"
-                  value={productoData.stockMinimo}
-                  onChange={handleNumberChange}
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación Almacén</label>
-                <input
-                  type="text"
-                  name="ubicacionAlmacen"
-                  value={productoData.ubicacionAlmacen}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="Ej: Pasillo 2, Estante B"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="activo"
-                name="activo"
-                checked={productoData.activo}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="activo" className="ml-2 block text-sm text-gray-700">
-                Producto activo
-              </label>
-            </div>
-          </div>
-
+          ))}
           <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-white ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors shadow-md`}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Guardando...
-                </span>
-              ) : 'Guardar Producto'}
+            <button type="submit" disabled={l} className={`w-full py-3 px-4 rounded-lg font-medium text-white ${l ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} shadow-md`}>
+              {l ? (<span className="flex items-center justify-center"><svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Guardando...</span>) : 'Guardar Producto'}
             </button>
           </div>
         </form>
-
-        {message && (
-          <div className="mx-6 mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
-            {message}
-          </div>
-        )}
-        {error && (
-          <div className="mx-6 mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+        {m && (<div className="mx-6 mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">{m}</div>)}
+        {err && (<div className="mx-6 mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{err}</div>)}
       </div>
     </div>
   );

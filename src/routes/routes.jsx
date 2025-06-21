@@ -13,12 +13,14 @@ import {GetPointsSales} from "../pages/puntos-venta/get-puntos-venta.jsx";
 import {GetProductsCompany} from "../pages/productos/list_products.jsx";
 import {CreateTikets} from "../pages/tikets/create-tiket.jsx";
 import {VerTiketsCompany} from "../pages/tikets/get-tikets.jsx";
+import {MetricasNegocio} from "../pages/metricas.jsx";
 
 export function LoadRoutes() {
     return(
         <Routes>
             {/* Ruta principal */}
             <Route path="/" element={<GetDashboardData/>} />
+            <Route path="/metricas" element={<MetricasNegocio/>}/>
             
             {/* Autenticación */}
             <Route path="/login" element={<LoginPage/>} />

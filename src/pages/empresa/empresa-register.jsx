@@ -1,457 +1,110 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiContext } from '../../context/api_context'; // Asegúrate de que esta ruta sea correcta
+import { apiContext } from '../../context/api_context';
+
+// Componente auxiliar para un campo de formulario genérico
+const InputField = ({ label, name, type = 'text', value, onChange, options, required, placeholder, className, disabled, minLength }) => (
+    <div className="form-group">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && '*'}</label>
+        {type === 'select' ? (
+            <select name={name} value={value} onChange={onChange} required={required} disabled={disabled} className={"w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition " + (className || "")}>
+                {options.map(opt => <option key={opt.value || opt} value={opt.value || opt}>{opt.label || opt}</option>)}
+            </select>
+        ) : type === 'file' ? (
+            <input type="file" name={name} onChange={onChange} required={required} disabled={disabled} className={"w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition " + (className || "")} />
+        ) : (
+            <input type={type} name={name} value={value} onChange={onChange} required={required} placeholder={placeholder} disabled={disabled} minLength={minLength} className={"w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition " + (className || "")} />
+        )}
+    </div>
+);
 
 export function EmpresaRegister() {
-  const navigate = useNavigate();
-  const { createEmpresa } = useContext(apiContext); // Consume la función createEmpresa del contexto
+    const navigate = useNavigate();
+    const { createEmpresa } = useContext(apiContext);
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState({ msg: '', type: '' });
 
-  // Estado inicial basado en el objeto proporcionado
-  const [empresaData, setEmpresaData] = useState({
-    nombreEmpresa: '',
-    razonSocial: '',
-    cuit: '',
-    iibb: '',
-    fechaInicioActividades: '',
-    condicionIVA: 'Responsable Inscripto',
-    actividadAFIP: '',
-    metodoContabilidad: 'Contado',
-    mesInicioFiscal: 1,
-    telefonoContacto: '',
-    numeroWhatsapp: '',
-    emailContacto: '',
-    pais: 'Argentina',
-    provincia: '',
-    ciudad: '',
-    codigoPostal: '',
-    direccion: '',
-    zonaHoraria: 'America/Argentina/Buenos_Aires',
-    monedaDefault: 'PES',
-    certificadoDigital: '',
-    clavePrivada: '',
-    fechaVencimientoCertificado: '',
-    ambienteAFIP: 'HOMOLOGACION'
-  });
+    const [empresaData, setEmpresaData] = useState({
+        nombreEmpresa: '', razonSocial: '', cuit: '', iibb: '', fechaInicioActividades: '', condicionIVA: 'Responsable Inscripto', actividadAFIP: '',
+        metodoContabilidad: 'Contado', mesInicioFiscal: 1, telefonoContacto: '', numeroWhatsapp: '', emailContacto: '', pais: 'Argentina',
+        provincia: '', ciudad: '', codigoPostal: '', direccion: '', zonaHoraria: 'America/Argentina/Buenos_Aires', monedaDefault: 'PES',
+        certificadoDigital: '', clavePrivada: '', fechaVencimientoCertificado: '', ambienteAFIP: 'HOMOLOGACION'
+    });
 
-  const condicionesIVA = [
-    'Responsable Inscripto',
-    'Monotributo',
-    'Exento',
-    'No Responsable',
-    'Consumidor Final'
-  ];
+    const condicionesIVA = ['Responsable Inscripto', 'Monotributo', 'Exento', 'No Responsable', 'Consumidor Final'];
+    const metodosContabilidad = ['Contado', 'Crédito'];
+    const meses = Array.from({ length: 12 }, (_, i) => i + 1);
+    const zonasHorarias = ['America/Argentina/Buenos_Aires', 'America/Argentina/Cordoba', 'America/Argentina/Mendoza', 'America/Argentina/Salta'];
 
-  const metodosContabilidad = ['Contado', 'Crédito'];
-  const meses = Array.from({ length: 12 }, (_, i) => i + 1);
-  const zonasHorarias = [
-    'America/Argentina/Buenos_Aires',
-    'America/Argentina/Cordoba',
-    'America/Argentina/Mendoza',
-    'America/Argentina/Salta'
-  ];
+    const handleChange = e => { const { name, value } = e.target; setEmpresaData(p => ({ ...p, [name]: value })); };
+    const handleFileChange = e => { const { name, files } = e.target; if (files && files[0]) { const r = new FileReader(); r.onloadend = () => setEmpresaData(p => ({ ...p, [name]: r.result.split(',')[1] })); r.readAsDataURL(files[0]); } else setEmpresaData(p => ({ ...p, [name]: '' })); };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEmpresaData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+    const handleSubmit = async e => {
+        e.preventDefault(); setLoading(true); setFeedback({ msg: '', type: '' });
+        try {
+            const requiredFields = ['nombreEmpresa', 'razonSocial', 'cuit', 'fechaInicioActividades', 'condicionIVA', 'actividadAFIP', 'telefonoContacto', 'emailContacto', 'pais', 'provincia', 'ciudad', 'direccion'];
+            for (const field of requiredFields) { if (!empresaData[field]) throw new Error(`Por favor, completa el campo obligatorio: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}.`); }
 
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEmpresaData(prev => ({
-          ...prev,
-          [name]: reader.result.split(',')[1] // Extrae solo el contenido base64
-        }));
-      };
-      reader.readAsDataURL(files[0]);
-    } else {
-      // Si el usuario cancela la selección o el archivo se borra, asegúrate de limpiar el estado
-      setEmpresaData(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
+            const dataToSend = { ...empresaData, mesInicioFiscal: parseInt(empresaData.mesInicioFiscal),
+                fechaInicioActividades: new Date(empresaData.fechaInicioActividades).toISOString(),
+                fechaVencimientoCertificado: empresaData.fechaVencimientoCertificado ? new Date(empresaData.fechaVencimientoCertificado).toISOString() : null,
+                certificadoDigital: empresaData.certificadoDigital || null, clavePrivada: empresaData.clavePrivada || null
+            };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-    setError('');
+            const result = await createEmpresa(dataToSend);
+            if (!result) throw new Error('Error desconocido al registrar la empresa. No se recibieron datos de confirmación.');
+            setFeedback({ msg: 'Empresa registrada exitosamente!', type: 'success' });
+            setTimeout(() => navigate('/'), 2000);
+        } catch (err) {
+            console.error("Error al registrar empresa:", err);
+            setFeedback({ msg: err.message || 'Error al registrar la empresa. Intenta de nuevo.', type: 'error' });
+        } finally { setLoading(false); }
+    };
 
-    try {
-      // Validación de campos obligatorios (sin incluir certificados)
-      if (
-        !empresaData.nombreEmpresa || 
-        !empresaData.razonSocial || 
-        !empresaData.cuit || 
-        !empresaData.fechaInicioActividades ||
-        !empresaData.condicionIVA ||
-        !empresaData.actividadAFIP ||
-        !empresaData.telefonoContacto ||
-        !empresaData.emailContacto ||
-        !empresaData.pais ||
-        !empresaData.provincia ||
-        !empresaData.ciudad ||
-        !empresaData.direccion
-      ) {
-        throw new Error('Por favor, completa todos los campos obligatorios marcados con (*).');
-      }
-
-      // Preparar datos para la API
-      const dataToSend = {
-        ...empresaData,
-        mesInicioFiscal: parseInt(empresaData.mesInicioFiscal),
-        fechaInicioActividades: new Date(empresaData.fechaInicioActividades).toISOString(),
-        // Condicionalmente incluye fechaVencimientoCertificado, certificadoDigital y clavePrivada
-        fechaVencimientoCertificado: empresaData.fechaVencimientoCertificado 
-          ? new Date(empresaData.fechaVencimientoCertificado).toISOString() 
-          : null, // Envía null si no se selecciona fecha
-        certificadoDigital: empresaData.certificadoDigital || null, // Envía null si no se selecciona archivo
-        clavePrivada: empresaData.clavePrivada || null // Envía null si no se selecciona archivo
-      };
-
-      console.log('Datos a enviar:', dataToSend);
-      
-      const result = await createEmpresa(dataToSend); 
-      
-      if (result) {
-        setMessage('Empresa registrada exitosamente!');
-        setTimeout(() => navigate('/'), 2000); 
-      } else {
-        throw new Error('Error desconocido al registrar la empresa. No se recibieron datos de confirmación.');
-      }
-    } catch (err) {
-      setError(err.message || 'Error al registrar la empresa. Intenta de nuevo.');
-      console.error("Error al registrar empresa:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-center">
-          <h1 className="text-2xl font-bold text-white">Registro de Empresa</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Columna 1 */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Básica</h2>
-            
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial*</label>
-              <input
-                type="text"
-                name="nombreEmpresa"
-                value={empresaData.nombreEmpresa}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Razón Social*</label>
-              <input
-                type="text"
-                name="razonSocial"
-                value={empresaData.razonSocial}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">CUIT*</label>
-              <input
-                type="text"
-                name="cuit"
-                value={empresaData.cuit}
-                onChange={handleChange}
-                required
-                placeholder="XX-XXXXXXXX-X"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">IIBB</label>
-              <input
-                type="text"
-                name="iibb"
-                value={empresaData.iibb}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio Actividades*</label>
-              <input
-                type="date"
-                name="fechaInicioActividades"
-                value={empresaData.fechaInicioActividades}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Condición IVA*</label>
-              <select
-                name="condicionIVA"
-                value={empresaData.condicionIVA}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              >
-                {condicionesIVA.map(opcion => (
-                  <option key={opcion} value={opcion}>{opcion}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Actividad AFIP*</label>
-              <input
-                type="text"
-                name="actividadAFIP"
-                value={empresaData.actividadAFIP}
-                onChange={handleChange}
-                required
-                placeholder="Código de actividad"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-          </div>
-
-          {/* Columna 2 */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Fiscal y Contacto</h2>
-            
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Método Contabilidad*</label>
-              <select
-                name="metodoContabilidad"
-                value={empresaData.metodoContabilidad}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              >
-                {metodosContabilidad.map(opcion => (
-                  <option key={opcion} value={opcion}>{opcion}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mes Inicio Fiscal*</label>
-              <select
-                name="mesInicioFiscal"
-                value={empresaData.mesInicioFiscal}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              >
-                {meses.map(mes => (
-                  <option key={mes} value={mes}>{mes}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono Contacto*</label>
-              <input
-                type="tel"
-                name="telefonoContacto"
-                value={empresaData.telefonoContacto}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-              <input
-                type="tel"
-                name="numeroWhatsapp"
-                value={empresaData.numeroWhatsapp}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Contacto*</label>
-              <input
-                type="email"
-                name="emailContacto"
-                value={empresaData.emailContacto}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">País*</label>
-              <input
-                type="text"
-                name="pais"
-                value={empresaData.pais}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Provincia*</label>
-              <input
-                type="text"
-                name="provincia"
-                value={empresaData.provincia}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad*</label>
-              <input
-                type="text"
-                name="ciudad"
-                value={empresaData.ciudad}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-          </div>
-
-          {/* Columna 3 */}
-          <div className="space-y-4 md:col-span-2">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Ubicación y Certificados</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
-                <input
-                  type="text"
-                  name="codigoPostal"
-                  value={empresaData.codigoPostal}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Zona Horaria*</label>
-                <select
-                  name="zonaHoraria"
-                  value={empresaData.zonaHoraria}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                >
-                  {zonasHorarias.map(zona => (
-                    <option key={zona} value={zona}>{zona}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección*</label>
-              <input
-                type="text"
-                name="direccion"
-                value={empresaData.direccion}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Certificado Digital</label>
-                <input
-                  type="file"
-                  name="certificadoDigital"
-                  onChange={handleFileChange}
-                  // Ya no es required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Clave Privada</label>
-                <input
-                  type="file"
-                  name="clavePrivada"
-                  onChange={handleFileChange}
-                  // Ya no es required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento Certificado</label>
-                <input
-                  type="date"
-                  name="fechaVencimientoCertificado"
-                  value={empresaData.fechaVencimientoCertificado}
-                  onChange={handleChange}
-                  // Ya no es required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-white ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors shadow-md`}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Registrando Empresa...
-                </span>
-              ) : 'Registrar Empresa'}
-            </button>
-          </div>
-        </form>
-
-        {message && (
-          <div className="mx-6 mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
-            {message}
-          </div>
-        )}
-        {error && (
-          <div className="mx-6 mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    return ( // Inicia el conteo de líneas de EmpresaRegister aquí
+        <div className="min-h-screen bg-gray-50 py-8 px-4"><div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-center">
+                <h1 className="text-2xl font-bold text-white">Registro de Empresa</h1></div>
+            <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4"><h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Básica</h2>
+                    <InputField label="Nombre Comercial" name="nombreEmpresa" value={empresaData.nombreEmpresa} onChange={handleChange} required />
+                    <InputField label="Razón Social" name="razonSocial" value={empresaData.razonSocial} onChange={handleChange} required />
+                    <InputField label="CUIT" name="cuit" value={empresaData.cuit} onChange={handleChange} required placeholder="XX-XXXXXXXX-X" />
+                    <InputField label="IIBB" name="iibb" value={empresaData.iibb} onChange={handleChange} />
+                    <InputField type="date" label="Fecha Inicio Actividades" name="fechaInicioActividades" value={empresaData.fechaInicioActividades} onChange={handleChange} required />
+                    <InputField type="select" label="Condición IVA" name="condicionIVA" value={empresaData.condicionIVA} onChange={handleChange} required options={condicionesIVA} />
+                    <InputField label="Actividad AFIP" name="actividadAFIP" value={empresaData.actividadAFIP} onChange={handleChange} required placeholder="Código de actividad" />
+                </div>
+                <div className="space-y-4"><h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Fiscal y Contacto</h2>
+                    <InputField type="select" label="Método Contabilidad" name="metodoContabilidad" value={empresaData.metodoContabilidad} onChange={handleChange} required options={metodosContabilidad} />
+                    <InputField type="select" label="Mes Inicio Fiscal" name="mesInicioFiscal" value={empresaData.mesInicioFiscal} onChange={handleChange} required options={meses} />
+                    <InputField type="tel" label="Teléfono Contacto" name="telefonoContacto" value={empresaData.telefonoContacto} onChange={handleChange} required />
+                    <InputField type="tel" label="WhatsApp" name="numeroWhatsapp" value={empresaData.numeroWhatsapp} onChange={handleChange} />
+                    <InputField type="email" label="Email Contacto" name="emailContacto" value={empresaData.emailContacto} onChange={handleChange} required />
+                    <InputField label="País" name="pais" value={empresaData.pais} onChange={handleChange} required />
+                    <InputField label="Provincia" name="provincia" value={empresaData.provincia} onChange={handleChange} required />
+                    <InputField label="Ciudad" name="ciudad" value={empresaData.ciudad} onChange={handleChange} required />
+                </div>
+                <div className="space-y-4 md:col-span-2"><h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Ubicación y Certificados</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField label="Código Postal" name="codigoPostal" value={empresaData.codigoPostal} onChange={handleChange} />
+                        <InputField type="select" label="Zona Horaria" name="zonaHoraria" value={empresaData.zonaHoraria} onChange={handleChange} required options={zonasHorarias} />
+                    </div>
+                    <InputField label="Dirección" name="direccion" value={empresaData.direccion} onChange={handleChange} required />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <InputField type="file" label="Certificado Digital" name="certificadoDigital" onChange={handleFileChange} />
+                        <InputField type="file" label="Clave Privada" name="clavePrivada" onChange={handleFileChange} />
+                        <InputField type="date" label="Vencimiento Certificado" name="fechaVencimientoCertificado" value={empresaData.fechaVencimientoCertificado} onChange={handleChange} />
+                    </div>
+                </div>
+                <div className="md:col-span-2">
+                    <button type="submit" disabled={loading} className={`w-full py-3 px-4 rounded-lg font-medium text-white ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors shadow-md`}>
+                        {loading ? (<span className="flex items-center justify-center"><svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Registrando Empresa...</span>) : 'Registrar Empresa'}
+                    </button>
+                </div>
+            </form>
+            {feedback.msg && (<div className={`mx-6 mb-4 p-3 rounded-lg text-sm ${feedback.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{feedback.msg}</div>)}
+        </div></div>
+    );
 }

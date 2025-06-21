@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Define la URL base de tu backend
 // Puedes cambiarla por 'http://localhost:3000/api/v1 https://api.facstock.com' para producción o desarrollo remoto
-const URL_BACKEND = 'https://api.facstock.com/api/v1'; 
+const URL_BACKEND = 'http://localhost:3000/api/v1'; 
 
 // --- Función de manejo de errores centralizada ---
 // Esto ayuda a evitar repetir el mismo bloque try/catch y console.error
