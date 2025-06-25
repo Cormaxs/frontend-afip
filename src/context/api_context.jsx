@@ -7,9 +7,36 @@ import { Login, Register, createEmpresaApi, addProduct,
 export const apiContext = createContext();
 
 export const ApiProvider = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [userData, setUserData] = useState(null);
+    // 1. Inicializa isAuthenticated leyendo directamente de localStorage
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        const storedUserData = localStorage.getItem("userData");
+        return !!storedUserData; // Devuelve true si hay userData en localStorage, false si no
+    });
 
+    // 2. Inicializa userData de forma segura con una función en useState
+    const [userData, setUserData] = useState(() => {
+        const storedUserData = localStorage.getItem("userData");
+        try {
+            // Intenta parsear los datos. Si hay un error (ej. JSON corrupto), devuelve null.
+            return storedUserData ? JSON.parse(storedUserData) : null;
+        } catch (error) {
+            console.error("Error parsing userData from localStorage:", error);
+            localStorage.removeItem("userData"); // Limpiar datos corruptos
+            return null;
+        }
+    });
+
+    // 3. Inicializa companyData de forma similar
+    const [companyData, setCompanyData] = useState(() => {
+        const storedCompanyData = localStorage.getItem("dataEmpresa");
+        try {
+            return storedCompanyData ? JSON.parse(storedCompanyData) : null;
+        } catch (error) {
+            console.error("Error parsing companyData from localStorage:", error);
+            localStorage.removeItem("dataEmpresa"); // Limpiar datos corruptos
+            return null;
+        }
+    });
     const login = async (data) => {
         try {
             const responseData = await Login(data);
@@ -48,6 +75,7 @@ export const ApiProvider = ({ children }) => {
             throw error;
         }
     };
+    
 
     const logout = () => {
         localStorage.removeItem("userData");
@@ -219,7 +247,8 @@ export const ApiProvider = ({ children }) => {
             getTiketsContext,createTiketContext,
             getCompanyID,
             isAuthenticated,
-            userData
+            userData,
+            companyData
         }}>
             {children} 
         </apiContext.Provider>

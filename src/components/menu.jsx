@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { apiContext } from '../context/api_context';
 
 // Definición de los grupos de menú fuera del componente para evitar re-renders innecesarios
 const menuGroups = {
@@ -11,7 +12,7 @@ const menuGroups = {
             </svg>
         ),
         items: [
-            { path: "/", label: "Inicio", icon: "🏠" },
+            { path: "/dashboard", label: "Inicio", icon: "🏠" },
             { path: "/metricas", label: "Métricas", icon: "📊" } // Ruta agregada
         ]
     },
@@ -157,6 +158,7 @@ export function SidePanel() {
     const [isOpen, setIsOpen] = useState(false); // Por defecto cerrado en móvil para un enfoque empresarial
     const [openSubmenu, setOpenSubmenu] = useState(null);
     const location = useLocation();
+    const {logout} = useContext(apiContext)
 
     // Efecto para controlar el estado inicial del panel y el redimensionamiento
     useEffect(() => {
@@ -235,10 +237,7 @@ export function SidePanel() {
                     <div className="mt-8 pt-4 border-t border-[#4c67f1]">
                         <button
                             className="flex items-center w-full p-2 rounded-md text-gray-100 hover:bg-indigo-700 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            onClick={() => {
-                                // Lógica para cerrar sesión
-                                console.log("Cerrar sesión");
-                            }}
+                            onClick={() => { logout();}}
                         >
                             <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

@@ -19,7 +19,7 @@ export function LoadRoutes() {
     return(
         <Routes>
             {/* Ruta principal */}
-            <Route path="/" element={<GetDashboardData/>} />
+            <Route path="/dashboard" element={<GetDashboardData/>} />
             <Route path="/metricas" element={<MetricasNegocio/>}/>
             
             {/* Autenticación */}

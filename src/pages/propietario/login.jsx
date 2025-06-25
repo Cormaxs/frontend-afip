@@ -22,6 +22,7 @@ export function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm text-center">
+            <h1 className='text-2xl font-bold mb-6'>Es necesario tener una empresa / local registrado</h1>
                 <h2 className="text-2xl font-bold mb-6">Iniciar Sesión</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input type="text" id="username" value={user.username} onChange={handleChange} disabled={loading}
@@ -36,6 +37,9 @@ export function LoginPage() {
                 {error && <p className="mt-4 text-red-500 text-sm">{error}</p>}
                 <p className="mt-6 text-sm text-gray-600">
                     ¿No tienes cuenta? <Link to="/register" className="text-blue-500 hover:underline">Regístrate</Link>
+                </p>
+                <p className="mt-6 text-sm text-gray-600">
+                    ¿No tienes Empresa? <Link to="/empresa-register" className="text-blue-500 hover:underline">Registrar empresa</Link>
                 </p>
             </div>
         </div>

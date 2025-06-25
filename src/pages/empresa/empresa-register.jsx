@@ -55,7 +55,7 @@ export function EmpresaRegister() {
             const result = await createEmpresa(dataToSend);
             if (!result) throw new Error('Error desconocido al registrar la empresa. No se recibieron datos de confirmación.');
             setFeedback({ msg: 'Empresa registrada exitosamente!', type: 'success' });
-            setTimeout(() => navigate('/'), 2000);
+            setTimeout(() => navigate('/register'), 2000);
         } catch (err) {
             console.error("Error al registrar empresa:", err);
             setFeedback({ msg: err.message || 'Error al registrar la empresa. Intenta de nuevo.', type: 'error' });

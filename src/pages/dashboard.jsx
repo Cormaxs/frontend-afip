@@ -205,18 +205,7 @@ export function GetDashboardData() {
                                 </p>
                             </div>
 
-                            {/* Botón de Acción */}
-                            <div className="mt-6 text-center">
-                                <Link
-                                    to={nextStepPath}
-                                    className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-[#3f64ec] hover:bg-[#4c67f1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3f64ec] transition-colors duration-200"
-                                >
-                                    {allStepsCompleted ? "Ir al Dashboard Principal" : "Continuar Configuración"}
-                                    <svg className="ml-3 -mr-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                        <path fillRule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                </Link>
-                            </div>
+                            
                         </>
                     )}
                 </div>
