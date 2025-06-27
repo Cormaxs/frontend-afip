@@ -1,121 +1,517 @@
-import React, { useContext, useState, useEffect, useMemo } from "react";
-import { apiContext } from "../../context/api_context";
+import React, { useContext, useState, useEffect, useMemo, useRef } from "react";
+import { apiContext } from "../../context/api_context"; // Asegúrate de que esta ruta sea correcta
+import Swal from 'sweetalert2'; // Import SweetAlert2
 
 export function CreateTikets() {
-  const { createTiketContext: cTC, getPointsByCompany: gPBC } = useContext(apiContext);
-  const [eId, setEId] = useState(null), [uId, setUId] = useState(null);
-  const [msg, setMsg] = useState(''), [err, setErr] = useState('');
-  const [items, setItems] = useState([]);
-  const [nI, setNI] = useState({ codigo: "", descripcion: "", cantidad: 1, precioUnitario: 0.00 });
-  const [fI, setFI] = useState({ puntoDeVenta: "", tipoComprobante: "Ticket", metodoPago: "Efectivo", montoRecibido: 0.00, nombreCliente: "", dniCuitCliente: "", condicionIVACliente: "Consumidor Final", observaciones: "" });
-  const [pDV, setPDV] = useState([]);
-  const [fHT, setFHT] = useState('');
+  const { createTiketContext, getPointsByCompany, getProductCodBarra, getTiketsPdf } = useContext(apiContext); // Usamos getTiketsPdf
 
+  // --- Estados del Componente ---
+  const [empresaId, setEmpresaId] = useState(null);
+  const [empresaNombre, setEmpresaNombre] = useState(''); 
+  const [userId, setUserId] = useState(null); 
+  const [puntosDeVenta, setPuntosDeVenta] = useState([]); 
+  const [puntoSeleccionado, setPuntoSeleccionado] = useState(''); 
+  
+  const [codBarra, setCodBarra] = useState(''); 
+  const [items, setItems] = useState([]); 
+  
+  const [loading, setLoading] = useState(true);
+  const [errorConfig, setErrorConfig] = useState(false);
+  const [message, setMessage] = useState(''); 
+  const [errorMessage, setErrorMessage] = useState(''); 
+
+  // Invoice form details
+  const [invoiceDetails, setInvoiceDetails] = useState({
+    tipoComprobante: "Ticket",
+    metodoPago: "Efectivo",
+    montoRecibido: 0.00,
+    nombreCliente: "",
+    dniCuitCliente: "",
+    condicionIVACliente: "Consumidor Final",
+    observaciones: ""
+  });
+  const [invoiceDateTime, setInvoiceDateTime] = useState(''); 
+
+  const inputRef = useRef(null); 
+
+  // --- Efecto: Inicialización de datos al cargar el componente ---
   useEffect(() => {
-    const lD = async () => {
-      let hE = false;
-      const eDS = localStorage.getItem("dataEmpresa") || "{}", uDS = localStorage.getItem("userData") || "{}";
-      try { const e = JSON.parse(eDS); if (e?._id) setEId(e._id); else { setErr("ID empresa no válido."); hE = true; } } catch { setErr("Error empresa local."); hE = true; }
-      try { const u = JSON.parse(uDS); if (u?._id) setUId(u._id); else { setErr(p => p ? `${p} | ID usuario no válido.` : "ID usuario no válido."); hE = true; } } catch { setErr(p => p ? `${p} | Error usuario local.` : "Error usuario local."); hE = true; }
-      const n = new Date(); setFHT(`${n.getFullYear()}-${(n.getMonth() + 1).toString().padStart(2, '0')}-${n.getDate().toString().padStart(2, '0')}T${n.getHours().toString().padStart(2, '0')}:${n.getMinutes().toString().padStart(2, '0')}`);
-      if (!hE && eId) {
-        try { const p = await gPBC(eId); if (p?.length) { setPDV(p); setFI(v => ({ ...v, puntoDeVenta: p[0].nombre })); } else { setPDV([]); setFI(v => ({ ...v, puntoDeVenta: "" })); setErr(p => p ? `${p} | No hay puntos de venta.` : "No hay puntos de venta."); } }
-        catch { setErr(p => p ? `${p} | Error cargando puntos de venta.` : "Error cargando puntos de venta."); setPDV([]); setFI(v => ({ ...v, puntoDeVenta: "" })); }
+    const initData = async () => {
+      setLoading(true);
+      setErrorConfig(false); 
+      try {
+        const storedEmpresaData = JSON.parse(localStorage.getItem('dataEmpresa') || '{}');
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+        if (!storedEmpresaData?._id) {
+          setErrorConfig(true);
+          Swal.fire({ icon: 'error', title: 'Error de Configuración', text: 'ID de empresa no encontrado en localStorage. Asegúrate de iniciar sesión.' });
+          setLoading(false);
+          return;
+        }
+        setEmpresaId(storedEmpresaData._id);
+        setEmpresaNombre(storedEmpresaData.nombreEmpresa || storedEmpresaData.nombre || 'Nombre de Empresa Desconocido');
+        
+        if (!userData?._id) {
+          setErrorConfig(true);
+          Swal.fire({ icon: 'error', title: 'Error de Configuración', text: 'ID de usuario no encontrado en localStorage. Asegúrate de iniciar sesión.' });
+          setLoading(false);
+          return;
+        }
+        setUserId(userData._id);
+
+        const points = await getPointsByCompany(storedEmpresaData._id);
+        if (points && points.length > 0) {
+          setPuntosDeVenta(points);
+          setPuntoSeleccionado(points[0]._id); 
+          inputRef.current?.focus(); 
+        } else {
+          Swal.fire({ icon: 'info', title: 'Sin Puntos de Venta', text: 'No se encontraron puntos de venta asociados a tu empresa. Configura al menos uno.' });
+          setPuntosDeVenta([]);
+          setPuntoSeleccionado('');
+        }
+        
+        const now = new Date();
+        setInvoiceDateTime(`${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}T${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
+
+      } catch (error) {
+        console.error('Error al iniciar la configuración:', error);
+        setErrorConfig(true);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Fallo al cargar los datos iniciales de configuración. Intenta nuevamente.' });
+      } finally {
+        setLoading(false);
       }
-      if (hE) setMsg('');
     };
-    lD();
-  }, [eId, gPBC]);
+    initData();
+  }, [getPointsByCompany]); 
 
-  const { subtotal: s, totalPagar: tP, cambio: c } = useMemo(() => {
-    const cS = items.reduce((a, i) => a + i.totalItem, 0);
-    const cTP = cS;
-    const cC = fI.metodoPago === 'Efectivo' && fI.montoRecibido > cTP ? fI.montoRecibido - cTP : 0;
-    return { subtotal: cS, totalPagar: cTP, cambio: cC };
-  }, [items, fI.montoRecibido, fI.metodoPago]);
+  // --- Calculated Totals ---
+  const { subtotal, totalPagar, cambio } = useMemo(() => {
+    const calculatedSubtotal = items.reduce((acc, item) => acc + (parseFloat(item.precio) * item.cantidad), 0);
+    const calculatedTotalPagar = calculatedSubtotal; 
+    const calculatedCambio = invoiceDetails.metodoPago === 'Efectivo' && invoiceDetails.montoRecibido > calculatedTotalPagar 
+      ? invoiceDetails.montoRecibido - calculatedTotalPagar 
+      : 0;
+    return { subtotal: calculatedSubtotal, totalPagar: calculatedTotalPagar, cambio: calculatedCambio };
+  }, [items, invoiceDetails.montoRecibido, invoiceDetails.metodoPago]);
 
-  const hFIC = e => { const { name, value } = e.target; setFI(p => ({ ...p, [name]: name === "montoRecibido" ? parseFloat(value) || 0 : value })); };
-  const hNIC = e => { const { name, value } = e.target; setNI(p => ({ ...p, [name]: (name === "cantidad" || name === "precioUnitario") ? parseFloat(value) || 0 : value })); };
-  const hAI = () => {
-    if (!nI.descripcion.trim() || nI.cantidad <= 0) { alert("Completa descripción y cantidad > 0."); return; }
-    setItems(p => [...p, { ...nI, totalItem: nI.cantidad * nI.precioUnitario }]);
-    setNI({ codigo: "", descripcion: "", cantidad: 1, precioUnitario: 0.00 });
+  // --- Handlers ---
+
+  // Handles changes for invoice details (excluding puntoDeVenta which is separate)
+  const handleInvoiceDetailsChange = e => {
+    const { name, value } = e.target;
+    setInvoiceDetails(prevDetails => ({
+      ...prevDetails,
+      [name]: name === "montoRecibido" ? parseFloat(value) || 0 : value
+    }));
   };
-  const hRI = iR => setItems(p => p.filter((_, i) => i !== iR));
 
-  const hS = async e => {
-    e.preventDefault(); setMsg(''); setErr('');
-    if (!eId) { setErr("Error: ID empresa no disponible."); return; }
-    if (!uId) { setErr("Error: ID usuario no disponible."); return; }
-    if (!items.length) { setErr("Error: Agrega al menos un ítem."); return; }
-    if (!fI.puntoDeVenta) { setErr("Error: Selecciona punto de venta."); return; }
-    if (fI.metodoPago === 'Efectivo' && fI.montoRecibido < tP) { setErr(`Error: Monto recibido ($${fI.montoRecibido.toFixed(2)}) menor al total ($${tP.toFixed(2)}).`); return; }
+  // Handler to search and add product by barcode
+  const handleSearchAndAddItem = async () => {
+    if (loading || errorConfig || !empresaId || !puntoSeleccionado || !codBarra.trim()) {
+      Swal.fire('Atención', 'Asegura que la empresa, el punto de venta y el código de barras estén completos.', 'warning');
+      return;
+    }
 
-    const sDT = new Date(fHT).toLocaleString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    const sVI = `VK${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${(crypto.randomUUID ? crypto.randomUUID().slice(-8) : Math.floor(Math.random() * 100000000).toString().padStart(8, '0'))}`;
-    const sNC = `0001-${Math.floor(Math.random() * 9000) + 1000}`;
-    const tD = { ventaId: sVI, fechaHora: sDT, puntoDeVenta: fI.puntoDeVenta, tipoComprobante: fI.tipoComprobante, numeroComprobante: sNC, items: items, totales: { subtotal: s, descuento: 0.00, totalPagar: tP }, pago: { metodo: fI.metodoPago, montoRecibido: fI.montoRecibido, cambio: c }, cliente: (fI.nombreCliente || fI.dniCuitCliente) ? { nombre: fI.nombreCliente, dniCuit: fI.dniCuitCliente, condicionIVA: fI.condicionIVACliente } : undefined, observaciones: fI.observaciones, cajero: "Cajero Test", sucursal: "Sucursal Principal", idUsuario: uId, idEmpresa: eId };
-
+    setLoading(true);
     try {
-      const r = await cTC(tD); setMsg(`Ticket creado. ID: ${r.databaseRecordId}, Venta: ${r.ventaId}`);
-      setItems([]); setNI({ codigo: "", descripcion: "", cantidad: 1, precioUnitario: 0.00 });
-      setFI(p => ({ ...p, montoRecibido: 0.00, nombreCliente: "", dniCuitCliente: "", condicionIVACliente: "Consumidor Final", observaciones: "" }));
-      const n = new Date(); setFHT(`${n.getFullYear()}-${(n.getMonth() + 1).toString().padStart(2, '0')}-${n.getDate().toString().padStart(2, '0')}T${n.getHours().toString().padStart(2, '0')}:${n.getMinutes().toString().padStart(2, '0')}`);
-    } catch (er) { setErr(`Error al crear ticket: ${er.message || 'Error desconocido'}.`); }
+      const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, codBarra.trim());
+      
+      const product = productResponse?.data || productResponse; 
+
+      if (product && product._id && product.producto && product.precioLista !== undefined) { 
+        const existingItemIndex = items.findIndex(item => item._id === product._id);
+
+        if (existingItemIndex > -1) {
+          const updatedItems = [...items];
+          updatedItems[existingItemIndex].cantidad += 1;
+          setItems(updatedItems);
+          //Swal.fire('Éxito', `Cantidad de **${product.producto}** actualizada a ${updatedItems[existingItemIndex].cantidad}.`, 'success');
+        } else {
+          setItems(prevItems => [...prevItems, { 
+            _id: product._id, 
+            idProduct: product._id, 
+            producto: product.producto, 
+            precio: parseFloat(product.precioLista), 
+            cantidad: 1,
+            categoria: product.categoria || 'N/A', 
+            codigoBarra: product.codigoBarra || 'N/A', 
+            marca: product.marca || 'N/A' 
+          }]);
+          //Swal.fire('Éxito', `**${product.producto}** agregado a la factura.`, 'success');
+        }
+      } else {
+        Swal.fire('Info', 'Producto no encontrado o datos incompletos. Revisa la consola para más detalles.', 'info');
+        console.warn('Invalid product received or missing properties (_id, producto, precioLista expected):', product); 
+      }
+    } catch (error) {
+      console.error('Error searching or adding product:', error);
+      Swal.fire('Error', `Fallo al buscar producto: ${error.message || 'Error desconocido'}`, 'error');
+    } finally {
+      setLoading(false);
+      setCodBarra(''); 
+      inputRef.current?.focus(); 
+    }
   };
+
+  // Handle quantity change for an item in the invoice list
+  const handleQuantityChange = (index, value) => {
+    let newQuantity = parseInt(value, 10);
+    if (isNaN(newQuantity) || newQuantity < 1) {
+      newQuantity = 1; 
+      Swal.fire('Atención', 'La cantidad mínima es 1.', 'warning');
+    }
+
+    setItems(prevItems => 
+      prevItems.map((item, i) => 
+        i === index ? { ...item, cantidad: newQuantity } : item
+      )
+    );
+  };
+
+  // Handle removing an item from the invoice list
+  const handleRemoveItem = (index) => {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: "¡Estás a punto de quitar este producto de la factura!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const newItems = items.filter((_, i) => i !== index);
+        setItems(newItems);
+        Swal.fire('Eliminado!', 'El producto ha sido quitado de la factura.', 'success');
+      }
+    });
+  };
+
+  // Handle Enter key press on barcode input
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); 
+      handleSearchAndAddItem();
+    }
+  };
+
+  // Handle ticket submission
+  const handleSubmit = async e => {
+    e.preventDefault(); 
+    setMessage(''); 
+    setErrorMessage('');
+
+    if (!empresaId) { setErrorMessage("Error: ID empresa no disponible."); return; }
+    if (!userId) { setErrorMessage("Error: ID usuario no disponible."); return; }
+    if (!items.length) { Swal.fire('Atención', "Error: Agrega al menos un ítem a la factura.", 'warning'); return; }
+    if (!puntoSeleccionado) { setErrorMessage("Error: Selecciona un punto de venta."); return; }
+    if (invoiceDetails.metodoPago === 'Efectivo' && invoiceDetails.montoRecibido < totalPagar) { 
+      Swal.fire('Error', `El monto recibido ($${invoiceDetails.montoRecibido.toFixed(2)}) es menor al total a pagar ($${totalPagar.toFixed(2)}).`, 'error'); 
+      return; 
+    }
+
+    Swal.fire({
+      title: '¿Confirmar Venta?',
+      text: `Estás a punto de generar una factura por $${totalPagar.toFixed(2)}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, generar venta',
+      cancelButtonText: 'No, cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const salesDate = new Date(invoiceDateTime);
+          const formattedSalesDate = salesDate.toLocaleString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+          
+          const salesId = `VK${salesDate.getFullYear().toString().slice(-2)}${(salesDate.getMonth() + 1).toString().padStart(2, '0')}${salesDate.getDate().toString().padStart(2, '0')}-${(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(-8) : Math.floor(Math.random() * 100000000).toString().padStart(8, '0'))}`;
+          const invoiceNumber = `0001-${Math.floor(Math.random() * 9000) + 1000}`; 
+
+          const ticketData = { 
+            ventaId: salesId, 
+            fechaHora: formattedSalesDate, 
+            puntoDeVenta: puntosDeVenta.find(p => p._id === puntoSeleccionado)?.nombre || puntoSeleccionado, 
+            tipoComprobante: invoiceDetails.tipoComprobante, 
+            numeroComprobante: invoiceNumber, 
+            items: items.map(item => ({
+              idProduct: item.idProduct, 
+              codigo: item.codigoBarra, 
+              descripcion: item.producto,
+              cantidad: item.cantidad,
+              precioUnitario: item.precio,
+              totalItem: (item.cantidad * item.precio)
+            })), 
+            totales: { 
+              subtotal: subtotal, 
+              descuento: 0.00, 
+              totalPagar: totalPagar 
+            }, 
+            pago: { 
+              metodo: invoiceDetails.metodoPago, 
+              montoRecibido: invoiceDetails.montoRecibido, 
+              cambio: cambio 
+            }, 
+            cliente: (invoiceDetails.nombreCliente || invoiceDetails.dniCuitCliente) ? { 
+              nombre: invoiceDetails.nombreCliente, 
+              dniCuit: invoiceDetails.dniCuitCliente, 
+              condicionIVA: invoiceDetails.condicionIVACliente 
+            } : undefined, 
+            observaciones: invoiceDetails.observaciones, 
+            cajero: "Cajero Test", 
+            sucursal: "Sucursal Principal", 
+            idUsuario: userId, 
+            idEmpresa: empresaId 
+          };
+
+          const response = await createTiketContext(ticketData); 
+          Swal.fire('Venta Registrada!', `Ticket creado. ID: ${response.databaseRecordId}, Venta: ${response.ventaId}`, 'success');
+          
+          // --- Generar y mostrar PDF del ticket ---
+          if (response.ventaId && userId) {
+            try {
+              // Llama a la función del contexto para obtener el Blob del PDF
+              // Usamos getTiketsPdf que está configurada para Axios y responseType: 'blob'
+              const pdfBlob = await getTiketsPdf(userId, response.ventaId); 
+             
+            } catch (pdfError) {
+              console.error('Error al generar el PDF del ticket (frontend):', pdfError);
+              Swal.fire('Error PDF', `Fallo al generar el PDF: ${pdfError.message || 'Error desconocido'}`, 'error');
+            }
+          } else {
+            console.warn('No se puede generar el PDF: falta ventaId o userId de la respuesta/estado.');
+          }
+          // --- FIN GENERACION PDF ---
+
+          // Reiniciar el formulario después de la venta exitosa
+          setItems([]);
+          setCodBarra('');
+          setInvoiceDetails({ ...invoiceDetails, montoRecibido: 0.00, nombreCliente: "", dniCuitCliente: "", condicionIVACliente: "Consumidor Final", observaciones: "" });
+          const newNow = new Date(); 
+          setInvoiceDateTime(`${newNow.getFullYear()}-${(newNow.getMonth() + 1).toString().padStart(2, '0')}-${newNow.getDate().toString().padStart(2, '0')}T${newNow.getHours().toString().padStart(2, '0')}:${newNow.getMinutes().toString().padStart(2, '0')}`);
+          inputRef.current?.focus();
+        } catch (error) { 
+          console.error('Error al crear ticket (backend):', error);
+          Swal.fire('Error', `Fallo al crear ticket: ${error.message || 'Error desconocido'}.`, 'error'); 
+          setErrorMessage(`Error al crear ticket: ${error.message || 'Error desconocido'}.`); 
+        }
+      }
+    });
+  };
+
+  // --- Renderizado Condicional ---
+  if (loading && (!empresaId || puntosDeVenta.length === 0) && !errorConfig) { 
+    return <div className="text-center text-lg text-gray-600 mt-10">Cargando configuración inicial...</div>;
+  }
+  if (errorConfig) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 max-w-md mx-auto my-10 text-center">
+        <h3 className="font-bold text-xl mb-2">Error de Configuración Esencial</h3>
+        <p className="mb-4">No se pudo cargar la información de la empresa o usuario. Verifica que el `localStorage` contenga `dataEmpresa` y `userData` con IDs válidos y que tu API esté funcionando.</p>
+        <button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200">Recargar Página</button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-xl border border-gray-200">
-      <h2 className="text-3xl font-bold mb-6 text-center text-blue-ui">Crear Ticket</h2>
-      <div className="mb-4 text-center text-lg"><p className="text-gray-700">ID Empresa: <strong className="text-blue-ui-dark">{eId || 'Cargando...'}</strong></p><p className="text-gray-700">ID Usuario: <strong className="text-blue-ui-dark">{uId || 'Cargando...'}</strong></p></div>
-      {msg && (<div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert"><strong className="font-bold">¡Éxito! </strong><span>{msg}</span></div>)}
-      {err && (<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert"><strong className="font-bold">¡Error! </strong><span>{err}</span></div>)}
-      <form onSubmit={hS}>
-        <hr className="my-6 border-t border-gray-300" /><h3 className="text-2xl font-semibold mb-4 text-blue-ui">Detalles</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div><label htmlFor="pDV" className="block text-gray-700 text-sm font-bold mb-2">Punto Venta:</label><select id="pDV" name="puntoDeVenta" value={fI.puntoDeVenta} onChange={hFIC} className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" disabled={pDV.length === 0}>{pDV.length === 0 ? (<option value="">Cargando puntos...</option>) : (pDV.map(p => (<option key={p._id} value={p.nombre}>{p.nombre}</option>)))}</select>{pDV.length === 0 && !err && (<p className="text-sm text-gray-500 mt-1">Asegure puntos de venta.</p>)}</div>
-          <div><label htmlFor="tC" className="block text-gray-700 text-sm font-bold mb-2">Tipo Comprobante:</label><input type="text" id="tC" name="tipoComprobante" value={fI.tipoComprobante} onChange={hFIC} className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"/></div>
-          <div><label htmlFor="fHT" className="block text-gray-700 text-sm font-bold mb-2">Fecha y Hora:</label><input type="datetime-local" id="fHT" name="fechaHoraTicket" value={fHT} onChange={e => setFHT(e.target.value)} className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"/></div>
+      <h2 className="text-3xl font-bold mb-6 text-center text-blue-700">Generar Facturas/Tickets</h2>
+      <hr className="my-6 border-t border-gray-300" />
+
+      {/* Información de la Empresa y Usuario */}
+      <div className="mb-4 p-3 bg-green-50 border-l-4 border-green-400 text-green-700 rounded">
+        <p className="text-sm"><strong>Empresa:</strong> {empresaNombre || 'Cargando...'}</p>
+        <p className="text-sm"><strong>ID Empresa:</strong> {empresaId || 'Cargando...'}</p>
+        <p className="text-sm"><strong>ID Usuario:</strong> {userId || 'Cargando...'}</p>
+      </div>
+
+      {/* Mensajes de feedback */}
+      {message && (<div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert"><strong className="font-bold">¡Éxito! </strong><span>{message}</span></div>)}
+      {errorMessage && (<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert"><strong className="font-bold">¡Error! </strong><span>{errorMessage}</span></div>)}
+
+      <form onSubmit={handleSubmit}>
+        {/* Selector de Punto de Venta */}
+        <div className="mb-5">
+          <label htmlFor="puntoVentaSelect" className="block text-gray-700 text-sm font-bold mb-2">Punto de Venta:</label>
+          <select
+            id="puntoVentaSelect"
+            value={puntoSeleccionado}
+            onChange={(e) => setPuntoSeleccionado(e.target.value)}
+            disabled={loading || puntosDeVenta.length === 0}
+            className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          >
+            <option value="">-- Selecciona un punto --</option>
+            {puntosDeVenta.map((p) => (
+              <option key={p._id} value={p._id}>{p.nombre || `Punto ID: ${p._id}`}</option>
+            ))}
+          </select>
+          {puntosDeVenta.length === 0 && !loading && <p className="text-sm text-yellow-600 mt-1">No hay puntos de venta disponibles. Configura uno en tu panel.</p>}
         </div>
 
-        <hr className="my-6 border-t border-gray-300" /><h3 className="text-2xl font-semibold mb-4 text-blue-ui">Agregar Ítem</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 items-end">
-          <div><label htmlFor="c" className="block text-gray-700 text-sm font-bold mb-2">Código:</label><input type="text" id="c" name="codigo" value={nI.codigo} onChange={hNIC} className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>
-          <div className="md:col-span-2 lg:col-span-1"><label htmlFor="d" className="block text-gray-700 text-sm font-bold mb-2">Descripción:*</label><input type="text" id="d" name="descripcion" value={nI.descripcion} onChange={hNIC} className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>
-          <div><label htmlFor="q" className="block text-gray-700 text-sm font-bold mb-2">Cantidad:*</label><input type="number" id="q" name="cantidad" value={nI.cantidad} onChange={hNIC} min="1" className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>
-          <div><label htmlFor="pU" className="block text-gray-700 text-sm font-bold mb-2">Precio Unitario:</label><input type="number" id="pU" name="precioUnitario" value={nI.precioUnitario} onChange={hNIC} min="0.00" step="0.01" className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>
-          <button type="button" onClick={hAI} className="bg-blue-700 hover:bg-blue-700-dark text-white font-bold py-2 px-4 rounded">Agregar</button>
+        {/* Input de Código de Barras y Botón */}
+        <div className="mb-6">
+          <label htmlFor="codBarraInput" className="block text-gray-700 text-sm font-bold mb-2">Código de Barras:</label>
+          <div className="flex gap-3">
+            <input
+              ref={inputRef}
+              type="text"
+              id="codBarraInput"
+              value={codBarra}
+              onChange={(e) => setCodBarra(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Escanea o ingresa el código"
+              disabled={loading || !puntoSeleccionado}
+              className="flex-grow shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
+              autoFocus
+            />
+            <button
+              type="button" 
+              onClick={handleSearchAndAddItem}
+              disabled={loading || !puntoSeleccionado || !codBarra.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 whitespace-nowrap"
+            >
+              {loading && codBarra.trim() ? 'Buscando...' : 'Agregar Producto'}
+            </button>
+          </div>
         </div>
 
-        <h3 className="text-2xl font-semibold mb-4 text-blue-ui">Ítems:</h3>
-        {items.length === 0 ? (<p className="text-center text-gray-600 mb-6">No hay ítems. Agregue productos.</p>) : (
-          <ul className="space-y-4 mb-6">
-            {items.map((x, i) => (<li key={i} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg shadow-sm bg-gray-500"><div><p className="text-lg font-medium text-gray-800"><strong>{x.descripcion || '[Sin Descripción]'}</strong> ({x.codigo || '[Sin Código]'})</p><p className="text-gray-600">Cantidad: {x.cantidad} x ${x.precioUnitario.toFixed(2)} = <strong className="text-blue-ui">${x.totalItem.toFixed(2)}</strong></p></div><button type="button" onClick={() => hRI(i)} className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Eliminar</button></li>))}
-          </ul>
-        )}
+        {/* Listado de Productos en la Factura */}
+        <div className="mt-6 border-t pt-5">
+          <h3 className="text-2xl font-semibold mb-4 text-blue-700">Productos en Factura ({items.length})</h3>
+          {items.length === 0 ? (
+            <p className="text-center text-gray-600 py-5 bg-gray-50 rounded-lg">Aún no hay productos en la factura. ¡Empieza a escanear!</p>
+          ) : (
+            <ul className="space-y-4 mb-6">
+              {items.map((item, index) => (
+                <li key={item._id + '-' + index} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg shadow-sm bg-gray-50">
+                  <div className="flex-grow mb-2 sm:mb-0">
+                    <p className="text-lg font-medium text-gray-800">
+                      <strong>{item.producto}</strong>
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Categoría: {item.categoria} | Código: {item.codigoBarra} | Marca: {item.marca}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.cantidad}
+                      onChange={(e) => handleQuantityChange(index, e.target.value)}
+                      className="w-20 p-2 border rounded-md text-center text-gray-700"
+                    />
+                    <span className="font-bold text-lg text-blue-700">${(item.precio * item.cantidad).toFixed(2)}</span>
+                    <button type="button" onClick={() => handleRemoveItem(index)} className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full w-7 h-7 flex items-center justify-center text-sm transition duration-200">
+                      X
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="text-right p-4 bg-gray-100 rounded-b-lg mt-4">
+            <p className="text-xl font-bold text-blue-800">Total: ${totalPagar.toFixed(2)}</p>
+          </div>
+        </div>
+
         <hr className="my-6 border-t border-gray-300" />
 
-        <h3 className="text-2xl font-semibold mb-4 text-blue-ui">Totales:</h3>
-        <div className="text-lg mb-6"><p className="text-gray-700">Subtotal: <strong className="text-blue-ui">${s.toFixed(2)}</strong></p><p className="text-gray-700">Descuento: <strong className="text-blue-ui">${0.00.toFixed(2)}</strong></p><p className="text-2xl font-bold text-blue-ui-dark mt-2">Total a Pagar: ${tP.toFixed(2)}</p></div>
+        {/* Detalles Generales y Pago */}
+        <h3 className="text-2xl font-semibold mb-4 text-blue-700">Detalles de Venta y Pago</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label htmlFor="tipoComprobante" className="block text-gray-700 text-sm font-bold mb-2">Tipo Comprobante:</label>
+            <input type="text" id="tipoComprobante" name="tipoComprobante" value={invoiceDetails.tipoComprobante} onChange={handleInvoiceDetailsChange} className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+          </div>
+          <div>
+            <label htmlFor="invoiceDateTime" className="block text-gray-700 text-sm font-bold mb-2">Fecha y Hora:</label>
+            <input type="datetime-local" id="invoiceDateTime" name="invoiceDateTime" value={invoiceDateTime} onChange={e => setInvoiceDateTime(e.target.value)} className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+          </div>
+          <div>
+            <label htmlFor="metodoPago" className="block text-gray-700 text-sm font-bold mb-2">Método Pago:</label>
+            <select id="metodoPago" name="metodoPago" value={invoiceDetails.metodoPago} onChange={handleInvoiceDetailsChange} className="shadow border rounded w-full py-2 px-3 text-gray-700">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Tarjeta Débito">Débito</option>
+              <option value="Tarjeta Crédito">Crédito</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+            </select>
+          </div>
+          {invoiceDetails.metodoPago === "Efectivo" && (
+            <div>
+              <label htmlFor="montoRecibido" className="block text-gray-700 text-sm font-bold mb-2">Monto Recibido:</label>
+              <input type="number" id="montoRecibido" name="montoRecibido" value={invoiceDetails.montoRecibido} onChange={handleInvoiceDetailsChange} min="0" step="0.01" className="shadow border rounded w-full py-2 px-3 text-gray-700" />
+            </div>
+          )}
+        </div>
+        <p className="text-lg text-gray-700 mb-6">Cambio: <strong className="text-blue-700">${cambio.toFixed(2)}</strong></p>
         <hr className="my-6 border-t border-gray-300" />
 
-        <h3 className="text-2xl font-semibold mb-4 text-blue-ui">Pago:</h3>
+        {/* Cliente (Opcional) */}
+        <h3 className="text-2xl font-semibold mb-4 text-blue-700">Cliente (Opcional):</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div><label htmlFor="mP" className="block text-gray-700 text-sm font-bold mb-2">Método Pago:</label><select id="mP" name="metodoPago" value={fI.metodoPago} onChange={hFIC} className="shadow border rounded w-full py-2 px-3 text-gray-700"><option value="Efectivo">Efectivo</option><option value="Tarjeta Débito">Débito</option><option value="Tarjeta Crédito">Crédito</option><option value="Mercado Pago">Mercado Pago</option></select></div>
-          {fI.metodoPago === "Efectivo" && (<div><label htmlFor="mR" className="block text-gray-700 text-sm font-bold mb-2">Monto Recibido:</label><input type="number" id="mR" name="montoRecibido" value={fI.montoRecibido} onChange={hFIC} min="0" step="0.01" className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>)}
+          <div>
+            <label htmlFor="nombreCliente" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
+            <input type="text" id="nombreCliente" name="nombreCliente" value={invoiceDetails.nombreCliente} onChange={handleInvoiceDetailsChange} className="shadow border rounded w-full py-2 px-3 text-gray-700" />
+          </div>
+          <div>
+            <label htmlFor="dniCuitCliente" className="block text-gray-700 text-sm font-bold mb-2">DNI/CUIT:</label>
+            <input type="text" id="dniCuitCliente" name="dniCuitCliente" value={invoiceDetails.dniCuitCliente} onChange={handleInvoiceDetailsChange} className="shadow border rounded w-full py-2 px-3 text-gray-700" />
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="condicionIVACliente" className="block text-gray-700 text-sm font-bold mb-2">Condición IVA:</label>
+            <select id="condicionIVACliente" name="condicionIVACliente" value={invoiceDetails.condicionIVACliente} onChange={handleInvoiceDetailsChange} className="shadow border rounded w-full py-2 px-3 text-gray-700">
+              <option value="Consumidor Final">Final</option>
+              <option value="Responsable Inscripto">Inscripto</option>
+              <option value="Monotributista">Monotributista</option>
+              <option value="Exento">Exento</option>
+            </select>
+          </div>
         </div>
-        <p className="text-lg text-gray-700 mb-6">Cambio: <strong className="text-blue-ui">${c.toFixed(2)}</strong></p>
-        <hr className="my-6 border-t border-gray-300" />
 
-        <h3 className="text-2xl font-semibold mb-4 text-blue-ui">Cliente (Opcional):</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div><label htmlFor="nC" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label><input type="text" id="nC" name="nombreCliente" value={fI.nombreCliente} onChange={hFIC} className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>
-          <div><label htmlFor="dC" className="block text-gray-700 text-sm font-bold mb-2">DNI/CUIT:</label><input type="text" id="dC" name="dniCuitCliente" value={fI.dniCuitCliente} onChange={hFIC} className="shadow border rounded w-full py-2 px-3 text-gray-700"/></div>
-          <div className="md:col-span-2"><label htmlFor="cIVAC" className="block text-gray-700 text-sm font-bold mb-2">Condición IVA:</label><select id="cIVAC" name="condicionIVACliente" value={fI.condicionIVACliente} onChange={hFIC} className="shadow border rounded w-full py-2 px-3 text-gray-700"><option value="Consumidor Final">Final</option><option value="Responsable Inscripto">Inscripto</option><option value="Monotributista">Monotributista</option><option value="Exento">Exento</option></select></div>
+        {/* Observaciones */}
+        <div className="mb-6">
+          <label htmlFor="observaciones" className="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
+          <textarea id="observaciones" name="observaciones" value={invoiceDetails.observaciones} onChange={handleInvoiceDetailsChange} rows="3" className="shadow border rounded w-full py-2 px-3 text-gray-700 resize-y" />
         </div>
 
-        <div className="mb-6"><label htmlFor="obs" className="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label><textarea id="obs" name="observaciones" value={fI.observaciones} onChange={hFIC} rows="3" className="shadow border rounded w-full py-2 px-3 text-gray-700 resize-y"/></div>
-        <button type="submit" disabled={!eId || !uId || !items.length || !pDV.length || !fI.puntoDeVenta} className={`w-full py-3 px-6 rounded-lg text-white text-xl font-bold transition duration-300 ease-in-out ${(!eId || !uId || !items.length || !pDV.length || !fI.puntoDeVenta) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-700-dark'}`}>Crear Ticket</button>
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="submit"
+            disabled={!empresaId || !userId || items.length === 0 || !puntoSeleccionado || loading}
+            className={`py-3 px-6 rounded-lg text-white text-lg font-bold transition duration-300 ease-in-out ${(!empresaId || !userId || items.length === 0 || !puntoSeleccionado || loading) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+          >
+            Generar Factura / Ticket
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              Swal.fire({
+                title: '¿Limpiar Factura?',
+                text: "Estás a punto de borrar todos los productos agregados. Esta acción no se puede deshacer.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, limpiar',
+                cancelButtonText: 'No, cancelar'
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  setItems([]);
+                  Swal.fire('Factura Vaciada!', 'Todos los productos han sido removidos.', 'success');
+                  setCodBarra(''); 
+                  inputRef.current?.focus();
+                }
+              });
+            }}
+            disabled={items.length === 0 || loading}
+            className={`py-3 px-6 rounded-lg text-white text-lg font-bold transition duration-300 ease-in-out ${items.length === 0 || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'}`}
+          >
+            Limpiar Factura
+          </button>
+        </div>
       </form>
     </div>
   );

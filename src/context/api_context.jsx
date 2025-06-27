@@ -1,7 +1,7 @@
 import { createContext, useState } from "react";
 import { Login, Register, createEmpresaApi, addProduct,
      addPointSale, getPointSales, addVendedores, getProductsCompany,
-     createTiket, getTikets, getEmpresaDataId
+     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar
     } from "../api/coneccion";
 
 export const apiContext = createContext();
@@ -232,6 +232,27 @@ export const ApiProvider = ({ children }) => {
 
         }
     }
+ 
+    const getProductCodBarra = async (idEmpresa, puntoVenta, codBarra) =>{
+        try{
+            console.log("recibidos -> desde getcod", idEmpresa, puntoVenta, codBarra)
+            const respuesta = await getProductCodBarraApi(idEmpresa, puntoVenta, codBarra)
+            //console.log("respuesta desde getProductCodBarra -> ", respuesta)
+            return respuesta;
+        }catch(err){
+
+        }
+    }
+
+    const getTiketsPdf = async (idAdmin, ventaID) =>{
+        try{
+            const respuesta = await getTiketsPdfDescargar(idAdmin, ventaID);
+            console.log(respuesta)
+            return respuesta
+        }catch(err){
+
+        }
+    }
 
     return (
         <apiContext.Provider value={{
@@ -246,6 +267,8 @@ export const ApiProvider = ({ children }) => {
             getProductsEmpresa,
             getTiketsContext,createTiketContext,
             getCompanyID,
+            getProductCodBarra,
+            getTiketsPdf,
             isAuthenticated,
             userData,
             companyData

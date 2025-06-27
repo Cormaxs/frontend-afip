@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Define la URL base de tu backend
 // Puedes cambiarla por 'http://localhost:3000/api/v1 https://api.facstock.com' para producción o desarrollo remoto
-const URL_BACKEND = 'https://api.facstock.com/api/v1'; 
+const URL_BACKEND = 'http://localhost:3000/api/v1'; 
 
 // --- Función de manejo de errores centralizada ---
 // Esto ayuda a evitar repetir el mismo bloque try/catch y console.error
@@ -154,5 +154,51 @@ export async function getEmpresaDataId(idEmpresa) {
         return response.data;
     } catch (error) {
         handleError(error, "getPointSales");
+    }
+}
+
+
+export async function getProductCodBarraApi(idEmpresa, puntoDeVenta, codBarra) {
+    try {
+        console.log(`Buscando producto por código de barras para empresa: ${idEmpresa}, punto de venta: ${puntoDeVenta} codigo de barras : ${codBarra}`);
+        console.log(`ruta -> ${URL_BACKEND}/products/get/codBarra/${idEmpresa}/${puntoDeVenta}`);
+        // Realiza una solicitud POST, enviando el codBarra en el cuerpo
+        const response = await axios.get(`${URL_BACKEND}/products/get/${codBarra}/${idEmpresa}/${puntoDeVenta}`
+        );
+        
+        console.log("Producto recibido:", response.data);
+        return response; // Devuelve los datos del producto
+    } catch (error) {
+        handleError(error, "getProductCodBarra");
+    }
+}
+
+
+export async function getTiketsPdfDescargar(idAdmin, idVenta) {
+    try {
+        const response = await axios.get(`${URL_BACKEND}/archivos/descargar/${idAdmin}/${idVenta}`, {
+            responseType: 'blob' // ¡IMPORTANTE! Indica que la respuesta es un blob (archivo binario)
+        });
+
+        // Crear una URL para el blob recibido
+        const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+
+        // Opción 1: Abrir el PDF en una nueva pestaña
+        window.open(pdfUrl, '_blank');
+
+        // Opción 2: Descargar automáticamente el PDF
+        /* 
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pdfUrl;
+        downloadLink.download = `ticket_${idVenta}.pdf`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        */
+
+        return pdfUrl; // Puedes devolver la URL si necesitas usarla después
+    } catch (error) {
+        handleError(error, "getTiketsPdfDescargar");
     }
 }

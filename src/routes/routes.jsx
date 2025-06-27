@@ -14,6 +14,8 @@ import {GetProductsCompany} from "../pages/productos/list_products.jsx";
 import {CreateTikets} from "../pages/tikets/create-tiket.jsx";
 import {VerTiketsCompany} from "../pages/tikets/get-tikets.jsx";
 import {MetricasNegocio} from "../pages/metricas.jsx";
+import {GenerarVentas} from "../pages/ventas/generar-venta.jsx";
+
 
 export function LoadRoutes() {
     return(
@@ -38,7 +40,7 @@ export function LoadRoutes() {
             {/* Puntos de Venta */}
             <Route path="/add-puntoVenta" element={<AgregarPuntoVenta/>} />
             <Route path="/get-puntoVenta" element={<GetPointsSales/>} />
-            
+            <Route path="/ventas" element={<GenerarVentas/>} />
             {/* Personal */}
             <Route path="/add-vendedor" element={<AddVendedores/>} />
             <Route path="/usuarios" element="usuarios" />
