@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Define la URL base de tu backend
-// Puedes cambiarla por 'http://localhost:3000/api/v1 https://api.facstock.com' para producción o desarrollo remoto
-const URL_BACKEND = 'https://api.facstock.com/api/v1'; 
+// Puedes cambiarla por 'http://localhost:3000/api/v1 https://api.facstock.com/api/v1' para producción o desarrollo remoto
+const URL_BACKEND = ' https://api.facstock.com/api/v1'; 
 
 // --- Función de manejo de errores centralizada ---
 // Esto ayuda a evitar repetir el mismo bloque try/catch y console.error
@@ -106,10 +106,10 @@ export async function getPointSales(idEmpresa) {
     }
 }
 
-export async function getProductsCompany(idEmpresa) {
+export async function getProductsCompany(idEmpresa, page,limit ) {
     try {
         console.log(`Solicitando productos para ID de empresa: ${idEmpresa}`);
-        const response = await axios.get(`${URL_BACKEND}/products/${idEmpresa}`);
+        const response = await axios.get(`${URL_BACKEND}/products/${idEmpresa}?page=${page}&limit=${limit}`);
         console.log("Productos recibidos:", response.data);
         return response.data;
     } catch (error) {
@@ -139,8 +139,8 @@ export async function createTiket(ticketDetails, idUserParam, idEmpresaParam) {
     }
 }
 
-export async function getTikets(idEmpresa){
-    const response = await axios.get(`${URL_BACKEND}/tikets/get/all/${idEmpresa}`);
+export async function getTikets(idEmpresa, page, limit){
+    const response = await axios.get(`${URL_BACKEND}/tikets/get/all/${idEmpresa}?page=${page}&limit=${limit}`);
     return response.data;
 }
 

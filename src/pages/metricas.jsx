@@ -1,288 +1,150 @@
-import React, { useContext, useEffect, useState, useCallback } from "react";
-import { apiContext } from "../context/api_context.jsx"; // ¡Importante: usa el contexto aquí!
+import React, { useContext, useEffect, useState } from "react";
+import { apiContext } from "../context/api_context.jsx";
 
-// --- Helper para leer datos de localStorage de forma segura ---
-const getLocalStorageItem = (key) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : null;
-  } catch (e) {
-    console.error(`Error al leer ${key} de localStorage:`, e);
-    return null;
-  }
-};
+// --- Iconos SVG Minimalistas ---
+// Cada icono es un componente para mantener el código limpio.
+const TicketIcon = ({ className = "w-7 h-7" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path></svg>
+);
+const StoreIcon = ({ className = "w-7 h-7" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+);
+const ProductIcon = ({ className = "w-7 h-7" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+);
 
+// --- Componente Reutilizable para cada Tarjeta de Métrica ---
+const MetricCard = ({ icon, title, value, isLoading }) => (
+  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md">
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-medium text-gray-500">{title}</p>
+      <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
+        {icon}
+      </div>
+    </div>
+    <div className="mt-4">
+      {isLoading ? (
+        // Estado de Carga (Esqueleto)
+        <div className="h-8 w-3/5 bg-gray-200 rounded-md animate-pulse"></div>
+      ) : (
+        // Valor final
+        <p className="text-3xl font-bold text-gray-800">
+          {value ?? '0'}
+        </p>
+      )}
+    </div>
+  </div>
+);
+
+// --- Componente Principal ---
 export function MetricasNegocio() {
-  // ¡CORRECCIÓN AQUÍ! Asegúrate de inclui en la desestructuración
-  const { getProductsEmpresa, getTiketsContext, getPointsByCompany } = useContext(apiContext);
+  const { userData, getTiketsContext, getPointsByCompany, getProductsEmpresa } = useContext(apiContext);
+  
+  const [tikets, setTikets] = useState(null);
+  const [points, setPoints] = useState(null);
+  const [products, setProducts] = useState(null);
 
-  const [productos, setProductos] = useState([]);
-  const [tickets, setTickets] = useState([]);
-  const [puntosDeVenta, setPuntosDeVenta] = useState([]);
-  const [vendedores, setVendedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Obtenemos los IDs de empresa y usuario directamente en el cuerpo del componente
-  const empresa = getLocalStorageItem("dataEmpresa");
-  const usuario = getLocalStorageItem("userData");
-  const idEmpresa = empresa?._id;
-  const idUsuario = usuario?._id; // Asegúrate de que idUsuario se usa si es necesario por getTiketsContext
+  useEffect(() => {
+    // Usamos una variable para evitar actualizaciones si el componente ya se desmontó
+    let isMounted = true; 
 
-  // Utilizamos useCallback para memorizar la función fetchData y evitar re-renderizados innecesarios
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    if (!idEmpresa) {
-      setError("ID de empresa no encontrado. Por favor, asegúrate de que la sesión esté iniciada correctamente.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const [productsResult, ticketsResult, pointsResult, sellersResult] = await Promise.allSettled([
-        getProductsEmpresa(idEmpresa),
-        getTiketsContext(idEmpresa, idUsuario),
-        getPointsByCompany(idEmpresa),
-(idEmpresa), // Aquí se llama la función
-      ]);
-      
-      if (productsResult.status === 'fulfilled') {
-        setProductos(productsResult.value || []);
-      } else {
-        console.error("Error al obtener productos:", productsResult.reason);
+    const fetchAllData = async () => {
+      if (!userData?.empresa) {
+        setLoading(false);
+        return;
       }
 
-      if (ticketsResult.status === 'fulfilled') {
-        setTickets(ticketsResult.value || []);
-      } else {
-        console.error("Error al obtener tickets:", ticketsResult.reason);
-      }
+      try {
+        const [
+          datosDeTikets, 
+          datosDePoints, 
+          datosDeProducts
+        ] = await Promise.all([
+          getTiketsContext(userData.empresa),
+          getPointsByCompany(userData.empresa),
+          getProductsEmpresa(userData.empresa)
+        ]);
 
-      if (pointsResult.status === 'fulfilled') {
-        setPuntosDeVenta(pointsResult.value || []);
-      } else {
-        console.error("Error al obtener puntos de venta:", pointsResult.reason);
-      }
+        if (isMounted) {
+          setTikets(datosDeTikets);
+          setPoints(datosDePoints);
+          setProducts(datosDeProducts);
+        }
 
-      if (sellersResult.status === 'fulfilled') {
-        setVendedores(sellersResult.value || []);
-      } else {
-        console.error("Error al obtener vendedores:", sellersResult.reason);
-      }
-
-      const rejectedResults = [productsResult, ticketsResult, pointsResult, sellersResult].filter(
-        (result) => result.status === 'rejected'
-      );
-
-      if (rejectedResults.length > 0) {
-        if (rejectedResults.length === 4) {
-          setError("Hubo un error al cargar todos los datos. Intenta de nuevo más tarde.");
-        } else {
-          setError("Algunos datos no pudieron cargarse. Revisa tu conexión o intenta más tarde.");
+      } catch (err) {
+        console.error("Error al obtener los datos de las métricas:", err);
+        if (isMounted) {
+          setError("No se pudieron cargar las métricas. Intente de nuevo más tarde.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
+    };
 
-    } catch (err) {
-      console.error("Error general en fetchData:", err);
-      setError("Hubo un error inesperado al cargar los datos. Intenta de nuevo más tarde.");
-    } finally {
-      setLoading(false);
+    fetchAllData();
+
+    // Función de limpieza para evitar memory leaks
+    return () => {
+      isMounted = false;
+    };
+
+  }, [userData?.empresa, getTiketsContext, getPointsByCompany, getProductsEmpresa]);
+
+  // Creamos un array con la configuración de las métricas para renderizarlo dinámicamente
+  const metricsData = [
+    {
+      title: "Total de Tickets",
+      value: tikets?.pagination?.totalTickets,
+      icon: <TicketIcon />
+    },
+    {
+      title: "Puntos de Venta Activos",
+      value: points?.pagination?.totalPuntosDeVenta,
+      icon: <StoreIcon />
+    },
+    {
+      title: "Productos Registrados",
+      value: products?.pagination?.totalProducts,
+      icon: <ProductIcon />
     }
-  }, [idEmpresa, idUsuario, getProductsEmpresa, getTiketsContext, getPointsByCompany]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // --- Lógica de cálculo de métricas ---
-  const totalProductosEnStock = productos.reduce((sum, product) => sum + (product.stock || 0), 0);
-  const totalMontoTickets = tickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
-  const cantidadTicketsEmitidos = tickets.length;
-  const cantidadPuntosDeVenta = puntosDeVenta.length;
-  const cantidadVendedoresActivos = vendedores.length;
-  const productosBajoStock = productos.filter(product => product.stock < (product.minStockAlert || 5)).length;
-
-
-  // --- Renderizado Condicional ---
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f9fafb] flex justify-center items-center">
-        <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-md">
-          <svg className="animate-spin h-10 w-10 text-[#3f64ec] mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="text-lg text-gray-600">Cargando métricas de negocio...</p>
-        </div>
-      </div>
-    );
-  }
+  ];
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#f9fafb] flex justify-center items-center">
-        <div className="p-6 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md text-center">
-          <p className="text-xl font-bold mb-2">¡Error al cargar!</p>
-          <p className="text-lg">{error}</p>
-          <p className="text-sm mt-2">Por favor, verifica tu conexión o intenta de nuevo más tarde.</p>
-        </div>
+      <div className="max-w-4xl mx-auto p-6 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-xl mt-10">
+        <p className="text-center font-bold">¡Ha ocurrido un error!</p>
+        <p className="text-center mt-2">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] py-8 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-8 text-center leading-tight">
-        Métricas del Negocio
-      </h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-        <MetricCard
-          title="Productos en Inventario"
-          value={totalProductosEnStock}
-          description="Unidades disponibles en tu inventario."
-          icon={<svg className="w-10 h-10 text-[#3f64ec]" fill="currentColor" viewBox="0 0 24 24"><path d="M7 3H4a1 1 0 00-1 1v4a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1zm0 8H4a1 1 0 00-1 1v4a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 00-1-1zm0 8H4a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1v-3a1 1 0 00-1-1zM11 3h3a1 1 0 001-1V.5a.5.5 0 00-.5-.5h-3a.5.5 0 00-.5.5V2a1 1 0 001 1zm0 8h3a1 1 0 001-1v-1a1 1 0 00-1-1h-3a1 1 0 00-1 1v1a1 1 0 001 1zm0 8h3a1 1 0 001-1v-1a1 1 0 00-1-1h-3a1 1 0 00-1 1v1a1 1 0 001 1zM18 3h3a1 1 0 001-1V.5a.5.5 0 00-.5-.5h-3a.5.5 0 00-.5.5V2a1 1 0 001 1zm0 8h3a1 1 0 001-1v-1a1 1 0 00-1-1h-3a1 1 0 00-1 1v1a1 1 0 001 1zm0 8h3a1 1 0 001-1v-1a1 1 0 00-1-1h-3a1 1 0 00-1 1v1a1 1 0 001 1z" clipRule="evenodd"></path></svg>}
-          borderColor="border-[#3f64ec]"
-        />
-
-        <MetricCard
-          title="Tickets Emitidos"
-          value={cantidadTicketsEmitidos}
-          description="Total de transacciones de ventas registradas."
-          icon={<svg className="w-10 h-10 text-green-600" fill="currentColor" viewBox="0 0 24 24"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 012.293 13H3a1 1 0 001 1h12a1 1 0 001-1h.707l-.707-.707V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path></svg>}
-          borderColor="border-green-600"
-        />
-
-        <MetricCard
-          title="Ventas Totales"
-          value={`$${totalMontoTickets.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          description="Monto acumulado de todas las ventas."
-          icon={<svg className="w-10 h-10 text-purple-600" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>}
-          borderColor="border-purple-600"
-        />
-
-        <MetricCard
-          title="Puntos de Venta"
-          value={cantidadPuntosDeVenta}
-          description="Locales o sucursales registrados."
-          icon={<svg className="w-10 h-10 text-yellow-600" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M5 4a2 2 0 012-2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm2 0h10v16H7V4zm4 4a1 1 0 100 2h2a1 1 0 100-2h-2zm0 4a1 1 0 100 2h2a1 1 0 100-2h-2z" clipRule="evenodd"></path></svg>}
-          borderColor="border-yellow-600"
-        />
-
-        <MetricCard
-          title="Vendedores Activos"
-          value={cantidadVendedoresActivos}
-          description="Número de vendedores registrados en tu empresa."
-          icon={<svg className="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>}
-          borderColor="border-blue-600"
-        />
-
-        <MetricCard
-          title="Productos Bajo Stock"
-          value={productosBajoStock}
-          description="Artículos con pocas unidades disponibles."
-          icon={<svg className="w-10 h-10 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M2.293 7.293a1 1 0 010-1.414L5 3.586V2a1 1 0 012 0v1.586l2.707 2.707a1 1 0 01-1.414 1.414L7 6.414V8a1 1 0 01-2 0V6.414L2.293 9.707a1 1 0 01-1.414-1.414l3-3a1 1 0 011.414 0zM12 20a8 8 0 100-16 8 8 0 000 16zm-1-10a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2v-2z" clipRule="evenodd"></path></svg>}
-          borderColor="border-red-600"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-5">Últimos Productos</h2>
-          {productos.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Producto
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stock
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Precio
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {productos.slice(0, 5).map(product => (
-                    <tr key={product._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{product.nombre}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock < (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                          {product.stock}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${product.precio?.toFixed(2) || 'N/A'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">No hay productos registrados para mostrar.</p>
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-5">Últimos Tickets Emitidos</h2>
-          {tickets.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nro. Ticket
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {tickets.slice(0, 5).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(ticket => (
-                    <tr key={ticket._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        #{ticket.numero}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(ticket.fecha).toLocaleDateString('es-AR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${ticket.total?.toFixed(2) || 'N/A'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">No hay tickets emitidos para mostrar.</p>
-          )}
+    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-md text-gray-600">
+            Bienvenido, {userData?.nombre}. Aquí tienes un resumen de la actividad de tu negocio.
+          </p>
+        </header>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {metricsData.map((metric) => (
+            <MetricCard 
+              key={metric.title}
+              icon={metric.icon}
+              title={metric.title}
+              value={metric.value}
+              isLoading={loading}
+            />
+          ))}
         </div>
       </div>
     </div>
   );
 }
-
-// --- Componente auxiliar para las tarjetas de métricas ---
-const MetricCard = ({ title, value, description, icon, borderColor }) => (
-  <div className={`bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform duration-300 ease-in-out border-l-4 ${borderColor}`}>
-    <div className="flex items-center justify-between mb-4">
-      <h2 className="text-xl font-semibold text-gray-700">{title}</h2>
-      {icon}
-    </div>
-    <p className="text-5xl font-bold text-gray-900 mb-2">{value}</p>
-    <p className="text-gray-500">{description}</p>
-  </div>
-);

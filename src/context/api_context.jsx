@@ -168,10 +168,10 @@ export const ApiProvider = ({ children }) => {
         }
     };
 
-    const getProductsEmpresa = async (idEmpresa) => {
+    const getProductsEmpresa = async (idEmpresa, page, limit) => {
         try {
           console.log(`API Context: Obteniendo productos para empresa ID: ${idEmpresa}`);
-          const productos = await getProductsCompany(idEmpresa);
+          const productos = await getProductsCompany(idEmpresa, page, limit);
           console.log("API Context: Productos obtenidos, respuesta:", productos);
           return productos; // Devuelve los productos
         } catch (error) {
@@ -214,10 +214,10 @@ export const ApiProvider = ({ children }) => {
         }
     };
 
-    const getTiketsContext = async (id) =>{
+    const getTiketsContext = async (id, page, limit) =>{
         try{
-            const respuesta = await getTikets(id);
-            console.log(respuesta)
+            const respuesta = await getTikets(id, page, limit);
+            console.log("desde context ",respuesta)
             return respuesta;
         }catch(err){
 
@@ -265,7 +265,8 @@ export const ApiProvider = ({ children }) => {
             getPointsByCompany,
             createVendedor, // Asegúrate de que el nombre aquí coincida con la función definida arriba (createVendedor)
             getProductsEmpresa,
-            getTiketsContext,createTiketContext,
+            getTiketsContext,
+            createTiketContext,
             getCompanyID,
             getProductCodBarra,
             getTiketsPdf,

@@ -3,22 +3,25 @@ import { apiContext } from "../../context/api_context"; // Asegúrate de que est
 import Swal from 'sweetalert2'; // Import SweetAlert2
 
 export function CreateTikets() {
-  const { createTiketContext, getPointsByCompany, getProductCodBarra, getTiketsPdf } = useContext(apiContext); // Usamos getTiketsPdf
+  const { createTiketContext, getPointsByCompany, getProductCodBarra, getTiketsPdf , userData , companyData } = useContext(apiContext);
 
   // --- Estados del Componente ---
   const [empresaId, setEmpresaId] = useState(null);
-  const [empresaNombre, setEmpresaNombre] = useState(''); 
-  const [userId, setUserId] = useState(null); 
-  const [puntosDeVenta, setPuntosDeVenta] = useState([]); 
-  const [puntoSeleccionado, setPuntoSeleccionado] = useState(''); 
-  
-  const [codBarra, setCodBarra] = useState(''); 
-  const [items, setItems] = useState([]); 
-  
+  const [empresaNombre, setEmpresaNombre] = useState('');
+  const [userId, setUserId] = useState(null);
+
+  // Estados para Puntos de Venta con paginación
+  const [puntosDeVenta, setPuntosDeVenta] = useState([]);
+  const [puntoSeleccionado, setPuntoSeleccionado] = useState('');
+  const [puntosDeVentaLoading, setPuntosDeVentaLoading] = useState(true);
+
+  const [codBarra, setCodBarra] = useState('');
+  const [items, setItems] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [errorConfig, setErrorConfig] = useState(false);
-  const [message, setMessage] = useState(''); 
-  const [errorMessage, setErrorMessage] = useState(''); 
+  const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Invoice form details
   const [invoiceDetails, setInvoiceDetails] = useState({
@@ -30,28 +33,27 @@ export function CreateTikets() {
     condicionIVACliente: "Consumidor Final",
     observaciones: ""
   });
-  const [invoiceDateTime, setInvoiceDateTime] = useState(''); 
+  const [invoiceDateTime, setInvoiceDateTime] = useState('');
 
-  const inputRef = useRef(null); 
+  const inputRef = useRef(null);
 
   // --- Efecto: Inicialización de datos al cargar el componente ---
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      setErrorConfig(false); 
+      setErrorConfig(false);
       try {
-        const storedEmpresaData = JSON.parse(localStorage.getItem('dataEmpresa') || '{}');
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+   
 
-        if (!storedEmpresaData?._id) {
+        if (!companyData?._id) {
           setErrorConfig(true);
           Swal.fire({ icon: 'error', title: 'Error de Configuración', text: 'ID de empresa no encontrado en localStorage. Asegúrate de iniciar sesión.' });
           setLoading(false);
           return;
         }
-        setEmpresaId(storedEmpresaData._id);
-        setEmpresaNombre(storedEmpresaData.nombreEmpresa || storedEmpresaData.nombre || 'Nombre de Empresa Desconocido');
-        
+        setEmpresaId(companyData._id);
+        setEmpresaNombre(companyData.nombreEmpresa || companyData.nombre || 'Nombre de Empresa Desconocido');
+
         if (!userData?._id) {
           setErrorConfig(true);
           Swal.fire({ icon: 'error', title: 'Error de Configuración', text: 'ID de usuario no encontrado en localStorage. Asegúrate de iniciar sesión.' });
@@ -60,17 +62,37 @@ export function CreateTikets() {
         }
         setUserId(userData._id);
 
-        const points = await getPointsByCompany(storedEmpresaData._id);
-        if (points && points.length > 0) {
-          setPuntosDeVenta(points);
-          setPuntoSeleccionado(points[0]._id); 
-          inputRef.current?.focus(); 
+        // --- MANEJO DE PAGINACIÓN PARA PUNTOS DE VENTA ---
+        setPuntosDeVentaLoading(true);
+        let allPoints = [];
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Bucle para obtener todas las páginas de puntos de venta
+        do {
+          const response = await getPointsByCompany(companyData._id, currentPage, 10); // Asumimos un límite de 10 por página
+          if (response && response.puntosDeVenta) {
+            allPoints = [...allPoints, ...response.puntosDeVenta];
+            totalPages = response.totalPages;
+            currentPage++;
+          } else {
+            // Si la respuesta no tiene el formato esperado, rompemos el bucle
+            break;
+          }
+        } while (currentPage <= totalPages);
+
+        if (allPoints.length > 0) {
+          setPuntosDeVenta(allPoints);
+          setPuntoSeleccionado(allPoints[0]._id); // Selecciona el primer punto de venta por defecto
+          inputRef.current?.focus();
         } else {
           Swal.fire({ icon: 'info', title: 'Sin Puntos de Venta', text: 'No se encontraron puntos de venta asociados a tu empresa. Configura al menos uno.' });
           setPuntosDeVenta([]);
           setPuntoSeleccionado('');
         }
-        
+        setPuntosDeVentaLoading(false);
+        // --- FIN MANEJO PAGINACIÓN ---
+
         const now = new Date();
         setInvoiceDateTime(`${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}T${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
 
@@ -83,14 +105,16 @@ export function CreateTikets() {
       }
     };
     initData();
-  }, [getPointsByCompany]); 
+  }, [getPointsByCompany]); // La dependencia se mantiene igual
+
+  // --- El resto del código permanece igual ---
 
   // --- Calculated Totals ---
   const { subtotal, totalPagar, cambio } = useMemo(() => {
     const calculatedSubtotal = items.reduce((acc, item) => acc + (parseFloat(item.precio) * item.cantidad), 0);
-    const calculatedTotalPagar = calculatedSubtotal; 
-    const calculatedCambio = invoiceDetails.metodoPago === 'Efectivo' && invoiceDetails.montoRecibido > calculatedTotalPagar 
-      ? invoiceDetails.montoRecibido - calculatedTotalPagar 
+    const calculatedTotalPagar = calculatedSubtotal;
+    const calculatedCambio = invoiceDetails.metodoPago === 'Efectivo' && invoiceDetails.montoRecibido > calculatedTotalPagar
+      ? invoiceDetails.montoRecibido - calculatedTotalPagar
       : 0;
     return { subtotal: calculatedSubtotal, totalPagar: calculatedTotalPagar, cambio: calculatedCambio };
   }, [items, invoiceDetails.montoRecibido, invoiceDetails.metodoPago]);
@@ -116,41 +140,39 @@ export function CreateTikets() {
     setLoading(true);
     try {
       const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, codBarra.trim());
-      
-      const product = productResponse?.data || productResponse; 
 
-      if (product && product._id && product.producto && product.precioLista !== undefined) { 
+      const product = productResponse?.data || productResponse;
+
+      if (product && product._id && product.producto && product.precioLista !== undefined) {
         const existingItemIndex = items.findIndex(item => item._id === product._id);
 
         if (existingItemIndex > -1) {
           const updatedItems = [...items];
           updatedItems[existingItemIndex].cantidad += 1;
           setItems(updatedItems);
-          //Swal.fire('Éxito', `Cantidad de **${product.producto}** actualizada a ${updatedItems[existingItemIndex].cantidad}.`, 'success');
         } else {
-          setItems(prevItems => [...prevItems, { 
-            _id: product._id, 
-            idProduct: product._id, 
-            producto: product.producto, 
-            precio: parseFloat(product.precioLista), 
+          setItems(prevItems => [...prevItems, {
+            _id: product._id,
+            idProduct: product._id,
+            producto: product.producto,
+            precio: parseFloat(product.precioLista),
             cantidad: 1,
-            categoria: product.categoria || 'N/A', 
-            codigoBarra: product.codigoBarra || 'N/A', 
-            marca: product.marca || 'N/A' 
+            categoria: product.categoria || 'N/A',
+            codigoBarra: product.codigoBarra || 'N/A',
+            marca: product.marca || 'N/A'
           }]);
-          //Swal.fire('Éxito', `**${product.producto}** agregado a la factura.`, 'success');
         }
       } else {
         Swal.fire('Info', 'Producto no encontrado o datos incompletos. Revisa la consola para más detalles.', 'info');
-        console.warn('Invalid product received or missing properties (_id, producto, precioLista expected):', product); 
+        console.warn('Invalid product received or missing properties (_id, producto, precioLista expected):', product);
       }
     } catch (error) {
       console.error('Error searching or adding product:', error);
       Swal.fire('Error', `Fallo al buscar producto: ${error.message || 'Error desconocido'}`, 'error');
     } finally {
       setLoading(false);
-      setCodBarra(''); 
-      inputRef.current?.focus(); 
+      setCodBarra('');
+      inputRef.current?.focus();
     }
   };
 
@@ -158,12 +180,12 @@ export function CreateTikets() {
   const handleQuantityChange = (index, value) => {
     let newQuantity = parseInt(value, 10);
     if (isNaN(newQuantity) || newQuantity < 1) {
-      newQuantity = 1; 
+      newQuantity = 1;
       Swal.fire('Atención', 'La cantidad mínima es 1.', 'warning');
     }
 
-    setItems(prevItems => 
-      prevItems.map((item, i) => 
+    setItems(prevItems =>
+      prevItems.map((item, i) =>
         i === index ? { ...item, cantidad: newQuantity } : item
       )
     );
@@ -192,24 +214,24 @@ export function CreateTikets() {
   // Handle Enter key press on barcode input
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); 
+      e.preventDefault();
       handleSearchAndAddItem();
     }
   };
 
   // Handle ticket submission
   const handleSubmit = async e => {
-    e.preventDefault(); 
-    setMessage(''); 
+    e.preventDefault();
+    setMessage('');
     setErrorMessage('');
 
     if (!empresaId) { setErrorMessage("Error: ID empresa no disponible."); return; }
     if (!userId) { setErrorMessage("Error: ID usuario no disponible."); return; }
     if (!items.length) { Swal.fire('Atención', "Error: Agrega al menos un ítem a la factura.", 'warning'); return; }
     if (!puntoSeleccionado) { setErrorMessage("Error: Selecciona un punto de venta."); return; }
-    if (invoiceDetails.metodoPago === 'Efectivo' && invoiceDetails.montoRecibido < totalPagar) { 
-      Swal.fire('Error', `El monto recibido ($${invoiceDetails.montoRecibido.toFixed(2)}) es menor al total a pagar ($${totalPagar.toFixed(2)}).`, 'error'); 
-      return; 
+    if (invoiceDetails.metodoPago === 'Efectivo' && invoiceDetails.montoRecibido < totalPagar) {
+      Swal.fire('Error', `El monto recibido ($${invoiceDetails.montoRecibido.toFixed(2)}) es menor al total a pagar ($${totalPagar.toFixed(2)}).`, 'error');
+      return;
     }
 
     Swal.fire({
@@ -226,56 +248,54 @@ export function CreateTikets() {
         try {
           const salesDate = new Date(invoiceDateTime);
           const formattedSalesDate = salesDate.toLocaleString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-          
-          const salesId = `VK${salesDate.getFullYear().toString().slice(-2)}${(salesDate.getMonth() + 1).toString().padStart(2, '0')}${salesDate.getDate().toString().padStart(2, '0')}-${(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(-8) : Math.floor(Math.random() * 100000000).toString().padStart(8, '0'))}`;
-          const invoiceNumber = `0001-${Math.floor(Math.random() * 9000) + 1000}`; 
 
-          const ticketData = { 
-            ventaId: salesId, 
-            fechaHora: formattedSalesDate, 
-            puntoDeVenta: puntosDeVenta.find(p => p._id === puntoSeleccionado)?.nombre || puntoSeleccionado, 
-            tipoComprobante: invoiceDetails.tipoComprobante, 
-            numeroComprobante: invoiceNumber, 
+          const salesId = `VK${salesDate.getFullYear().toString().slice(-2)}${(salesDate.getMonth() + 1).toString().padStart(2, '0')}${salesDate.getDate().toString().padStart(2, '0')}-${(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(-8) : Math.floor(Math.random() * 100000000).toString().padStart(8, '0'))}`;
+          const invoiceNumber = `0001-${Math.floor(Math.random() * 9000) + 1000}`;
+
+          const ticketData = {
+            ventaId: salesId,
+            fechaHora: formattedSalesDate,
+            puntoDeVenta: puntosDeVenta.find(p => p._id === puntoSeleccionado)?.nombre || puntoSeleccionado,
+            tipoComprobante: invoiceDetails.tipoComprobante,
+            numeroComprobante: invoiceNumber,
             items: items.map(item => ({
-              idProduct: item.idProduct, 
-              codigo: item.codigoBarra, 
+              idProduct: item.idProduct,
+              codigo: item.codigoBarra,
               descripcion: item.producto,
               cantidad: item.cantidad,
               precioUnitario: item.precio,
               totalItem: (item.cantidad * item.precio)
-            })), 
-            totales: { 
-              subtotal: subtotal, 
-              descuento: 0.00, 
-              totalPagar: totalPagar 
-            }, 
-            pago: { 
-              metodo: invoiceDetails.metodoPago, 
-              montoRecibido: invoiceDetails.montoRecibido, 
-              cambio: cambio 
-            }, 
-            cliente: (invoiceDetails.nombreCliente || invoiceDetails.dniCuitCliente) ? { 
-              nombre: invoiceDetails.nombreCliente, 
-              dniCuit: invoiceDetails.dniCuitCliente, 
-              condicionIVA: invoiceDetails.condicionIVACliente 
-            } : undefined, 
-            observaciones: invoiceDetails.observaciones, 
-            cajero: "Cajero Test", 
-            sucursal: "Sucursal Principal", 
-            idUsuario: userId, 
-            idEmpresa: empresaId 
+            })),
+            totales: {
+              subtotal: subtotal,
+              descuento: 0.00,
+              totalPagar: totalPagar
+            },
+            pago: {
+              metodo: invoiceDetails.metodoPago,
+              montoRecibido: invoiceDetails.montoRecibido,
+              cambio: cambio
+            },
+            cliente: (invoiceDetails.nombreCliente || invoiceDetails.dniCuitCliente) ? {
+              nombre: invoiceDetails.nombreCliente,
+              dniCuit: invoiceDetails.dniCuitCliente,
+              condicionIVA: invoiceDetails.condicionIVACliente
+            } : undefined,
+            observaciones: invoiceDetails.observaciones,
+            cajero: userData.username,
+            sucursal: puntosDeVenta.find(p => p._id === puntoSeleccionado)?.nombre || puntoSeleccionado,
+            idUsuario: userId,
+            idEmpresa: empresaId
           };
 
-          const response = await createTiketContext(ticketData); 
+          const response = await createTiketContext(ticketData);
           Swal.fire('Venta Registrada!', `Ticket creado. ID: ${response.databaseRecordId}, Venta: ${response.ventaId}`, 'success');
-          
+
           // --- Generar y mostrar PDF del ticket ---
           if (response.ventaId && userId) {
             try {
-              // Llama a la función del contexto para obtener el Blob del PDF
-              // Usamos getTiketsPdf que está configurada para Axios y responseType: 'blob'
-              const pdfBlob = await getTiketsPdf(userId, response.ventaId); 
-             
+              const pdfBlob = await getTiketsPdf(userId, response.ventaId);
+
             } catch (pdfError) {
               console.error('Error al generar el PDF del ticket (frontend):', pdfError);
               Swal.fire('Error PDF', `Fallo al generar el PDF: ${pdfError.message || 'Error desconocido'}`, 'error');
@@ -289,20 +309,20 @@ export function CreateTikets() {
           setItems([]);
           setCodBarra('');
           setInvoiceDetails({ ...invoiceDetails, montoRecibido: 0.00, nombreCliente: "", dniCuitCliente: "", condicionIVACliente: "Consumidor Final", observaciones: "" });
-          const newNow = new Date(); 
+          const newNow = new Date();
           setInvoiceDateTime(`${newNow.getFullYear()}-${(newNow.getMonth() + 1).toString().padStart(2, '0')}-${newNow.getDate().toString().padStart(2, '0')}T${newNow.getHours().toString().padStart(2, '0')}:${newNow.getMinutes().toString().padStart(2, '0')}`);
           inputRef.current?.focus();
-        } catch (error) { 
+        } catch (error) {
           console.error('Error al crear ticket (backend):', error);
-          Swal.fire('Error', `Fallo al crear ticket: ${error.message || 'Error desconocido'}.`, 'error'); 
-          setErrorMessage(`Error al crear ticket: ${error.message || 'Error desconocido'}.`); 
+          Swal.fire('Error', `Fallo al crear ticket: ${error.message || 'Error desconocido'}.`, 'error');
+          setErrorMessage(`Error al crear ticket: ${error.message || 'Error desconocido'}.`);
         }
       }
     });
   };
 
   // --- Renderizado Condicional ---
-  if (loading && (!empresaId || puntosDeVenta.length === 0) && !errorConfig) { 
+  if (loading && (!empresaId || puntosDeVenta.length === 0) && !errorConfig) {
     return <div className="text-center text-lg text-gray-600 mt-10">Cargando configuración inicial...</div>;
   }
   if (errorConfig) {
@@ -339,16 +359,27 @@ export function CreateTikets() {
             id="puntoVentaSelect"
             value={puntoSeleccionado}
             onChange={(e) => setPuntoSeleccionado(e.target.value)}
-            disabled={loading || puntosDeVenta.length === 0}
+            disabled={puntosDeVentaLoading || puntosDeVenta.length === 0}
             className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
-            <option value="">-- Selecciona un punto --</option>
-            {puntosDeVenta.map((p) => (
-              <option key={p._id} value={p._id}>{p.nombre || `Punto ID: ${p._id}`}</option>
-            ))}
+            {puntosDeVentaLoading ? (
+              <option value="">Cargando puntos de venta...</option>
+            ) : puntosDeVenta.length > 0 ? (
+              <>
+                <option value="">-- Selecciona un punto --</option>
+                {puntosDeVenta.map((p) => (
+                  <option key={p._id} value={p._id}>{p.nombre || `Punto ID: ${p._id}`}</option>
+                ))}
+              </>
+            ) : (
+              <option value="">No hay puntos de venta disponibles</option>
+            )}
           </select>
-          {puntosDeVenta.length === 0 && !loading && <p className="text-sm text-yellow-600 mt-1">No hay puntos de venta disponibles. Configura uno en tu panel.</p>}
+          {puntosDeVenta.length === 0 && !puntosDeVentaLoading && <p className="text-sm text-yellow-600 mt-1">No hay puntos de venta disponibles. Configura uno en tu panel.</p>}
         </div>
+
+        {/* ... El resto del JSX permanece igual ... */}
+
 
         {/* Input de Código de Barras y Botón */}
         <div className="mb-6">
@@ -367,7 +398,7 @@ export function CreateTikets() {
               autoFocus
             />
             <button
-              type="button" 
+              type="button"
               onClick={handleSearchAndAddItem}
               disabled={loading || !puntoSeleccionado || !codBarra.trim()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 whitespace-nowrap"
@@ -501,7 +532,7 @@ export function CreateTikets() {
                 if (result.isConfirmed) {
                   setItems([]);
                   Swal.fire('Factura Vaciada!', 'Todos los productos han sido removidos.', 'success');
-                  setCodBarra(''); 
+                  setCodBarra('');
                   inputRef.current?.focus();
                 }
               });

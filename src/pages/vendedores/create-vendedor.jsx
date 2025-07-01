@@ -1,103 +1,255 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { apiContext } from "../../context/api_context";
 
-export function AddVendedores() {
+// --- CONFIGURACIÓN DE ROLES CENTRALIZADA ---
+// Fuente única de verdad para todos los roles disponibles en el formulario.
+const ROLES_DISPONIBLES = [
+  { value: 'empleado_administrativo', label: 'Empleado Administrativo' },
+  { value: 'vendedor_activo', label: 'Vendedor Activo' },
+  { value: 'vendedor_inactivo', label: 'Vendedor Inactivo' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'gerente', label: 'Gerente' }
+];
+
+// Define qué roles necesitan que se les asignen puntos de venta.
+const ROLES_CON_PUNTOS_DE_VENTA = ['vendedor_activo', 'vendedor_inactivo', 'supervisor'];
+
+
+// --- HOOK PERSONALIZADO: Encapsula toda la lógica del formulario ---
+const useVendedorForm = () => {
   const { createVendedor, getPointsByCompany } = useContext(apiContext);
-  const [vData, setVData] = useState({
-    username: '', password: '', email: '', empresa: '', rol: 'vendedor_activo',
+
+  const [formData, setFormData] = useState({
+    username: '', password: '', email: '', empresa: '', rol: 'empleado_administrativo',
     puntosVentaAsignados: [], nombre: '', apellido: '', telefono: '', dni: '', llegada: '', salida: ''
   });
-  const [empName, setEmpName] = useState('');
-  const [pvSel, setPVSel] = useState('');
-  const [pvDisp, setPVDisp] = useState([]);
-  const [loading, setLoading] = useState(false), [msg, setMsg] = useState(''), [error, setError] = useState('');
-
-  const getPVNameById = useCallback((id) => pvDisp.find(pv => pv._id === id)?.nombre || `ID Desconocido: ${id}`, [pvDisp]);
+  
+  const [companyInfo, setCompanyInfo] = useState({ id: '', name: '' });
+  const [availablePoints, setAvailablePoints] = useState([]);
+  const [selectedPointId, setSelectedPointId] = useState('');
+  
+  const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Cargando datos iniciales...');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadCompAndPoints = async () => {
-      let currentEmpId = '', currentEmpName = '';
+    const loadInitialData = async () => {
+      setLoading(true);
       try {
-        const uDS = localStorage.getItem("userData"); if (uDS) currentEmpId = JSON.parse(uDS).empresa || '';
-        const dES = localStorage.getItem("dataEmpresa"); if (dES) currentEmpName = JSON.parse(dES).nombreEmpresa || '';
-      } catch (e) { console.error("Error localStorage:", e); setError("Error al cargar datos empresa."); return; }
+        const userDataString = localStorage.getItem("userData");
+        const dataEmpresaString = localStorage.getItem("dataEmpresa");
+        const companyId = userDataString ? JSON.parse(userDataString).empresa : null;
+        const companyName = dataEmpresaString ? JSON.parse(dataEmpresaString).nombreEmpresa : 'Empresa sin nombre';
 
-      setVData(prev => ({ ...prev, empresa: currentEmpId })); setEmpName(currentEmpName);
-      if (!currentEmpId) { setError("No se encontró ID de empresa."); return; }
-      try {
-        setLoading(true); const points = await getPointsByCompany(currentEmpId);
-        if (Array.isArray(points)) { setPVDisp(points); setError(''); }
-        else { console.error("API no devolvió array de PV:", points); setError("Lista PV inválida."); }
-      } catch (err) { console.error("Error cargar PV:", err); setError(err.message || "No se pudieron cargar los puntos de venta.");
-      } finally { setLoading(false); }
+        if (!companyId) {
+          throw new Error("No se encontró el ID de la empresa. Por favor, inicie sesión de nuevo.");
+        }
+        
+        setCompanyInfo({ id: companyId, name: companyName });
+        setFormData(prev => ({ ...prev, empresa: companyId }));
+        
+        setLoadingMessage('Cargando puntos de venta...');
+        
+        const initialResponse = await getPointsByCompany(companyId, 1, 100);
+        if (!initialResponse || !initialResponse.puntosDeVenta || !initialResponse.pagination) {
+          throw new Error("La respuesta de la API para los puntos de venta es inválida.");
+        }
+        
+        let allPoints = initialResponse.puntosDeVenta;
+        const { totalPages } = initialResponse.pagination;
+
+        if (totalPages > 1) {
+          setLoadingMessage(`Cargando ${totalPages} páginas de puntos de venta...`);
+          const pagePromises = [];
+          for (let page = 2; page <= totalPages; page++) {
+            pagePromises.push(getPointsByCompany(companyId, page, 100));
+          }
+          const subsequentPages = await Promise.all(pagePromises);
+          subsequentPages.forEach(response => {
+            if (response && response.puntosDeVenta) {
+              allPoints = [...allPoints, ...response.puntosDeVenta];
+            }
+          });
+        }
+        
+        setAvailablePoints(allPoints);
+        setError('');
+      } catch (err) {
+        console.error("Error al cargar datos iniciales:", err);
+        setError(err.message || "No se pudieron cargar los datos necesarios.");
+      } finally {
+        setLoading(false);
+        setLoadingMessage('');
+      }
     };
-    loadCompAndPoints();
+    
+    loadInitialData();
   }, [getPointsByCompany]);
 
-  const rolesVendedor = [{ value: 'vendedor_activo', label: 'Activo' }, { value: 'vendedor_inactivo', label: 'Inactivo' }, { value: 'supervisor', label: 'Supervisor' }];
-  const hC = (e) => { const { name, value } = e.target; if (name !== 'empresa') setVData(prev => ({ ...prev, [name]: value })); };
-  const hPVAdd = () => {
-    if (pvSel && pvDisp.some(pv => pv._id === pvSel) && !vData.puntosVentaAsignados.includes(pvSel)) {
-      setVData(prev => ({ ...prev, puntosVentaAsignados: [...prev.puntosVentaAsignados, pvSel] }));
-      setPVSel('');
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newState = { ...prev, [name]: value };
+      if (name === 'rol' && !ROLES_CON_PUNTOS_DE_VENTA.includes(value)) {
+        newState.puntosVentaAsignados = [];
+      }
+      return newState;
+    });
+  };
+
+  const handleAddPoint = () => {
+    if (selectedPointId && !formData.puntosVentaAsignados.includes(selectedPointId)) {
+      setFormData(prev => ({
+        ...prev,
+        puntosVentaAsignados: [...prev.puntosVentaAsignados, selectedPointId]
+      }));
+      setSelectedPointId('');
     }
   };
-  const hPVRemove = (id) => setVData(prev => ({ ...prev, puntosVentaAsignados: prev.puntosVentaAsignados.filter(p => p !== id) }));
 
-  const hSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); setMsg(''); setError('');
-    try {
-      if (!vData.username || !vData.password || !vData.email) throw new Error('Username, password y email obligatorios.');
-      if (vData.password.length < 8) throw new Error('Contraseña debe tener al menos 8 caracteres.');
-      if (!vData.empresa) throw new Error('ID empresa no cargado. Recargue.');
-      const dataToSend = { ...vData, puntosVentaAsignados: vData.puntosVentaAsignados.filter(Boolean) };
-      const res = await createVendedor(dataToSend);
-      if (res?.data?.creado) { setMsg(res.data.message || 'Vendedor registrado exitosamente!'); setVData(p => ({ ...p, username: '', password: '', email: '', puntosVentaAsignados: [], nombre: '', apellido: '', telefono: '', dni: '', llegada: '', salida: '' })); setPVSel(''); setTimeout(() => setMsg(''), 3000); }
-      else { setError(res?.data?.message || 'Error al registrar vendedor: Operación no exitosa.'); setTimeout(() => setError(''), 5000); }
-    } catch (err) { console.error("Error al enviar:", err); setError(err.message || 'Error al registrar vendedor. Intente de nuevo.'); setTimeout(() => setError(''), 5000);
-    } finally { setLoading(false); }
+  const handleRemovePoint = (idToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      puntosVentaAsignados: prev.puntosVentaAsignados.filter(id => id !== idToRemove)
+    }));
   };
+  
+  const getPointNameById = useCallback((id) => {
+    return availablePoints.find(pv => pv._id === id)?.nombre || `ID Desconocido: ${id}`;
+  }, [availablePoints]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccessMessage('');
+    setError('');
+
+    try {
+      if (!formData.username || !formData.password || !formData.email || !formData.nombre || !formData.apellido) {
+        throw new Error('Los campos con * son obligatorios.');
+      }
+      if (formData.password.length < 8) {
+        throw new Error('La contraseña debe tener al menos 8 caracteres.');
+      }
+      
+      const response = await createVendedor(formData);
+
+      if (response?.data?.creado) {
+        setSuccessMessage(response.data.message || '¡Empleado registrado exitosamente!');
+        setFormData({
+          username: '', password: '', email: '', empresa: companyInfo.id, rol: 'empleado_administrativo',
+          puntosVentaAsignados: [], nombre: '', apellido: '', telefono: '', dni: '', llegada: '', salida: ''
+        });
+        setSelectedPointId('');
+        setTimeout(() => setSuccessMessage(''), 4000);
+      } 
+    } catch (err) {
+      console.error("Error al registrar empleado:", err);
+      setError(err.message || 'Error desconocido al registrar el empleado.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return {
+    formData, companyInfo, availablePoints, selectedPointId, setSelectedPointId,
+    loading, loadingMessage, successMessage, error,
+    handleChange, handleAddPoint, handleRemovePoint, getPointNameById, handleSubmit
+  };
+};
+
+
+// --- COMPONENTE DE UI: Limpio y enfocado en la presentación ---
+export function AddVendedores() {
+  const {
+    formData, companyInfo, availablePoints, selectedPointId, setSelectedPointId,
+    loading, loadingMessage, successMessage, error,
+    handleChange, handleAddPoint, handleRemovePoint, getPointNameById, handleSubmit
+  } = useVendedorForm();
+  
+  const unassignedPoints = availablePoints.filter(
+    pv => !formData.puntosVentaAsignados.includes(pv._id)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-center"><h1 className="text-2xl font-bold text-white">Agregar Nuevo Vendedor</h1></div>
-        <form onSubmit={hSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-center">
+          <h1 className="text-2xl font-bold text-white tracking-wide">Agregar Nuevo Empleado</h1>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* --- SECCIÓN DE CUENTA Y PERSONAL --- */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            {/* Columna Izquierda: Cuenta */}
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información de Cuenta</h2>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Username*</label><input type="text" name="username" value={vData.username} onChange={hC} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="Nombre de usuario"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Password* (min 8 chars)</label><input type="password" name="password" value={vData.password} onChange={hC} required minLength="8" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="Contraseña segura"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Email*</label><input type="email" name="email" value={vData.email} onChange={hC} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="email@empresa.com"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Rol*</label><select name="rol" value={vData.rol} onChange={hC} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition">{rolesVendedor.map(rol => (<option key={rol.value} value={rol.value}>{rol.label}</option>))}</select></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Empresa (Owner)*</label><input type="text" name="empresa" value={empName} readOnly className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed"/></div>
+              <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">Información de Cuenta</h2>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Username*</label><input type="text" name="username" value={formData.username} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Password* (mín. 8 caracteres)</label><input type="password" name="password" value={formData.password} onChange={handleChange} required minLength="8" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Email*</label><input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rol*</label>
+                <select name="rol" value={formData.rol} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition">
+                  {ROLES_DISPONIBLES.map(rol => (
+                    <option key={rol.value} value={rol.value}>{rol.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label><input type="text" value={companyInfo.name} readOnly className="w-full px-4 py-2 border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" /></div>
             </div>
+            
+            {/* Columna Derecha: Personal */}
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Información Personal</h2>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Nombre*</label><input type="text" name="nombre" value={vData.nombre} onChange={hC} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="Nombre del vendedor"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Apellido*</label><input type="text" name="apellido" value={vData.apellido} onChange={hC} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="Apellido del vendedor"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label><input type="tel" name="telefono" value={vData.telefono} onChange={hC} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="+5491155551234"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">DNI</label><input type="text" name="dni" value={vData.dni} onChange={hC} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" placeholder="30123456"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Hora Llegada</label><input type="time" name="llegada" value={vData.llegada} onChange={hC} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition"/></div>
-              <div className="form-group"><label className="block text-sm font-medium text-gray-700 mb-1">Hora Salida</label><input type="time" name="salida" value={vData.salida} onChange={hC} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition"/></div>
+              <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">Información Personal</h2>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Nombre*</label><input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Apellido*</label><input type="text" name="apellido" value={formData.apellido} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label><input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">DNI</label><input type="text" name="dni" value={formData.dni} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Hora Llegada</label><input type="time" name="llegada" value={formData.llegada} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Hora Salida</label><input type="time" name="salida" value={formData.salida} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition" /></div>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">Asignar Puntos de Venta</h2>
-            {loading && !error ? (<p className="text-gray-600 flex items-center"><svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Cargando puntos...</p>)
-            : error && !msg ? (<p className="text-red-600 text-sm">{error}</p>) : (<div className="flex gap-2">
-                <select value={pvSel} onChange={(e) => setPVSel(e.target.value)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition"><option value="">Seleccionar Punto</option>{pvDisp.map(p => (<option key={p._id} value={p._id}>{p.nombre}</option>))}</select>
-                <button type="button" onClick={hPVAdd} disabled={!pvSel} className={`px-4 py-2 rounded-lg transition ${!pvSel ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>Agregar</button>
-            </div>)}
-            {vData.puntosVentaAsignados.length > 0 && (
-              <div className="mt-2 space-y-2"><h3 className="text-sm font-medium text-gray-700">Puntos asignados:</h3>
-                <ul className="space-y-1">{vData.puntosVentaAsignados.map(pId => (<li key={pId} className="flex justify-between items-center bg-gray-50 p-2 rounded"><span>{getPVNameById(pId)}</span><button type="button" onClick={() => hPVRemove(pId)} className="text-red-500 hover:text-red-700">×</button></li>))}</ul>
-              </div>)}
+
+          {/* --- SECCIÓN DINÁMICA DE PUNTOS DE VENTA --- */}
+          {ROLES_CON_PUNTOS_DE_VENTA.includes(formData.rol) && (
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-800">Asignar Puntos de Venta</h2>
+              {loading && loadingMessage ? (<p className="text-gray-600 animate-pulse">{loadingMessage}</p>) : 
+               error && !successMessage ? (<p className="text-red-600 text-sm">{error}</p>) : (
+                <div className="flex items-center gap-2">
+                  <select value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="">Seleccionar un punto de venta...</option>
+                    {unassignedPoints.map(p => (<option key={p._id} value={p._id}>{p.nombre}</option>))}
+                  </select>
+                  <button type="button" onClick={handleAddPoint} disabled={!selectedPointId} className="px-5 py-2 rounded-lg font-semibold transition text-white bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed">Agregar</button>
+                </div>
+              )}
+              {formData.puntosVentaAsignados.length > 0 && (
+                <div className="mt-2 space-y-2 pt-2">
+                  <h3 className="text-sm font-medium text-gray-700">Puntos asignados:</h3>
+                  <ul className="space-y-1">{formData.puntosVentaAsignados.map(pointId => (
+                    <li key={pointId} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                      <span className="text-gray-800">{getPointNameById(pointId)}</span>
+                      <button type="button" onClick={() => handleRemovePoint(pointId)} className="text-red-500 hover:text-red-700 font-bold text-xl px-2">&times;</button>
+                    </li>))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* --- BOTÓN DE ENVÍO Y MENSAJES --- */}
+          <div className="pt-4">
+            <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors shadow-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-wait">
+              {loading ? 'Guardando...' : 'Registrar Empleado'}
+            </button>
+            {successMessage && (<div className="mt-4 p-3 bg-green-100 text-green-800 border border-green-200 rounded-lg text-sm text-center">{successMessage}</div>)}
+            {error && (<div className="mt-4 p-3 bg-red-100 text-red-800 border border-red-200 rounded-lg text-sm text-center">{error}</div>)}
           </div>
-          <div className="pt-4"><button type="submit" disabled={loading} className={`w-full py-3 px-4 rounded-lg font-medium text-white ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors shadow-md`}>{loading ? (<span className="flex items-center justify-center"><svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Guardando...</span>) : 'Registrar Vendedor'}</button></div>
         </form>
-        {msg && (<div className="mx-6 mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">{msg}</div>)}
-        {error && (<div className="mx-6 mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>)}
       </div>
     </div>
   );
