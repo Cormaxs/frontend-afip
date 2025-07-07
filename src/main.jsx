@@ -9,7 +9,7 @@ import './App.css'
 createRoot(document.getElementById('root')).render(
    <ApiProvider>
     <StrictMode>
-   
+    
     <BrowserRouter>
     <App />
     </BrowserRouter>

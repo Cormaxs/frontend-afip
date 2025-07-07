@@ -3,104 +3,84 @@ import { Link, useLocation } from 'react-router-dom';
 import { apiContext } from '../context/api_context';
 
 // Definición de los grupos de menú fuera del componente para evitar re-renders innecesarios
+// Objeto de configuración de menú, completo y sincronizado con tus rutas
 const menuGroups = {
     dashboard: {
-        title: "Dashboard",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-        ),
+        title: "general",
+        icon: <i className="bi bi-columns-gap"></i>,
         items: [
-            { path: "/dashboard", label: "Inicio", icon: "🏠" },
-            { path: "/metricas", label: "Métricas", icon: "📊" } // Ruta agregada
-        ]
-    },
-    auth: {
-        title: "Autenticación",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-        ),
-        items: [
-            { path: "/login", label: "Login", icon: "🔑" },
-            { path: "/register", label: "Registro", icon: "📝" }
-        ]
-    },
-    config: {
-        title: "Configuración",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-        ),
-        items: [
-            { path: "/empresa-register", label: "Empresa", icon: "🏢" },
-            { path: "/generate-key-crs", label: "Key/CSR", icon: "🔐" },
-            { path: "/generate-crt", label: "Certificado", icon: "📄" }
-        ]
-    },
-    products: {
-        title: "Productos",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-        ),
-        items: [
-            { path: "/productos", label: "Listado", icon: "📋" },
-            { path: "/add-product", label: "Agregar", icon: "➕" }
-        ]
-    },
-    salesPoints: {
-        title: "Puntos de Venta",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-        ),
-        items: [
-            { path: "/add-puntoVenta", label: "Agregar", icon: "🏪" },
-            { path: "/get-puntoVenta", label: "Listado", icon: "📋" }
-        ]
-    },
-    personal: {
-        title: "Personal",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-        ),
-        items: [
-            { path: "/add-vendedor", label: "Vendedores", icon: "👤" },
-            { path: "/usuarios", label: "Usuarios", icon: "👥" } // Ruta agregada
+            { path: "/dashboard", label: "Inicio", icon: <i className="bi bi-house-fill"></i> },
+            { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line"></i> }
         ]
     },
     operations: {
         title: "Operaciones",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-        ),
+        icon: <i className="bi bi-collection"></i>,
         items: [
-            { path: "/create-factura", label: "Facturación", icon: "🧾" }
+            { path: "/ventas", label: "Ventas", icon: <i className="bi bi-bag-fill"></i> },
+            { path: "/create-factura", label: "Facturación", icon: <i className="bi bi-receipt-cutoff"></i> }
+        ]
+    },
+    caja: {
+        title: "Caja",
+        icon: <i className="bi bi-box"></i>,
+        items: [
+            { path: "/abrir-caja", label: "Abrir Caja", icon: <i className="bi bi-check-circle-fill"></i> },
+            { path: "/cerrar-caja", label: "Cerrar Caja", icon: <i className="bi bi-x-circle-fill"></i> },
+            { path: "/ingreso-egreso-caja", label: "Ingreso/Egreso", icon: <i className="bi bi-currency-dollar"></i> },
+            { path: "/get-cajas-empresa", label: "Historial", icon: <i className="bi bi-file-medical"></i> }
+        ]
+    },
+    products: {
+        title: "Productos",
+        icon: <i className="bi bi-diagram-3"></i>,
+        items: [
+            { path: "/productos", label: "Listado", icon: <i className="bi bi-card-checklist"></i> },
+            { path: "/add-product", label: "Agregar producto", icon: <i className="bi bi-file-earmark-plus"></i> },
+            { path: "/carga-masiva-productos", label: "Carga Masiva", icon: <i className="bi bi-folder-plus"></i> }
+        ]
+    },
+    salesPoints: {
+        title: "Puntos de Venta",
+        icon:<i className="bi bi-buildings"></i>,
+        items: [
+            { path: "/add-puntoVenta", label: "Agregar", icon: <i className="bi bi-house-add"></i> },
+            { path: "/get-puntoVenta", label: "Listado ", icon: <i className="bi bi-list-ol"></i> }
+        ]
+    },
+    personal: {
+        title: "Personal",
+        icon: <i className="bi bi-person-badge"></i>,
+        items: [
+            { path: "/add-vendedor", label: "Agregar vendedor", icon: <i className="bi bi-person-add"></i> },
+            { path: "/usuarios", label: "Ver usuarios", icon: <i className="bi bi-people"></i>}
         ]
     },
     tickets: {
         title: "Tickets",
-        icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M15 5v2m0 4v2m0 4v2M9 9h1a2 2 0 002-2V3a1 1 0 00-1-1H5a1 1 0 00-1 1v2c0 .552.448 1 1 1h1zm0 3H9v2h2v-2zm0 4H9v2h2v-2zm0 4H9v2h2v-2z" />
-            </svg>
-        ),
+        icon: <i className="bi bi-file-earmark"></i>,
         items: [
-            { path: "/tiket/create", label: "Crear Ticket", icon: "🎟️" },
-            { path: "/tiket/get", label: "Ver Tickets", icon: "📜" }
+            { path: "/tiket/create", label: "Crear Ticket", icon: <i className="bi bi-ticket-perforated-fill"></i> },
+            { path: "/tiket/get", label: "Ver Tickets", icon: <i className="bi bi-ticket-detailed"></i> }
         ]
-    }
+    },
+    config: {
+        title: "Configuración AFIP",
+        icon: <i className="bi bi-gear-wide-connected"></i>,
+        items: [
+            { path: "/empresa-register", label: "Empresa", icon: <i className="bi bi-building"></i> },
+            { path: "/generate-key-crs", label: "Key/CSR", icon: <i className="bi bi-key"></i> },
+            { path: "/generate-crt", label: "Certificado", icon: <i className="bi bi-newspaper"></i> }
+        ]
+    },
+     auth: {
+        title: "Autenticación",
+        icon: <i className="bi bi-person-check"></i>,
+        items: [
+            { path: "/login", label: "Login", icon: <i className="bi bi-box-arrow-in-right"></i> },
+            { path: "/register", label: "Registro", icon: <i className="bi bi-plus-square"></i> }
+        ]
+    },
 };
 
 // Componente para un solo ítem de menú
@@ -108,7 +88,7 @@ const MenuItem = ({ item, isActive }) => (
     <Link
         to={item.path}
         className={`flex items-center p-2 rounded-md text-sm font-medium
-            ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-100 hover:bg-indigo-700'}
+            ${isActive ? 'bg-[var(--principal-activo)] text-white shadow-md' : 'text-gray-100 hover:bg-[var(--principal-shadow)]'}
             transition duration-200 ease-in-out group`}
     >
         <span className="mr-3 text-lg group-hover:scale-110 transition-transform">{item.icon}</span>
@@ -125,8 +105,8 @@ const SubMenu = ({ group, open, isActivePath, toggleSubmenu }) => {
             <button
                 onClick={toggleSubmenu}
                 className={`w-full flex items-center justify-between p-2 rounded-md
-                    ${isGroupActive ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-100 hover:bg-indigo-700'}
-                    transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                    ${isGroupActive ? 'bg-[var(--principal-activo)] text-white shadow-md' : 'text-gray-100 hover:bg-[var(--principal-shadow)]'}
+                    transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal-shadow)]`}
             >
                 <div className="flex items-center">
                     <span className="mr-3">{group.icon}</span>
@@ -201,18 +181,16 @@ export function SidePanel() {
 
             {/* Panel lateral */}
             <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 z-50 transition-transform duration-300 ease-in-out
-                bg-gradient-to-b from-[#3f64ec] to-[#4c67f1] text-white w-64 shadow-xl flex flex-col`}>
+                bg-gradient-to-b from-[var(--principal)] to-[var(--principal-shadow)] text-white w-64 shadow-xl flex flex-col`}>
                 {/* Encabezado del panel */}
-                <div className="flex items-center justify-between p-4 border-b border-[#4c67f1]">
+                <div className="flex items-center justify-between p-4 border-b border-[var(--principal-shadow)]">
                     <Link to="/" className="text-2xl font-extrabold flex items-center text-white">
-                        <svg className="w-8 h-8 mr-2 text-indigo-200" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                        </svg>
-                        FacStock
+                        <i className="bi bi-check2-all w-8 h-8 mr-2 text-indigo-200"></i>
+                        FACSTOCK
                     </Link>
                     <button
                         onClick={togglePanel}
-                        className="md:hidden text-white focus:outline-none p-1 rounded-md hover:bg-indigo-700"
+                        className="md:hidden text-white focus:outline-none p-1 rounded-md hover:bg-[var(--principal-shadow)]"
                         aria-label="Cerrar panel"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -234,14 +212,13 @@ export function SidePanel() {
                     ))}
 
                     {/* Botón de cerrar sesión */}
-                    <div className="mt-8 pt-4 border-t border-[#4c67f1]">
+                    <div className="mt-8 pt-4 border-t border-[var(--principal-shadow)]">
                         <button
-                            className="flex items-center w-full p-2 rounded-md text-gray-100 hover:bg-indigo-700 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="flex items-center w-full p-2 rounded-md text-gray-100 hover:bg-[var(--principal-shadow)] transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal-shadow)]"
                             onClick={() => { logout();}}
                         >
-                            <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
+                           
+                            <i className="bi bi-x-square w-5 h-5 mr-3"></i>
                             <span className="font-semibold">Cerrar Sesión</span>
                         </button>
                     </div>
@@ -252,7 +229,7 @@ export function SidePanel() {
             {!isOpen && (
                 <button
                     onClick={togglePanel}
-                    className="fixed bottom-4 left-4 z-40 md:hidden bg-[#3f64ec] text-white p-3 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="fixed bottom-4 left-4 z-40 md:hidden bg-[var(--principal)] text-white p-3 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal-shadow)]"
                     aria-label="Abrir panel"
                 >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

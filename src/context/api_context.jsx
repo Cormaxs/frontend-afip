@@ -1,258 +1,260 @@
-import { createContext, useState } from "react";
-import { Login, Register, createEmpresaApi, addProduct,
-     addPointSale, getPointSales, addVendedores, getProductsCompany,
-     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar
-    } from "../api/coneccion";
+import { createContext, useState, useCallback } from "react";
+import {
+    Login, Register, createEmpresaApi, addProduct,
+    addPointSale, getPointSales, addVendedores, getProductsCompany,
+    createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
+    CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
+    get_caja_company_api
+} from "../api/coneccion";
+
+// --- Helper para leer de localStorage de forma segura y sin repetición ---
+const getInitialStateFromStorage = (key) => {
+    try {
+        const storedData = localStorage.getItem(key);
+        return storedData ? JSON.parse(storedData) : null;
+    } catch (error) {
+        console.error(`Error parsing ${key} from localStorage:`, error);
+        localStorage.removeItem(key); // Limpiar datos corruptos
+        return null;
+    }
+};
 
 export const apiContext = createContext();
 
 export const ApiProvider = ({ children }) => {
-    // 1. Inicializa isAuthenticated leyendo directamente de localStorage
-    const [isAuthenticated, setIsAuthenticated] = useState(() => {
-        const storedUserData = localStorage.getItem("userData");
-        return !!storedUserData; // Devuelve true si hay userData en localStorage, false si no
-    });
+    // --- ESTADOS ---
+    // Inicialización limpia usando el helper
+    const [userData, setUserData] = useState(() => getInitialStateFromStorage("userData"));
+    const [companyData, setCompanyData] = useState(() => getInitialStateFromStorage("dataEmpresa"));
+    const [isAuthenticated, setIsAuthenticated] = useState(() => !!getInitialStateFromStorage("userData"));
+    const [cajasActivas, setCajasActivas] = useState(() => getInitialStateFromStorage("cajasActivas") || []); // Inicializa como un array vacío si no hay datos
+    // --- MANEJO DE SESIÓN ---
 
-    // 2. Inicializa userData de forma segura con una función en useState
-    const [userData, setUserData] = useState(() => {
-        const storedUserData = localStorage.getItem("userData");
-        try {
-            // Intenta parsear los datos. Si hay un error (ej. JSON corrupto), devuelve null.
-            return storedUserData ? JSON.parse(storedUserData) : null;
-        } catch (error) {
-            console.error("Error parsing userData from localStorage:", error);
-            localStorage.removeItem("userData"); // Limpiar datos corruptos
-            return null;
-        }
-    });
-
-    // 3. Inicializa companyData de forma similar
-    const [companyData, setCompanyData] = useState(() => {
-        const storedCompanyData = localStorage.getItem("dataEmpresa");
-        try {
-            return storedCompanyData ? JSON.parse(storedCompanyData) : null;
-        } catch (error) {
-            console.error("Error parsing companyData from localStorage:", error);
-            localStorage.removeItem("dataEmpresa"); // Limpiar datos corruptos
-            return null;
-        }
-    });
     const login = async (data) => {
         try {
-            const responseData = await Login(data);
-            if (responseData) {
-                localStorage.setItem("userData", JSON.stringify(responseData));
-                setIsAuthenticated(true); // Update state on successful login
-                setUserData(responseData); // Store user data
-                const dataEmpresa = await getCompanyID(responseData.empresa)
-                console.log("datos de la empresa -> ", dataEmpresa);
-                localStorage.setItem("dataEmpresa", JSON.stringify(dataEmpresa));
-                return responseData;
-            } else {
-                throw new Error("No se pudo obtener datos del usuario después del login.");
-            }
-        } catch (error) {
-            console.error("Error en la función login del Context:", error);
-            throw error;
-        }
-    };
+            const userResponse = await Login(data);
+            
+            // Obtenemos los datos de la empresa después de un login exitoso
+            const companyResponse = await getEmpresaDataId(userResponse.empresa);
 
-    const register = async (userDataToRegister) => {
-        console.log("Datos de registro recibidos en Context:", userDataToRegister);
-        try {
-            const responseData = await Register(userDataToRegister);
-            if (responseData) {
-                console.log("Registro exitoso en Context:", responseData);
-                return responseData;
-            } else {
-                throw new Error("No se pudo completar el registro. Datos inválidos o error del servidor.");
-            }
+            // Guardamos todo en localStorage
+            localStorage.setItem("userData", JSON.stringify(userResponse));
+            localStorage.setItem("dataEmpresa", JSON.stringify(companyResponse));
+
+            // Actualizamos todos los estados de una vez
+            setUserData(userResponse);
+            setCompanyData(companyResponse);
+            setIsAuthenticated(true);
+
+            return userResponse;
         } catch (error) {
-            console.error("Error en la función register del Context:", error);
-            if (error.response && error.response.data && error.response.data.message) {
-                throw new Error(error.response.data.message);
-            }
-            throw error;
+            console.error("Error en el flujo de login del Context:", error);
+            throw error; // Relanzamos el error para que el componente de UI reaccione
         }
     };
-    
 
     const logout = () => {
         localStorage.removeItem("userData");
-        localStorage.removeItem("dataEmpresa"); // Also clear company data on logout
-        setIsAuthenticated(false);
+        localStorage.removeItem("dataEmpresa");
         setUserData(null);
+        setCompanyData(null);
+        setIsAuthenticated(false);
         console.log("Sesión cerrada.");
     };
 
-    const createEmpresa = async (empresaData) => {
+    // --- FUNCIONES WRAPPER DE LA API ---
+    // Todas las funciones ahora siguen el mismo patrón simple y robusto.
+    // Usamos useCallback para optimizar y evitar re-creaciones innecesarias de funciones.
+
+    const register = useCallback(async (userDataToRegister) => {
         try {
-            console.log("API Context: Enviando datos de empresa:", empresaData);
+            return await Register(userDataToRegister);
+        } catch (error) {
+            console.error("Error en register (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const createEmpresa = useCallback(async (empresaData) => {
+        try {
             const response = await createEmpresaApi(empresaData);
-            // Guardar en localStorage solo si la respuesta es exitosa y contiene el nombre de la empresa
-            if (response && response.nombreEmpresa) {
+            // Actualiza los datos de la empresa en el contexto si es exitoso
+            if (response) {
                 localStorage.setItem("dataEmpresa", JSON.stringify(response));
+                setCompanyData(response);
             }
-            console.log("API Context: Empresa registrada, respuesta:", response);
             return response;
         } catch (error) {
-            console.error("API Context: Error al registrar la empresa:", error);
-            // Propagar el error con un mensaje significativo si está disponible del backend
-            if (error.response && error.response.data && error.response.data.message) {
-                throw new Error(error.response.data.message);
-            }
+            console.error("Error en createEmpresa (Context):", error);
             throw error;
         }
-    };
-
-    const createProduct = async (productData) => {
+    }, []);
+    
+    // El resto de las funciones ahora simplemente llaman a la API y manejan errores de forma unificada.
+    const createProduct = useCallback(async (productData) => {
         try {
-            console.log("API Context: Enviando datos de producto:", productData);
-            const response = await addProduct(productData); // Call the API function
-            console.log("API Context: Producto creado, respuesta:", response);
-            return response; // Return the response data from the API
+            return await addProduct(productData);
         } catch (error) {
-            console.error("API Context: Error al crear el producto:", error);
-            // Propagate the error with a meaningful message if available from the backend
-            if (error.response && error.response.data && error.response.data.message) {
-                throw new Error(error.response.data.message);
-            }
-            throw error; // Re-throw the original error if no specific message
-        }
-    };
-
-    const createPointSale = async (dataPoint) => {
-        try {
-            console.log("API Context: Enviando datos de punto de venta:", dataPoint);
-            const response = await addPointSale(dataPoint); // Llama a la función de la API
-            console.log("API Context: Punto de venta creado, respuesta:", response);
-            return response; // Devuelve la respuesta de la API
-        } catch (error) {
-            console.error("API Context: Error al crear el punto de venta:", error);
-            // Propaga el error con un mensaje significativo si está disponible del backend
-            if (error.response && error.response.data && error.response.data.message) {
-                throw new Error(error.response.data.message);
-            }
-            throw error; // Vuelve a lanzar el error original si no hay un mensaje específico
-        }
-    };
-
-    const getPointsByCompany = async (idEmpresa) => { // Renombré a getPointsByCompany para mayor claridad
-        try {
-            console.log(`API Context: Obteniendo puntos de venta para empresa ID: ${idEmpresa}`);
-            const response = await getPointSales(idEmpresa); // Llama a la función de la API
-            console.log("API Context: Puntos de venta obtenidos, respuesta:", response);
-            return response; // Devuelve los puntos de venta
-        } catch (error) {
-            console.error("API Context: Error al obtener puntos de venta:", error);
-            if (error.response && error.response.data && error.response.data.message) {
-                throw new Error(error.response.data.message);
-            }
+            console.error("Error en createProduct (Context):", error);
             throw error;
         }
-    };
+    }, []);
 
-    const createVendedor = async (dataVendedor) => { // Renombré a `createVendedor` (camelCase) para consistencia
+    const createPointSale = useCallback(async (dataPoint) => {
         try {
-            console.log("API Context: Enviando datos de vendedor:", dataVendedor);
-            const vendedorAgregado = await addVendedores(dataVendedor); // Llama a la función de la API
-            console.log("API Context: Vendedor agregado, respuesta:", vendedorAgregado);
-            return vendedorAgregado; // Devuelve la respuesta de la API
+            return await addPointSale(dataPoint);
         } catch (error) {
-            console.error("API Context: Error al crear el vendedor:", error);
-            // Propaga el error con un mensaje significativo si está disponible del backend
-            if (error.response && error.response.data && error.response.data.message) {
-                throw new Error(error.response.data.message);
-            }
-            throw error; // Vuelve a lanzar el error original si no hay un mensaje específico
+            console.error("Error en createPointSale (Context):", error);
+            throw error;
         }
-    };
+    }, []);
 
-    const getProductsEmpresa = async (idEmpresa, page, limit) => {
+    const getPointsByCompany = useCallback(async (idEmpresa, page) => { // Añadido `page` para consistencia
         try {
-          console.log(`API Context: Obteniendo productos para empresa ID: ${idEmpresa}`);
-          const productos = await getProductsCompany(idEmpresa, page, limit);
-          console.log("API Context: Productos obtenidos, respuesta:", productos);
-          return productos; // Devuelve los productos
+            // Pasamos los parámetros que necesite la función de la API
+            return await getPointSales(idEmpresa, page); 
         } catch (error) {
-          console.error("API Context: Error al obtener productos de la empresa:", error);
-          if (error.response && error.response.data && error.response.data.message) {
-            throw new Error(error.response.data.message);
-          }
-          throw error;
+            console.error("Error en getPointsByCompany (Context):", error);
+            throw error;
         }
-      };
+    }, []);
 
-      const createTiketContext = async (ticketDataForBackend) => {
+    const createVendedor = useCallback(async (dataVendedor) => {
         try {
-            //console.log("API Context: Datos de ticket recibidos para enviar:", ticketDataForBackend);
-            const userDataString = localStorage.getItem("userData");
-            let idUsuario = null;
+            return await addVendedores(dataVendedor);
+        } catch (error) {
+            console.error("Error en createVendedor (Context):", error);
+            throw error;
+        }
+    }, []);
 
-            if (userDataString) {
-                try {
-                    const user = JSON.parse(userDataString);
-                    if (user._id) {
-                        idUsuario = user._id;
-                    }
-                } catch (e) {
-                    console.error("Error al parsear userData de localStorage en apiContext:", e);
-                }
-            }
+    const getProductsEmpresa = useCallback(async (idEmpresa, page, limit) => {
+        try {
+            return await getProductsCompany(idEmpresa, page, limit);
+        } catch (error) {
+            console.error("Error en getProductsEmpresa (Context):", error);
+            throw error;
+        }
+    }, []);
 
-            if (!idUsuario) {
+    const createTiketContext = useCallback(async (ticketDataForBackend) => {
+        try {
+            // Usamos el 'userData' del estado, no de localStorage. Es más seguro y eficiente.
+            if (!userData?._id) {
                 throw new Error("ID de usuario no disponible. Por favor, inicie sesión.");
             }
-            const idEmpresa = ticketDataForBackend.idEmpresa; 
-            const response = await createTiket(ticketDataForBackend, idUsuario, idEmpresa); 
-            
-            //console.log("API Context: Ticket creado, respuesta:", response);
-            return response;
+            const idEmpresa = ticketDataForBackend.idEmpresa;
+            return await createTiket(ticketDataForBackend, userData._id, idEmpresa);
         } catch (error) {
-            console.error("API Context: Error al crear el ticket:", error);
+            console.error("Error en createTiketContext (Context):", error);
             throw error;
         }
-    };
+    }, [userData]); // Depende de userData, así que se añade a las dependencias
 
-    const getTiketsContext = async (id, page, limit) =>{
-        try{
-            const respuesta = await getTikets(id, page, limit);
-            console.log("desde context ",respuesta)
+    const getTiketsContext = useCallback(async (id, page, limit) => {
+        try {
+            return await getTikets(id, page, limit);
+        } catch (error) {
+            console.error("Error en getTiketsContext (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const getCompanyID = useCallback(async (idEmpresa) => {
+        try {
+            return await getEmpresaDataId(idEmpresa);
+        } catch (error) {
+            console.error("Error en getCompanyID (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const getProductCodBarra = useCallback(async (idEmpresa, puntoVenta, codBarra) => {
+        try {
+            return await getProductCodBarraApi(idEmpresa, puntoVenta, codBarra);
+        } catch (error) {
+            console.error("Error en getProductCodBarra (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const getTiketsPdf = useCallback(async (idAdmin, ventaID) => {
+        try {
+            return await getTiketsPdfDescargar(idAdmin, ventaID);
+        } catch (error) {
+            console.error("Error en getTiketsPdf (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const cargaMasiva = useCallback(async (listado, empresaId, puntoVentaid) => {
+        try {
+            return await CargarMasiva_api(listado, empresaId, puntoVentaid);
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+    const abrirCaja = useCallback(async (data) => {
+        try {
+            console.log("Datos recibidos para abrir caja:", data);
+           const respuesta = await AbrirCaja_api(data)
+           if(respuesta._id){
+            localStorage.setItem("cajasActivas", JSON.stringify(respuesta)); // Guardamos la caja activa en localStorage
+            setCajasActivas(respuesta);
+           }
             return respuesta;
-        }catch(err){
-
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
         }
-    }
+    }, []);
 
-    const getCompanyID = async (idEmpresa) =>{
-        try{
-            const respuesta = await getEmpresaDataId(idEmpresa)
-            return respuesta;
-        }catch(err){
 
+    const cerrarCaja = useCallback(async (data, idCaja) => {
+        try {
+            console.log(data)
+            console.log("Datos recibidos para cerrar caja:", data, idCaja);
+            return await CerrarCaja_api(data, idCaja);
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
         }
-    }
- 
-    const getProductCodBarra = async (idEmpresa, puntoVenta, codBarra) =>{
-        try{
-            console.log("recibidos -> desde getcod", idEmpresa, puntoVenta, codBarra)
-            const respuesta = await getProductCodBarraApi(idEmpresa, puntoVenta, codBarra)
-            //console.log("respuesta desde getProductCodBarra -> ", respuesta)
-            return respuesta;
-        }catch(err){
+    }, []);
 
+    const ingreso_egreso = useCallback(async (data, idCaja) => {
+        try {
+            console.log("Datos recibidos para abrir caja:", data);
+            return await Ingreso_Egreso_Caja_api(data, idCaja);
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
         }
-    }
+    }, []);
 
-    const getTiketsPdf = async (idAdmin, ventaID) =>{
-        try{
-            const respuesta = await getTiketsPdfDescargar(idAdmin, ventaID);
-            console.log(respuesta)
-            return respuesta
-        }catch(err){
-
+    const get_caja_id = useCallback(async (idCaja) => {
+        try {
+            console.log("Datos recibidos para abrir caja:", data);
+            return await get_caja_id_api(idCaja);
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
         }
-    }
+    }, []);
+
+
+    const get_caja_company = useCallback(async (idEmpresa) => {
+        try {
+            console.log("Datos recibidos para abrir caja:", idEmpresa);
+            return await get_caja_company_api(idEmpresa);
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+    
 
     return (
         <apiContext.Provider value={{
@@ -263,18 +265,25 @@ export const ApiProvider = ({ children }) => {
             createProduct,
             createPointSale,
             getPointsByCompany,
-            createVendedor, // Asegúrate de que el nombre aquí coincida con la función definida arriba (createVendedor)
+            createVendedor,
             getProductsEmpresa,
             getTiketsContext,
             createTiketContext,
-            getCompanyID,
+            getCompanyID, // La función se llama `getCompanyID`, pero la de la API es `getEmpresaDataId`
             getProductCodBarra,
             getTiketsPdf,
+            cargaMasiva,
+            abrirCaja,
+            cerrarCaja,
+            ingreso_egreso,
+            get_caja_id,
+            get_caja_company,
             isAuthenticated,
             userData,
-            companyData
+            companyData,
+            cajasActivas
         }}>
-            {children} 
+            {children}
         </apiContext.Provider>
     );
 };

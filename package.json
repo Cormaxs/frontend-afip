@@ -11,12 +11,19 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.10",
+    "@tanstack/react-form": "^1.14.0",
+    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/yup-form-adapter": "^0.42.1",
     "axios": "^1.9.0",
+    "bootstrap-icons": "^1.13.1",
+    "dotenv": "^17.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-hook-form": "^7.60.0",
     "react-router-dom": "^7.6.2",
     "sweetalert2": "^11.22.1",
-    "tailwindcss": "^4.1.10"
+    "tailwindcss": "^4.1.10",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

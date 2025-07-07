@@ -1,1 +1,8 @@
 @import "tailwindcss";
+@import "bootstrap-icons";
+
+:root{
+    --principal:#722ff9;
+    --principal-activo:#a377fc;
+    --principal-shadow:#6017f3;
+}

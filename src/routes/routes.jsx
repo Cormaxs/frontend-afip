@@ -15,7 +15,11 @@ import {CreateTikets} from "../pages/tikets/create-tiket.jsx";
 import {VerTiketsCompany} from "../pages/tikets/get-tikets.jsx";
 import {MetricasNegocio} from "../pages/metricas.jsx";
 import {GenerarVentas} from "../pages/ventas/generar-venta.jsx";
-
+import {CagargaMasiva_products} from "../pages/productos/carga-masiva.jsx";
+import {AbrirCaja} from "../pages/caja/abrir-caja.jsx";
+import {CerrarCaja} from "../pages/caja/cerrar-caja.jsx";
+import {IngresoEgreso} from "../pages/caja/ingreso-egreso-caja.jsx";
+import {HistorialCajas} from "../pages/caja/get-cajas-company.jsx";
 
 export function LoadRoutes() {
     return(
@@ -36,6 +40,7 @@ export function LoadRoutes() {
             {/* Gestión de Catálogo */}
             <Route path="/add-product" element={<AgregarProducto/>} />
             <Route path="/productos" element={<GetProductsCompany/>} />
+            <Route path="/carga-masiva-productos" element={<CagargaMasiva_products/>} />
             
             {/* Puntos de Venta */}
             <Route path="/add-puntoVenta" element={<AgregarPuntoVenta/>} />
@@ -45,6 +50,14 @@ export function LoadRoutes() {
             <Route path="/add-vendedor" element={<AddVendedores/>} />
             <Route path="/usuarios" element="usuarios" />
             
+            {/* Caja */}
+            <Route path="/abrir-caja" element={<AbrirCaja/>} />
+            <Route path="/cerrar-caja" element={<CerrarCaja/>} />
+            <Route path="/ingreso-egreso-caja" element={<IngresoEgreso/>} />
+            <Route path="/get-caja-id" element={<AbrirCaja/>} />
+            <Route path="/get-cajas-empresa" element={<HistorialCajas/>} />
+
+            {/* Tikets */}
             <Route path="/tiket/create" element={<CreateTikets/>} />
             <Route path="/tiket/get" element={<VerTiketsCompany/>} />
 

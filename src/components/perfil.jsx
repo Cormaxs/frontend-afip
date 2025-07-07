@@ -1,0 +1,9 @@
+
+
+export function Perfil() {
+    return(
+        <>
+        
+        </>
+    )
+}
