@@ -39,7 +39,7 @@ const validateForm = (formData) => {
     return { isValid: true, message: '' };
 };
 
-export function AgregarProducto() {
+export default function AgregarProducto() {
     // 1. LLAMADA A HOOKS EN EL NIVEL SUPERIOR
     const { createProduct, getPointsByCompany, userData, companyData } = useContext(apiContext);
 

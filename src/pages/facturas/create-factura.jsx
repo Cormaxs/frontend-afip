@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export function CrearFactura() {
+export default function CrearFactura() {
   const [facturaData, setFacturaData] = useState({
     afipRequestData: {
       Auth: {

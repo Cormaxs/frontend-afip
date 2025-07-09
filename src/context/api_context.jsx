@@ -111,6 +111,7 @@ export const ApiProvider = ({ children }) => {
 
     const getPointsByCompany = useCallback(async (idEmpresa, page) => { // Añadido `page` para consistencia
         try {
+            //console.log("llego a puntos de venta, page _ >", page);
             // Pasamos los parámetros que necesite la función de la API
             return await getPointSales(idEmpresa, page); 
         } catch (error) {
@@ -130,6 +131,7 @@ export const ApiProvider = ({ children }) => {
 
     const getProductsEmpresa = useCallback(async (idEmpresa, page, limit) => {
         try {
+            console.log("llegaron -> ", page, limit)
             return await getProductsCompany(idEmpresa, page, limit);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);

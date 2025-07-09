@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { apiContext } from "../../context/api_context";
 
-export function IngresoEgreso() {
+export default function IngresoEgreso() {
     // 1. CONTEXTO Y ESTADO
     // --------------------
     const { cajasActivas, ingreso_egreso } = useContext(apiContext);

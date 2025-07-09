@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { apiContext } from "../../context/api_context";
 
 // Componente principal para mostrar el historial de cajas
-export function HistorialCajas() {
+export default function HistorialCajas() {
     // ESTADOS
     const { companyData, get_caja_company } = useContext(apiContext);
     const [currentPage, setCurrentPage] = useState(1);

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState, useMemo } from "react";
 import { apiContext } from "../../context/api_context";
 
-export function AbrirCaja() {
+export default function AbrirCaja() {
     // 1. CONTEXTO Y ESTADO
     // --------------------
     // Asumo que tienes una función `abrirCajaApi` en tu contexto para esta acción.

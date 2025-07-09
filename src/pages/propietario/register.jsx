@@ -30,7 +30,7 @@ const getInitialEmpresa = () => {
     }
 };
 
-export function RegisterPage() {
+export default function RegisterPage() {
     const navigate = useNavigate();
     const { register: apiRegister } = useContext(apiContext); // Renombrado para evitar conflicto
     const [serverFeedback, setServerFeedback] = useState({ msg: '', type: '' });
@@ -178,11 +178,11 @@ export function RegisterPage() {
                     />
 
                     <div className="flex items-center">
-                        <input type="checkbox" id="activo" {...register("activo")} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
+                        <input type="checkbox" id="activo" {...register("activo")} className="h-4 w-4 text-[var(--principal-activo)] border-gray-300 rounded" />
                         <label htmlFor="activo" className="ml-2 block text-sm text-gray-700">Usuario activo</label>
                     </div>
 
-                    <button type="submit" disabled={isSubmitting} className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:opacity-50">
+                    <button type="submit" disabled={isSubmitting} className="cursor-pointer w-full bg-[var(--principal)] text-white p-2 rounded hover:bg-[var(--principal-activo)] disabled:opacity-50">
                         {isSubmitting ? 'Registrando...' : 'Registrarse'}
                     </button>
                 </form>
@@ -194,10 +194,10 @@ export function RegisterPage() {
                 )}
                 
                 <p className="mt-6 text-center text-sm text-gray-600">
-                    ¿Ya tienes cuenta? <Link to="/login" className="text-blue-500 hover:underline">Inicia sesión aquí</Link>
+                    ¿Ya tienes cuenta? <Link to="/login" className="text-[var(--principal)] hover:underline">Inicia sesión aquí</Link>
                 </p>
                 <p className="mt-4 text-center text-sm text-gray-600">
-                    ¿No tienes Empresa? <Link to="/empresa-register" className="text-blue-500 hover:underline">Registrar empresa</Link>
+                    ¿No tienes Empresa? <Link to="/empresa-register" className="text-[var(--principal)] hover:underline">Registrar empresa</Link>
                 </p>
             </div>
         </div>

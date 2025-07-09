@@ -4,7 +4,7 @@ import axios from 'axios';
 // 1. CONFIGURACIÓN CENTRAL DE AXIOS
 // ============================================================================
 
-// Determina la URL base según el entorno (desarrollo vs. producción) http://localhost:3000/api/v1
+// Determina la URL base según el entorno (desarrollo vs. producción) http://localhost:3000/api/v1  https://api.facstock.com/api/v1
 const URL_BACKEND = "https://api.facstock.com/api/v1"
 
 // Crea una instancia de Axios con configuración predeterminada
@@ -153,6 +153,7 @@ export async function getPointSales(idEmpresa) {
 
 export async function getProductsCompany(idEmpresa, page, limit) {
     // Es mejor práctica pasar parámetros de URL a través del objeto `params`
+    console.log(page, limit)
     const response = await axiosInstance.get(`/products/${idEmpresa}`, { params: { page, limit } });
     return response.data;
 }

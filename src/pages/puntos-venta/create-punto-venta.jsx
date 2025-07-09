@@ -16,7 +16,7 @@ const createInitialState = (userData, companyData) => ({
   telefono: ''
 });
 
-export function AgregarPuntoVenta() {
+export default function AgregarPuntoVenta() {
   // --- HOOKS Y ESTADO ---
   const { createPointSale, userData, companyData } = useContext(apiContext);
   const [formData, setFormData] = useState(() => createInitialState(userData, companyData));

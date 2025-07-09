@@ -134,7 +134,7 @@ const SubMenu = ({ group, open, isActivePath, toggleSubmenu }) => {
     );
 };
 
-export function SidePanel() {
+export default function SidePanel() {
     const [isOpen, setIsOpen] = useState(false); // Por defecto cerrado en móvil para un enfoque empresarial
     const [openSubmenu, setOpenSubmenu] = useState(null);
     const location = useLocation();

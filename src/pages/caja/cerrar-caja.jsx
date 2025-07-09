@@ -1,7 +1,7 @@
 import React, { useContext, useState, useMemo } from "react";
 import { apiContext } from "../../context/api_context";
 
-export function CerrarCaja() {
+export default function CerrarCaja() {
     // 1. CONTEXTO Y ESTADO
     // --------------------
     const { cerrarCaja, cajasActivas } = useContext(apiContext);

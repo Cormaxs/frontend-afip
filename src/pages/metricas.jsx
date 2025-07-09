@@ -37,7 +37,7 @@ const MetricCard = ({ icon, title, value, isLoading }) => (
 );
 
 // --- Componente Principal ---
-export function MetricasNegocio() {
+export default function MetricasNegocio() {
   const { userData, getTiketsContext, getPointsByCompany, getProductsEmpresa } = useContext(apiContext);
   
   const [tikets, setTikets] = useState(null);

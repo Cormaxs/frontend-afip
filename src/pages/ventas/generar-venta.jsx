@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { apiContext } from '../../context/api_context';
 import Swal from 'sweetalert2';
 
-export function GenerarVentas() {
+export default function GenerarVentas() {
   const { getPointsByCompany, getProductCodBarra } = useContext(apiContext);
 
   // --- Estados del Componente ---

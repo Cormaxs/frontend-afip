@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback } from "react";
 import { apiContext } from "../../context/api_context";
 
-export function GetPointsSales() {
+export default function GetPointsSales() {
   // --- ESTADO ---
   const { getPointsByCompany, userData, companyData } = useContext(apiContext);
   const [data, setData] = useState(null);

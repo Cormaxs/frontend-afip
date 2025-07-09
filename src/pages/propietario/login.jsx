@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form'; // 1. Importar el hook principal
 import { apiContext } from '../../context/api_context.jsx';
 
-export function LoginPage() {
+export default function LoginPage() {
     const { login } = useContext(apiContext);
     const navigate = useNavigate();
     const [serverError, setServerError] = useState('');
@@ -31,7 +31,6 @@ export function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm text-center">
-                <h1 className='text-xl font-bold mb-4'>Es necesario tener una empresa / local registrado</h1>
                 <h2 className="text-2xl font-bold mb-6">Iniciar Sesión</h2>
 
                 {/* handleSubmit se encarga de la validación antes de llamar a nuestro 'onSubmit' */}
@@ -67,7 +66,7 @@ export function LoginPage() {
                         {errors.password && <em className="text-red-500 text-xs text-left block mt-1">{errors.password.message}</em>}
                     </div>
 
-                    <button type="submit" disabled={isSubmitting} className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 disabled:opacity-50">
+                    <button type="submit" disabled={isSubmitting} className=" cursor-pointer w-full bg-[var(--principal)] text-white p-2 rounded-md hover:bg-[var(--principal-activo)] disabled:opacity-50">
                         {isSubmitting ? 'Cargando...' : 'Entrar'}
                     </button>
                 </form>
@@ -75,11 +74,9 @@ export function LoginPage() {
                 {serverError && <p className="mt-4 text-red-500 text-sm">{serverError}</p>}
                 
                 <div className='mt-6 space-y-2'>
+                   
                     <p className="text-sm text-gray-600">
-                        ¿No tienes cuenta? <Link to="/register" className="text-blue-500 hover:underline">Regístrate</Link>
-                    </p>
-                    <p className="text-sm text-gray-600">
-                        ¿No tienes Empresa? <Link to="/empresa-register" className="text-blue-500 hover:underline">Registrar empresa</Link>
+                        ¿No tienes cuenta? <Link to="/empresa-register" className="text-[var(--principal)] hover:underline">Registrate</Link>
                     </p>
                 </div>
             </div>

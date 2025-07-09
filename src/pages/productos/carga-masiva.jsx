@@ -1,7 +1,7 @@
 import { apiContext } from "../../context/api_context";
 import React, { useContext, useEffect, useState } from "react";
 
-export function CagargaMasiva_products() {
+export default function CagargaMasiva_products() {
     const { companyData, cargaMasiva, getPointsByCompany } = useContext(apiContext);
     
     const [puntosDeVenta, setPuntosDeVenta] = useState([]);

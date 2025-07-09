@@ -1,6 +1,6 @@
 
 
-export function Perfil() {
+export default function Perfil() {
     return(
         <>
         

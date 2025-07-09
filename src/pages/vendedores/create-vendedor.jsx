@@ -13,7 +13,7 @@ const ROLES_DISPONIBLES = [
 const ROLES_CON_PUNTOS_DE_VENTA = ['vendedor_activo', 'supervisor'];
 
 
-export function AddVendedores() {
+export default function AddVendedores() {
     const { createVendedor, getPointsByCompany } = useContext(apiContext);
 
     // --- ESTADOS NO RELACIONADOS AL FORMULARIO ---

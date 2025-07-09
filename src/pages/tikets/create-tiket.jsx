@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useMemo, useRef } from "react";
 import { apiContext } from "../../context/api_context"; // Asegúrate de que esta ruta sea correcta
 import Swal from 'sweetalert2'; // Import SweetAlert2
 
-export function CreateTikets() {
+export default function CreateTikets() {
   const { createTiketContext, getPointsByCompany, getProductCodBarra, getTiketsPdf , userData , companyData } = useContext(apiContext);
 
   // --- Estados del Componente ---

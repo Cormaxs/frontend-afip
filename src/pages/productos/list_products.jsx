@@ -3,7 +3,7 @@ import { apiContext } from "../../context/api_context";
 
 // Ya no se importa nada de @heroicons/react
 
-export function GetProductsCompany() {
+export default function GetProductsCompany() {
   // --- STATE MANAGEMENT ---
   const { getProductsEmpresa: getProds, userData, companyData, getPointsByCompany } = useContext(apiContext);
   

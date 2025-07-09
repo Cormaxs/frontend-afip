@@ -21,7 +21,7 @@ const InputField = ({ label, name, value, onChange, type = 'text', options, requ
     </div>
 );
 
-export function GenerarCertificadoDigital() {
+export default function GenerarCertificadoDigital() {
     const [certData, setCertData] = useState({ datos: { country: "AR", state: "", locality: "", organization: "", organizationalUnit: "", emailAddress: "", cuit: "" } });
     const [certFile, setCertFile] = useState(null);
     const [privKeyFile, setPrivKeyFile] = useState(null);

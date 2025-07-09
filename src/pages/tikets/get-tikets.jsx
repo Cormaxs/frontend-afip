@@ -18,7 +18,7 @@ const PdfIcon = () => (
 
 
 // --- Componente Principal ---
-export function VerTiketsCompany() {
+export default function VerTiketsCompany() {
   const apiContextValue = useContext(apiContext);
 
   if (!apiContextValue) {

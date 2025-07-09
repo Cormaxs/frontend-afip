@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export function CertificateUploader() {
+export default function CertificateUploader() {
     const [certData, setCertData] = useState({ content: '' });
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState({ msg: '', type: '' });
