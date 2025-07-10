@@ -70,7 +70,7 @@ export default function CreateTikets() {
 
         // Bucle para obtener todas las páginas de puntos de venta
         do {
-          const response = await getPointsByCompany(companyData._id, currentPage, 10); // Asumimos un límite de 10 por página
+          const response = await getPointsByCompany(companyData._id, currentPage, 100); // Asumimos un límite de 10 por página
           if (response && response.puntosDeVenta) {
             allPoints = [...allPoints, ...response.puntosDeVenta];
             totalPages = response.totalPages;

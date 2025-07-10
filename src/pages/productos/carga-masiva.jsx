@@ -1,135 +1,154 @@
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import { apiContext } from "../../context/api_context";
-import React, { useContext, useEffect, useState } from "react";
 
+// --- Componente Refactorizado ---
 export default function CagargaMasiva_products() {
     const { companyData, cargaMasiva, getPointsByCompany } = useContext(apiContext);
-    
+
+    // 1. ESTADO SIMPLIFICADO
+    const [status, setStatus] = useState('loading'); // loading, idle, loadingMore, submitting, success, error
     const [puntosDeVenta, setPuntosDeVenta] = useState([]);
     const [paginationInfo, setPaginationInfo] = useState(null);
     const [selectedPuntoVentaId, setSelectedPuntoVentaId] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState('');
+    const [message, setMessage] = useState({ type: '', text: '' }); // Para errores y éxito
 
     const idEmpresa = companyData?._id;
 
+    // --- LÓGICA DE DATOS ---
+    const fetchPuntosDeVenta = useCallback(async (page) => {
+        if (!idEmpresa) return;
+
+        setStatus(page === 1 ? 'loading' : 'loadingMore');
+        setMessage({ type: '', text: '' });
+        
+        try {
+            const apiResult = await getPointsByCompany(idEmpresa, page);
+            if (apiResult?.puntosDeVenta && apiResult?.pagination) {
+                setPuntosDeVenta(prev => page === 1 ? apiResult.puntosDeVenta : [...prev, ...apiResult.puntosDeVenta]);
+                setPaginationInfo(apiResult.pagination);
+                setStatus('idle');
+            } else {
+                throw new Error("La respuesta de la API no tiene el formato esperado.");
+            }
+        } catch (err) {
+            setStatus('error');
+            setMessage({ type: 'error', text: "No se pudieron cargar los puntos de venta." });
+        }
+    }, [idEmpresa, getPointsByCompany]);
+
     useEffect(() => {
         if (idEmpresa) {
-            const fetchPuntosDeVenta = async () => {
-                setLoading(true);
-                setError(null);
-                try {
-                    const resultadoApi = await getPointsByCompany(idEmpresa, currentPage);
-                    if (resultadoApi && Array.isArray(resultadoApi.puntosDeVenta) && resultadoApi.pagination) {
-                        setPuntosDeVenta(resultadoApi.puntosDeVenta);
-                        setPaginationInfo(resultadoApi.pagination);
-                    } else {
-                        setPuntosDeVenta([]);
-                        setPaginationInfo(null);
-                        console.warn("La estructura de la respuesta de la API no es la esperada.");
-                    }
-                } catch (err) {
-                    console.error("Error al obtener los puntos de venta:", err);
-                    setError("No se pudieron cargar los puntos de venta. Intente de nuevo.");
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchPuntosDeVenta();
+            setCurrentPage(1);
+            setPuntosDeVenta([]);
+            fetchPuntosDeVenta(1);
         }
-    }, [idEmpresa, currentPage, getPointsByCompany]);
+    }, [idEmpresa]); // Solo se ejecuta si cambia la empresa
 
-    const handleNextPage = () => setCurrentPage(prevPage => prevPage + 1);
-    const handlePrevPage = () => setCurrentPage(prevPage => prevPage - 1);
-    const handleFileChange = (event) => {
-        setSelectedFile(event.target.files[0]);
-        setSuccessMessage('');
-    };
-    const handlePuntoVentaChange = (event) => {
-        setSelectedPuntoVentaId(event.target.value);
-        setSuccessMessage('');
-    };
+    useEffect(() => {
+        if (currentPage > 1) {
+            fetchPuntosDeVenta(currentPage);
+        }
+    }, [currentPage]); // Se ejecuta al hacer clic en "Mostrar más"
 
-    // --- FUNCIÓN CORREGIDA ---
+    // --- MANEJADORES DE EVENTOS ---
+    const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
+    const handlePuntoVentaChange = (e) => setSelectedPuntoVentaId(e.target.value);
+    const handleMostrarMas = () => paginationInfo?.hasNextPage && setCurrentPage(p => p + 1);
+
     const handleSubmit = async (event) => {
         event.preventDefault();
-
         if (!selectedPuntoVentaId || !selectedFile) {
-            setError("Por favor, seleccione un punto de venta y un archivo CSV.");
+            setMessage({ type: 'error', text: "Por favor, seleccione un punto de venta y un archivo." });
             return;
         }
 
-        setLoading(true);
-        setError(null);
-        setSuccessMessage('');
-
+        setStatus('submitting');
+        setMessage({ type: '', text: '' });
+        
         const formData = new FormData();
         formData.append('importar-db', selectedFile);
 
         try {
-            // Llamamos a la función con los 3 argumentos que espera
-            const response = await cargaMasiva(formData, idEmpresa, selectedPuntoVentaId); 
-            
-            setSuccessMessage("¡Archivo cargado exitosamente!");
-            console.log("Respuesta del servidor:", response);
-            
+            await cargaMasiva(formData, idEmpresa, selectedPuntoVentaId);
+            setStatus('success');
+            setMessage({ type: 'success', text: "¡Archivo cargado exitosamente!" });
             setSelectedFile(null);
-             if(event.target.querySelector('input[type="file"]')) {
-                event.target.querySelector('input[type="file"]').value = "";
-             }
-
+            event.target.reset(); // Limpia el formulario
         } catch (err) {
-            console.error("Error en la carga masiva:", err);
-            setError(err.message || "Ocurrió un error al cargar el archivo.");
-        } finally {
-            setLoading(false);
+            setStatus('error');
+            setMessage({ type: 'error', text: err.message || "Ocurrió un error al cargar el archivo." });
         }
     };
-    
-    return (
-        <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-            <h2>Carga Masiva de Productos desde CSV compatible con tiendanube</h2>
-            <form onSubmit={handleSubmit}>
-                <fieldset style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '15px' }}>
-                    <legend>Paso 1: Seleccione el Punto de Venta</legend>
-                    {loading && <p>Cargando puntos de venta...</p>}
-                    {!loading && puntosDeVenta.length > 0 && (
-                        <>
-                            <select id="puntoVenta" value={selectedPuntoVentaId} onChange={handlePuntoVentaChange} required style={{ width: '100%', padding: '8px', marginBottom: '10px' }}>
-                                <option value="" disabled>-- Seleccionar un punto de venta --</option>
-                                {puntosDeVenta.map((punto) => (
-                                    <option key={punto._id} value={punto._id}>
-                                        {punto.nombre} ({punto.ciudad})
-                                    </option>
-                                ))}
-                            </select>
-                            {paginationInfo && paginationInfo.totalPages > 1 && (
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                                    <button type="button" onClick={handlePrevPage} disabled={!paginationInfo.hasPrevPage}>Anterior</button>
-                                    <span>Página {paginationInfo.currentPage} de {paginationInfo.totalPages}</span>
-                                    <button type="button" onClick={handleNextPage} disabled={!paginationInfo.hasNextPage}>Siguiente</button>
-                                </div>
-                            )}
-                        </>
-                    )}
-                    {!loading && puntosDeVenta.length === 0 && !error && (<p>No se encontraron puntos de venta para esta empresa.</p>)}
-                </fieldset>
 
-                {selectedPuntoVentaId && (
-                    <fieldset style={{ border: '1px solid #ccc', padding: '15px' }}>
-                        <legend>Paso 2: Subir Archivo</legend>
-                        <label htmlFor="csvFile" style={{ display: 'block', marginBottom: '5px' }}>Seleccione el archivo <code>.csv</code> a importar:</label>
-                        <input type="file" id="csvFile" name="importar-db" accept=".csv" onChange={handleFileChange} required style={{ width: '100%', padding: '8px' }}/>
+    // 2. CLASES REUTILIZABLES DE TAILWIND
+    const fieldsetClasses = "border border-gray-300 p-4 rounded-lg";
+    const legendClasses = "text-sm font-semibold text-gray-800 px-2";
+    const inputClasses = "w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition";
+    const buttonPrimaryClasses = "w-full py-2 px-4 bg-[var(--principal)] text-white font-semibold rounded-md shadow-sm hover:bg-[var(--principal)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition";
+    const buttonSecondaryClasses = "w-auto py-2 px-4 bg-white text-[var(--principal)] font-semibold border border-[var(--principal)] rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition";
+
+    const isLoading = status === 'loading' || status === 'loadingMore' || status === 'submitting';
+    
+    // --- RENDERIZADO ---
+    return (
+        <div className="bg-gray-50 min-h-screen p-4 md:p-8 flex items-center justify-center">
+            <div className="max-w-2xl w-full bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900">Carga Masiva de Productos</h2>
+                    <p className="text-gray-600 mt-1">Sube tu archivo CSV compatible con Tiendanube.</p>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <fieldset className={fieldsetClasses}>
+                        <legend className={legendClasses}>Paso 1: Punto de Venta</legend>
+                        {status === 'loading' ? (
+                            <p className="text-center text-gray-600 p-4">Cargando...</p>
+                        ) : puntosDeVenta.length > 0 ? (
+                            <div className="space-y-4">
+                                <select id="puntoVenta" value={selectedPuntoVentaId} onChange={handlePuntoVentaChange} required className={inputClasses}>
+                                    <option value="" disabled>-- Seleccionar un punto de venta --</option>
+                                    {puntosDeVenta.map((punto) => (
+                                        <option key={punto._id} value={punto._id}>
+                                            {punto.nombre} ({punto.ciudad})
+                                        </option>
+                                    ))}
+                                </select>
+                                
+                                {status === 'loadingMore' && <p className="text-center text-[var(--principal)]">Cargando más...</p>}
+                                {paginationInfo?.hasNextPage && status !== 'loadingMore' && (
+                                    <div className="text-center">
+                                        <button type="button" onClick={handleMostrarMas} className={buttonSecondaryClasses}>
+                                            Mostrar más
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-center text-gray-500 p-4">No se encontraron puntos de venta.</p>
+                        )}
                     </fieldset>
-                )}
-                {error && <p style={{ color: 'red', marginTop: '10px' }}>Error: {error}</p>}
-                {successMessage && <p style={{ color: 'green', marginTop: '10px' }}>{successMessage}</p>}
-                <button type="submit" disabled={!selectedPuntoVentaId || !selectedFile || loading} style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer', backgroundColor: loading ? '#ccc' : '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}>
-                    {loading ? 'Cargando...' : 'Cargar Productos'}
-                </button>
-            </form>
+
+                    {selectedPuntoVentaId && (
+                        <fieldset className={fieldsetClasses}>
+                            <legend className={legendClasses}>Paso 2: Subir Archivo</legend>
+                            <label htmlFor="csvFile" className="sr-only">Subir archivo CSV</label>
+                            <input type="file" id="csvFile" name="importar-db" accept=".csv" onChange={handleFileChange} required className={`${inputClasses} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-[var(--principal)] hover:file:bg-indigo-100`}/>
+                        </fieldset>
+                    )}
+                    
+                    {message.text && (
+                        <p className={`text-center font-medium ${message.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                            {message.text}
+                        </p>
+                    )}
+                    
+                    <button type="submit" disabled={!selectedPuntoVentaId || !selectedFile || isLoading} className={buttonPrimaryClasses}>
+                        {status === 'submitting' ? 'Procesando...' : 'Cargar Productos'}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }

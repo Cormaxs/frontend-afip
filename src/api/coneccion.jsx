@@ -146,15 +146,16 @@ export async function Ingreso_Egreso_Caja_api(data, idCaja) {
 }
 // --- Obtención de Recursos (GET) ---
 
-export async function getPointSales(idEmpresa) {
-    const response = await axiosInstance.get(`/point-sales/${idEmpresa}`);
+export async function getPointSales(idEmpresa, page, limit) {
+    console.log(page)
+    const response = await axiosInstance.get(`/point-sales/${idEmpresa}?page=${page}&limit=${limit}`);
     return response.data;
 }
 
-export async function getProductsCompany(idEmpresa, page, limit) {
+export async function getProductsCompany(idEmpresa, page, limit, category, product, marca) {
     // Es mejor práctica pasar parámetros de URL a través del objeto `params`
     console.log(page, limit)
-    const response = await axiosInstance.get(`/products/${idEmpresa}`, { params: { page, limit } });
+    const response = await axiosInstance.get(`/products/${idEmpresa}`, { params: { page, limit, category, product, marca} });
     return response.data;
 }
 

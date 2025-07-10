@@ -4,38 +4,59 @@ import { apiContext } from "../../context/api_context";
 export default function GetPointsSales() {
   // --- ESTADO ---
   const { getPointsByCompany, userData, companyData } = useContext(apiContext);
-  const [data, setData] = useState(null);
+  
+  // Estado unificado para la respuesta de la API
+  const [data, setData] = useState(null); 
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [companyName, setCompanyName] = useState("");
 
   // --- LÓGICA DE OBTENCIÓN DE DATOS ---
-  const fetchPoints = useCallback(async () => {
+  const fetchPoints = useCallback(async (page) => {
     if (!userData?.empresa) {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
+    
     setIsLoading(true);
     setError(null);
+    
     try {
       setCompanyName(companyData?.nombreEmpresa || "Tu Empresa");
-      const responseData = await getPointsByCompany(userData.empresa, currentPage);
+      const responseData = await getPointsByCompany(userData.empresa, page);
+
+      // Validar que la respuesta de la API tiene el formato esperado
       if (responseData?.puntosDeVenta && responseData?.pagination) {
+        // Reemplaza los datos anteriores con los de la página actual
         setData(responseData);
       } else {
-        throw new Error("La respuesta de la API no tiene el formato de paginación esperado.");
+        setData({ puntosDeVenta: [], pagination: null }); // Resetea en caso de respuesta inválida
+        throw new Error("La respuesta de la API no tiene el formato esperado.");
       }
     } catch (err) {
       setError(err.message || "Ocurrió un error al cargar los puntos de venta.");
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, getPointsByCompany, userData, companyData]);
+  }, [getPointsByCompany, userData, companyData]);
 
+  // Efecto para resetear la paginación si la empresa cambia
   useEffect(() => {
-    fetchPoints();
-  }, [fetchPoints]);
+    if (userData?.empresa) {
+      setCurrentPage(1);
+      setData(null); 
+    }
+  }, [userData?.empresa]);
+
+  // Efecto para cargar los datos cuando la página o la empresa cambian
+  useEffect(() => {
+    // Solo fetching si tenemos una empresa y no hay datos cargados para la página actual
+    if (userData?.empresa) {
+        fetchPoints(currentPage);
+    }
+  }, [currentPage, fetchPoints, userData?.empresa]);
 
   // --- FUNCIÓN AUXILIAR DE FORMATO DE FECHA ---
   const formatDateTime = (isoString) => {
@@ -49,7 +70,7 @@ export default function GetPointsSales() {
       return "Fecha inválida";
     }
   };
-
+  
   // --- RENDERIZADO DE ESTADOS DE CARGA Y ERROR ---
   if (isLoading) return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
@@ -81,20 +102,18 @@ export default function GetPointsSales() {
           <p className="text-gray-600 mt-1">Empresa: {companyName}</p>
         </div>
         
-        {points.length === 0 && !isLoading ? (
+        {points.length === 0 ? (
           <p className="text-gray-600 text-center py-10">No hay puntos de venta registrados.</p>
         ) : (
           <>
-            {/* Contenedor con Columnas Múltiples */}
             <ul className="columns-1 md:columns-2 gap-4 space-y-4">
               {points.map(point => (
-                // La clase 'break-inside-avoid' es clave para que las tarjetas no se corten
                 <li key={point._id} className="p-4 border bg-white rounded-lg break-inside-avoid">
                   <div className="flex justify-between items-start mb-2">
-                      <h2 className="text-lg font-semibold text-gray-900">{point.nombre}</h2>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${point.activo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                        {point.activo ? "Activo" : "Inactivo"}
-                      </span>
+                    <h2 className="text-lg font-semibold text-gray-900">{point.nombre}</h2>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${point.activo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                      {point.activo ? "Activo" : "Inactivo"}
+                    </span>
                   </div>
                   <div className="text-sm text-gray-700 space-y-1">
                     <p><span className="font-medium">Número:</span> {point.numero}</p>
@@ -105,7 +124,7 @@ export default function GetPointsSales() {
               ))}
             </ul>
 
-            {/* Controles de Paginación */}
+            {/* --- CONTROLES DE PAGINACIÓN --- */}
             {pagination && pagination.totalPages > 1 && (
               <div className="flex items-center justify-between mt-8">
                 <button 
