@@ -1,179 +1,232 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { apiContext } from "../../context/api_context";
-
-// --- Estado Inicial Descriptivo ---
-const createInitialState = (userData, companyData) => ({
-  empresa: userData?.empresa || '',
-  companyName: companyData?.nombreEmpresa || '', // Solo para UI
-  numero: '',
-  nombre: '',
-  activo: true,
-  fechaUltimoCbte: '',
-  direccion: '',
-  ciudad: '',
-  provincia: '',
-  codigoPostal: '',
-  telefono: ''
-});
+import React, { useState, useEffect, useContext } from 'react';
+import { useForm } from 'react-hook-form'; // 1. Importar el hook
+import { apiContext } from "../../context/api_context.jsx";
 
 export default function AgregarPuntoVenta() {
   // --- HOOKS Y ESTADO ---
   const { createPointSale, userData, companyData } = useContext(apiContext);
-  const [formData, setFormData] = useState(() => createInitialState(userData, companyData));
-  const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  
+  // El estado ahora es solo para mensajes del servidor, no para los campos del formulario.
+  const [serverFeedback, setServerFeedback] = useState({ success: '', error: '' });
 
-  // Sincroniza el estado del formulario si los datos del contexto cargan después del montaje inicial
+  // 2. Configurar useForm con valores por defecto
+  const { 
+    register, 
+    handleSubmit, 
+    reset,
+    formState: { errors, isSubmitting } 
+  } = useForm({
+    defaultValues: {
+      empresa: userData?.empresa || '',
+      companyName: companyData?.nombreEmpresa || '',
+      numero: '',
+      nombre: '',
+      activo: true,
+      fechaUltimoCbte: '',
+      direccion: '',
+      ciudad: '',
+      provincia: '',
+      codigoPostal: '',
+      telefono: ''
+    }
+  });
+
+  // Sincroniza los valores por defecto si los datos del contexto cargan tarde
   useEffect(() => {
     if (userData?.empresa && companyData?.nombreEmpresa) {
-      setFormData(prev => ({
-        ...prev,
+      reset({
         empresa: userData.empresa,
         companyName: companyData.nombreEmpresa,
-      }));
+        activo: true, // Asegura que los valores por defecto se mantengan
+      });
     }
-  }, [userData, companyData]);
+  }, [userData, companyData, reset]);
 
   // --- DATOS Y CONFIGURACIÓN ---
   const provinciasArgentinas = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
 
-  // --- MANEJADORES DE EVENTOS ---
-  const handleChange = useCallback((e) => {
-    const { name, value, type, checked } = e.target;
-    // No permitir que el campo de la empresa se modifique manualmente
-    if (name === 'empresa') return;
-
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  }, []);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsLoading(true);
-    setSuccessMessage('');
-    setErrorMessage('');
+  // 3. La función de envío ahora recibe la data validada
+  const onSubmit = async (data) => {
+    setServerFeedback({ success: '', error: '' });
 
     try {
-      // Validaciones básicas
-      if (!formData.empresa) throw new Error('El ID de la empresa no está cargado. Por favor, recargue la página.');
-      if (!formData.numero || isNaN(parseInt(formData.numero, 10)) || formData.numero <= 0) throw new Error('El campo "Número de Punto" es obligatorio y debe ser un número válido mayor que 0.');
-      if (!formData.nombre.trim()) throw new Error('El campo "Nombre" es obligatorio.');
-
-      // Prepara los datos para enviar a la API
       const dataToSend = {
-        ...formData,
-        numero: parseInt(formData.numero, 10),
-        ultimoCbteAutorizado: formData.ultimoCbteAutorizado ? parseInt(formData.ultimoCbteAutorizado, 10) : 0,
-        fechaUltimoCbte: formData.fechaUltimoCbte || null,
+        ...data,
+        fechaUltimoCbte: data.fechaUltimoCbte || null,
       };
-      delete dataToSend.companyName; // No enviar el nombre de la empresa, solo el ID
+      delete dataToSend.companyName; // No enviar el nombre de la empresa
 
       await createPointSale(dataToSend);
-      setSuccessMessage('¡Punto de venta registrado con éxito!');
+      setServerFeedback({ success: '¡Punto de venta registrado con éxito!', error: '' });
       
       // Resetea el formulario manteniendo los datos de la empresa
-      setFormData(createInitialState(userData, companyData));
+      reset({
+        ...data, // Mantiene los datos que no se deben limpiar
+        numero: '',
+        nombre: '',
+        direccion: '',
+        ciudad: '',
+        provincia: '',
+        codigoPostal: '',
+        telefono: '',
+        fechaUltimoCbte: '',
+      });
       
-      setTimeout(() => setSuccessMessage(''), 4000);
+      setTimeout(() => setServerFeedback({ success: '', error: '' }), 4000);
     } catch (e) {
-      setErrorMessage(e.message || 'Ocurrió un error al registrar el punto de venta.');
-      setTimeout(() => setErrorMessage(''), 5000);
-    } finally {
-      setIsLoading(false);
+      setServerFeedback({ success: '', error: e.response?.data?.message || e.message || 'Ocurrió un error al registrar el punto de venta.'});
+      setTimeout(() => setServerFeedback({ success: '', error: '' }), 5000);
     }
   };
 
-  // --- RENDERIZADO ---
-  const formStyles = {
-    formContainer: { maxWidth: '800px', margin: 'auto', padding: '20px' },
-    form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' },
-    formGroup: { marginBottom: '15px' },
-    label: { display: 'block', marginBottom: '5px', fontWeight: 'bold' },
-    input: { width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' },
-    button: { width: '100%', padding: '12px', fontSize: '16px', cursor: 'pointer', border: 'none', borderRadius: '4px', color: 'white' },
-    message: { padding: '10px', marginTop: '15px', borderRadius: '4px', textAlign: 'center' }
-  };
-  
+  // --- RENDERIZADO CON TAILWIND CSS Y REACT-HOOK-FORM ---
   return (
-    <div style={formStyles.formContainer}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <h1>Agregar Punto de Venta</h1>
-      </div>
-      
-      <form onSubmit={handleSubmit}>
-        <div style={formStyles.form}>
-            {/* Campo Empresa (solo lectura) */}
-            <div style={{ ...formStyles.formGroup, gridColumn: '1 / -1' }}>
-                <label style={formStyles.label} htmlFor="companyName">Empresa (Owner)*</label>
-                <input style={{...formStyles.input, backgroundColor: '#f0f0f0'}} type="text" id="companyName" value={formData.companyName} readOnly />
-            </div>
-
-            {/* Campos del Formulario */}
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="numero">Número de Punto*</label>
-                <input style={formStyles.input} type="number" name="numero" id="numero" value={formData.numero} onChange={handleChange} required min="1" placeholder="Ej: 4"/>
-            </div>
-
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="nombre">Nombre*</label>
-                <input style={formStyles.input} type="text" name="nombre" id="nombre" value={formData.nombre} onChange={handleChange} required placeholder="Ej: Sucursal Centro"/>
-            </div>
-
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="direccion">Dirección</label>
-                <input style={formStyles.input} type="text" name="direccion" id="direccion" value={formData.direccion} onChange={handleChange} placeholder="Av. Corrientes 1234"/>
-            </div>
-
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="ciudad">Ciudad</label>
-                <input style={formStyles.input} type="text" name="ciudad" id="ciudad" value={formData.ciudad} onChange={handleChange} placeholder="Ej: Rosario"/>
-            </div>
-            
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="provincia">Provincia</label>
-                <select style={formStyles.input} name="provincia" id="provincia" value={formData.provincia} onChange={handleChange}>
-                    <option value="">Seleccione una provincia</option>
-                    {provinciasArgentinas.map(prov => <option key={prov} value={prov}>{prov}</option>)}
-                </select>
-            </div>
-            
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="codigoPostal">Código Postal</label>
-                <input style={formStyles.input} type="text" name="codigoPostal" id="codigoPostal" value={formData.codigoPostal} onChange={handleChange} placeholder="Ej: S2000"/>
-            </div>
-
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="telefono">Teléfono</label>
-                <input style={formStyles.input} type="tel" name="telefono" id="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej: +543415123456"/>
-            </div>
-
-            
-
-            <div style={formStyles.formGroup}>
-                <label style={formStyles.label} htmlFor="fechaUltimoCbte">Fecha Último Cbte.</label>
-                <input style={formStyles.input} type="datetime-local" name="fechaUltimoCbte" id="fechaUltimoCbte" value={formData.fechaUltimoCbte} onChange={handleChange} />
-            </div>
-
-            <div style={{ ...formStyles.formGroup, gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
-                <input type="checkbox" name="activo" id="activo" checked={formData.activo} onChange={handleChange} style={{ marginRight: '10px' }}/>
-                <label style={{...formStyles.label, marginBottom: '0'}} htmlFor="activo">Punto de venta activo</label>
-            </div>
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">Agregar Punto de Venta</h1>
         </div>
+        
+        {/* 4. handleSubmit se encarga de la validación antes de llamar a onSubmit */}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700" htmlFor="companyName">Empresa (Owner)*</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed" 
+                type="text" 
+                {...register("companyName")} // Registrado pero sin validación
+                readOnly 
+              />
+            </div>
 
-        {/* Botón de envío */}
-        <div style={{...formStyles.formGroup, marginTop: '20px'}}>
-            <button type="submit" disabled={isLoading} style={{ ...formStyles.button, backgroundColor: isLoading ? '#999' : '#007bff' }}>
-                {isLoading ? 'Guardando...' : 'Guardar Punto de Venta'}
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="numero">Número de Punto*</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="number" 
+                id="numero" 
+                placeholder="Ej: 4"
+                {...register("numero", { 
+                  required: "El número es obligatorio.",
+                  valueAsNumber: true,
+                  min: { value: 1, message: "El número debe ser mayor que 0."} 
+                })}
+              />
+              {/* 5. Mostrar el error si existe */}
+              {errors.numero && <span className="text-red-600 text-sm mt-1">{errors.numero.message}</span>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="nombre">Nombre*</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="text" 
+                id="nombre" 
+                placeholder="Ej: Sucursal Centro"
+                {...register("nombre", { required: "El nombre es obligatorio." })}
+              />
+              {errors.nombre && <span className="text-red-600 text-sm mt-1">{errors.nombre.message}</span>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="direccion">Dirección</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="text" 
+                id="direccion" 
+                placeholder="Av. Corrientes 1234"
+                {...register("direccion")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="ciudad">Ciudad</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="text" 
+                id="ciudad" 
+                placeholder="Ej: Rosario"
+                {...register("ciudad")}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="provincia">Provincia</label>
+              <select 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                id="provincia"
+                {...register("provincia")}
+              >
+                <option value="">Seleccione una provincia</option>
+                {provinciasArgentinas.map(prov => <option key={prov} value={prov}>{prov}</option>)}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="codigoPostal">Código Postal</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="text" 
+                id="codigoPostal" 
+                placeholder="Ej: S2000"
+                {...register("codigoPostal")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="telefono">Teléfono</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="tel" 
+                id="telefono" 
+                placeholder="Ej: +543415123456"
+                {...register("telefono")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="fechaUltimoCbte">Fecha Último Cbte.</label>
+              <input 
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal)] focus:border-[var(--principal)]" 
+                type="datetime-local" 
+                id="fechaUltimoCbte" 
+                {...register("fechaUltimoCbte")}
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center">
+              <input 
+                type="checkbox" 
+                id="activo"
+                className="h-4 w-4 text-[var(--principal-shadow)] border-gray-300 rounded focus:ring-[var(--principal)]"
+                {...register("activo")}
+              />
+              <label className="ml-2 block text-sm text-gray-900" htmlFor="activo">Punto de venta activo</label>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <button 
+              type="submit" 
+              disabled={isSubmitting} // Se usa isSubmitting en lugar de isLoading manual
+              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors ${
+                isSubmitting 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-[var(--principal)] hover:bg-[var(--principal-shadow)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal)]'
+              }`}
+            >
+              {isSubmitting ? 'Guardando...' : 'Guardar Punto de Venta'}
             </button>
+          </div>
+        </form>
+        
+        <div className="mt-4 space-y-2">
+            {serverFeedback.success && <div className="p-3 bg-green-100 text-green-800 rounded-md text-center">{serverFeedback.success}</div>}
+            {serverFeedback.error && <div className="p-3 bg-red-100 text-red-800 rounded-md text-center">{serverFeedback.error}</div>}
         </div>
-      </form>
-      
-      {/* Mensajes de feedback */}
-      {successMessage && <div style={{ ...formStyles.message, backgroundColor: '#d4edda', color: '#155724' }}>{successMessage}</div>}
-      {errorMessage && <div style={{ ...formStyles.message, backgroundColor: '#f8d7da', color: '#721c24' }}>{errorMessage}</div>}
+      </div>
     </div>
   );
 }

@@ -132,10 +132,10 @@ export async function get_caja_id_api(idCaja) {
     return response.data;
 }
 
-export async function get_caja_company_api(idEmpresa) {
+export async function get_caja_company_api(idEmpresa, currentPage, filters) {
     console.log("id empresa desde coneccion -> ",idEmpresa)
     // Para cargas de archivos, Axios detecta FormData y establece el 'Content-Type' correcto.
-    const response = await axiosInstance.get(`/cajas/empresa/${idEmpresa}`);
+    const response = await axiosInstance.get(`/cajas/empresa/${idEmpresa}`, {params: { page: currentPage, ...filters }});
     return response.data;
 }
 
@@ -146,23 +146,47 @@ export async function Ingreso_Egreso_Caja_api(data, idCaja) {
 }
 // --- Obtención de Recursos (GET) ---
 
-export async function getPointSales(idEmpresa, page, limit) {
-    console.log(page)
-    const response = await axiosInstance.get(`/point-sales/${idEmpresa}?page=${page}&limit=${limit}`);
+export async function getPointSales(idEmpresa, page, limit, filters) {
+    console.log(page, limit, filters)
+    const { nombre, provincia, numero } = filters || {};
+    const response = await axiosInstance.get(`/point-sales/${idEmpresa}`, { params: { page, limit,nombre, provincia, numero  } });
     return response.data;
 }
 
-export async function getProductsCompany(idEmpresa, page, limit, category, product, marca) {
+export async function getProductsCompany(idEmpresa, page, limit, category, product, marca, puntoVenta) {
     // Es mejor práctica pasar parámetros de URL a través del objeto `params`
     console.log(page, limit)
-    const response = await axiosInstance.get(`/products/${idEmpresa}`, { params: { page, limit, category, product, marca} });
+    const response = await axiosInstance.get(`/products/${idEmpresa}`, { params: { page, limit, category, product, marca, puntoVenta} });
     return response.data;
 }
 
-export async function getTikets(idEmpresa, page, limit) {
-    const response = await axiosInstance.get(`/tikets/get/all/${idEmpresa}`, { params: { page, limit } });
+export async function getCategoryCompany(idEmpresa) {
+    // Es mejor práctica pasar parámetros de URL a través del objeto `params`
+    const response = await axiosInstance.get(`/products/get/all/category/${idEmpresa}`);
     return response.data;
 }
+
+export async function getMarcaCompany(idEmpresa) {
+    // Es mejor práctica pasar parámetros de URL a través del objeto `params`
+    const response = await axiosInstance.get(`/products/get/all/Marca/${idEmpresa}`);
+    return response.data;
+}
+
+export async function getTikets(idEmpresa, page, limit, searchQuery) {
+    // Construimos los parámetros para la petición
+    const params = {
+      page,
+      limit,
+    };
+  
+    // Solo añadimos el parámetro de búsqueda si no está vacío
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
+  
+    const response = await axiosInstance.get(`/tikets/get/all/${idEmpresa}`, { params });
+    return response.data;
+  }
 
 export async function getEmpresaDataId(idEmpresa) {
     const response = await axiosInstance.get(`/companies/get/${idEmpresa}`);

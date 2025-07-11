@@ -4,16 +4,32 @@ import {
     addPointSale, getPointSales, addVendedores, getProductsCompany,
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
-    get_caja_company_api
+    get_caja_company_api, getCategoryCompany, getMarcaCompany
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
 const getInitialStateFromStorage = (key) => {
     try {
         const storedData = localStorage.getItem(key);
-        return storedData ? JSON.parse(storedData) : null;
+        if (!storedData) {
+            return null; // No hay datos, devuelve null
+        }
+
+        const parsedData = JSON.parse(storedData);
+
+        // --- ¡LA VALIDACIÓN CLAVE! ---
+        // Verifica si el dato parseado es realmente un array.
+        if (Array.isArray(parsedData)) {
+            return parsedData; // Es un array, perfecto.
+        }
+        
+        // Si no es un array (es un objeto, etc.), trátalo como inválido.
+       // console.warn(`Los datos para '${key}' no son un array, se limpiarán.`);
+        //localStorage.removeItem(key); // Opcional: limpiar datos incorrectos.
+        return parsedData;
+
     } catch (error) {
-        console.error(`Error parsing ${key} from localStorage:`, error);
+        console.error(`Error al parsear '${key}' desde localStorage:`, error);
         localStorage.removeItem(key); // Limpiar datos corruptos
         return null;
     }
@@ -109,11 +125,11 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
-    const getPointsByCompany = useCallback(async (idEmpresa, page, limit) => { // Añadido `page` para consistencia
+    const getPointsByCompany = useCallback(async (idEmpresa, page, limit, filters) => { // Añadido `page` para consistencia
         try {
-            console.log("llego a puntos de venta, page _ >", page, limit);
+            console.log("llego a puntos de venta, page _ >", page, limit, filters);
             // Pasamos los parámetros que necesite la función de la API
-            const respuesta = await getPointSales(idEmpresa, page, limit);
+            const respuesta = await getPointSales(idEmpresa, page, limit, filters);
             console.log(respuesta)
             return respuesta; 
         } catch (error) {
@@ -131,15 +147,37 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
-    const getProductsEmpresa = useCallback(async (idEmpresa, page,limit , category, product, marca  ) => {
+    const getProductsEmpresa = useCallback(async (idEmpresa, page,limit , category, product, marca, puntoVenta  ) => {
         try {
-            console.log(`pagina -> ${page} limite -> ${limit} categoria -> ${category} producto -> ${product} marca -> ${marca}`);
-            return await getProductsCompany(idEmpresa, page, limit, category, product, marca);
+            console.log(`pagina -> ${page} limite -> ${limit} categoria -> ${category} producto -> ${product} marca -> ${marca} punto de venta -> ${puntoVenta}`);
+            return await getProductsCompany(idEmpresa, page, limit, category, product, marca, puntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
             throw error;
         }
     }, []);
+
+
+    const getCategoryEmpresa = useCallback(async (idEmpresa  ) => {
+        try {
+            return await getCategoryCompany(idEmpresa);
+        } catch (error) {
+            console.error("Error en getProductsEmpresa (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+
+    const getMarcaEmpresa = useCallback(async (idEmpresa  ) => {
+        try {
+            return await getMarcaCompany(idEmpresa);
+        } catch (error) {
+            console.error("Error en getProductsEmpresa (Context):", error);
+            throw error;
+        }
+    }, []);
+
 
     const createTiketContext = useCallback(async (ticketDataForBackend) => {
         try {
@@ -155,14 +193,15 @@ export const ApiProvider = ({ children }) => {
         }
     }, [userData]); // Depende de userData, así que se añade a las dependencias
 
-    const getTiketsContext = useCallback(async (id, page, limit) => {
+    const getTiketsContext = useCallback(async (id, page, limit, searchQuery) => { // 1. Añade searchQuery aquí
         try {
-            return await getTikets(id, page, limit);
+          // 2. Pasa searchQuery a la función de la API
+          return await getTikets(id, page, limit, searchQuery);
         } catch (error) {
-            console.error("Error en getTiketsContext (Context):", error);
-            throw error;
+          console.error("Error en getTiketsContext (Context):", error);
+          throw error;
         }
-    }, []);
+      }, []);
 
     const getCompanyID = useCallback(async (idEmpresa) => {
         try {
@@ -207,7 +246,9 @@ export const ApiProvider = ({ children }) => {
            const respuesta = await AbrirCaja_api(data)
            if(respuesta._id){
             localStorage.setItem("cajasActivas", JSON.stringify(respuesta)); // Guardamos la caja activa en localStorage
-            setCajasActivas(respuesta);
+            const datosParaGuardar = Array.isArray(respuesta) ? respuesta : (respuesta ? [respuesta] : []);
+            setCajasActivas(datosParaGuardar);
+            console.log("caja desd context -> ",cajasActivas)
            }
             return respuesta;
         } catch (error) {
@@ -221,6 +262,7 @@ export const ApiProvider = ({ children }) => {
         try {
             console.log(data)
             console.log("Datos recibidos para cerrar caja:", data, idCaja);
+            setCajasActivas([])
             return await CerrarCaja_api(data, idCaja);
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -249,10 +291,10 @@ export const ApiProvider = ({ children }) => {
     }, []);
 
 
-    const get_caja_company = useCallback(async (idEmpresa) => {
+    const get_caja_company = useCallback(async (idEmpresa, currentPage, filters) => {
         try {
-            console.log("Datos recibidos para abrir caja:", idEmpresa);
-            return await get_caja_company_api(idEmpresa);
+            console.log("Datos recibidos para abrir caja:", idEmpresa, currentPage, filters);
+            return await get_caja_company_api(idEmpresa, currentPage, filters);
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
             throw error;
@@ -282,6 +324,8 @@ export const ApiProvider = ({ children }) => {
             ingreso_egreso,
             get_caja_id,
             get_caja_company,
+            getCategoryEmpresa,
+            getMarcaEmpresa,
             isAuthenticated,
             userData,
             companyData,
@@ -290,4 +334,4 @@ export const ApiProvider = ({ children }) => {
             {children}
         </apiContext.Provider>
     );
-};
+}; 

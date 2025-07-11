@@ -5,7 +5,7 @@ import { useContext, useEffect, useState, useCallback, useMemo } from "react";
 const DOTS = '...';
 const range = (start, end) => Array.from({ length: end - start + 1 }, (_, idx) => idx + start);
 
-// --- Iconos para botones ---
+// --- Iconos ---
 const ChevronLeftIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1 0 1.06L8.854 10l3.938 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.5a.75.75 0 0 1 0-1.06l4.25-4.5a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" /></svg>
 );
@@ -15,6 +15,9 @@ const ChevronRightIcon = () => (
 const PdfIcon = () => (
     <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
 );
+const SearchIcon = (props) => (
+    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20" {...props}><path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" /></svg>
+);
 
 
 // --- Componente Principal ---
@@ -22,7 +25,7 @@ export default function VerTiketsCompany() {
   const apiContextValue = useContext(apiContext);
 
   if (!apiContextValue) {
-    // ... (código de error de contexto sin cambios)
+    return <div>Error: Contexto de API no disponible.</div>;
   }
 
   const { getTiketsContext: fetchTicketsFromAPI, userData, getTiketsPdf } = apiContextValue;
@@ -34,32 +37,25 @@ export default function VerTiketsCompany() {
   const [limit, setLimit] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pdfLoading, setPdfLoading] = useState(null); // Estado para saber qué PDF se está cargando
+  const [pdfLoading, setPdfLoading] = useState(null);
 
-  // --- Lógica de Petición de Datos ---
-  const fetchTickets = useCallback(async (page, itemsLimit, signal) => {
-    // ... (lógica de fetchTickets sin cambios, pero corregimos la estructura de la respuesta)
+  // --- Estados para la Búsqueda Manual ---
+  const [searchTerm, setSearchTerm] = useState(''); // El valor del input en tiempo real
+  const [activeSearchTerm, setActiveSearchTerm] = useState(''); // El valor que se envía a la API
+
+  // --- Lógica de Petición de Datos (MODIFICADA para incluir la búsqueda) ---
+  const fetchTickets = useCallback(async (page, itemsLimit, searchQuery, signal) => {
     setIsLoading(true);
     setError(null);
     try {
-      const dataEmpresaString = localStorage.getItem("dataEmpresa");
-      if (!dataEmpresaString) throw new Error("Datos de empresa no encontrados.");
-      
-      const companyId = JSON.parse(dataEmpresaString)?._id;
+      const companyId = JSON.parse(localStorage.getItem("dataEmpresa"))?._id;
       if (!companyId) throw new Error("ID de empresa no válido.");
       
-      const response = await fetchTicketsFromAPI(companyId, page, itemsLimit, { signal });
+      const response = await fetchTicketsFromAPI(companyId, page, itemsLimit, searchQuery, { signal });
       
-      // Corregido para usar `response.pagination`
       if (response && Array.isArray(response.tickets) && response.pagination) {
         setTickets(response.tickets);
-        setPaginationInfo({
-          currentPage: response.pagination.currentPage || 1,
-          hasNextPage: response.pagination.hasNextPage || false,
-          hasPrevPage: response.pagination.hasPrevPage || false,
-          totalPages: response.pagination.totalPages || 1,
-          totalTickets: response.pagination.totalTickets || 0
-        });
+        setPaginationInfo(response.pagination);
       } else {
         throw new Error("La respuesta de la API no tiene el formato esperado.");
       }
@@ -72,16 +68,17 @@ export default function VerTiketsCompany() {
     }
   }, [fetchTicketsFromAPI]);
 
-  // --- Efecto para Cargar Datos ---
+  // --- Efecto para Cargar Datos (MODIFICADO para depender de la búsqueda activa) ---
   useEffect(() => {
     const controller = new AbortController();
-    fetchTickets(currentPage, limit, controller.signal);
+    // La primera vez, se llama con activeSearchTerm vacío, trayendo todo.
+    // Después, se llama solo cuando se activa una nueva búsqueda.
+    fetchTickets(currentPage, limit, activeSearchTerm, controller.signal);
     return () => controller.abort();
-  }, [currentPage, limit, fetchTickets]);
+  }, [currentPage, limit, activeSearchTerm, fetchTickets]);
 
   // --- Lógica de Paginación ---
   const paginationRange = useMemo(() => {
-    // ... (lógica de paginationRange sin cambios)
     if (!paginationInfo || !paginationInfo.totalPages) return [];
     const { totalPages } = paginationInfo;
     const siblingCount = 1;
@@ -99,9 +96,7 @@ export default function VerTiketsCompany() {
 
   // --- Manejadores de Eventos ---
   const handlePageChange = (page) => {
-    if (typeof page !== 'number' || page < 1 || page > (paginationInfo?.totalPages || 1) || page === currentPage || isLoading) {
-      return;
-    }
+    if (typeof page !== 'number' || page < 1 || page > (paginationInfo?.totalPages || 1) || page === currentPage || isLoading) return;
     setCurrentPage(page);
   };
   const handlePreviousPage = () => handlePageChange(currentPage - 1);
@@ -110,39 +105,86 @@ export default function VerTiketsCompany() {
     setLimit(Number(e.target.value));
     setCurrentPage(1);
   };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
-  // --- MANEJADOR PARA DESCARGAR EL PDF ---
+  // Manejador para el envío del formulario de búsqueda
+  const handleSearchSubmit = (e) => {
+    e.preventDefault(); // Evita que la página se recargue
+    setCurrentPage(1);
+    setActiveSearchTerm(searchTerm); // Activa la búsqueda
+  };
+
+  // Manejador para limpiar la búsqueda
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setActiveSearchTerm('');
+    setCurrentPage(1);
+  };
+
   const handleDownloadPdf = async (ticketId) => {
-    
-    setPdfLoading(ticketId); // Inicia la carga para este ticket específico
+    setPdfLoading(ticketId);
     try {
       const pdfBlob = await getTiketsPdf(userData._id, ticketId);
       if (pdfBlob) {
         const url = window.URL.createObjectURL(pdfBlob);
         window.open(url, '_blank');
-        // Opcional: revocar la URL después de un tiempo para liberar memoria
         setTimeout(() => window.URL.revokeObjectURL(url), 100);
       } else {
         throw new Error("La API no devolvió un archivo PDF válido.");
       }
     } catch (error) {
-     
+       setError("Error al descargar el PDF: " + error.message);
     } finally {
-      setPdfLoading(null); // Termina la carga
+      setPdfLoading(null);
     }
   };
 
-
   // --- Renderizado de Estados de Carga y Error ---
   if (isLoading && tickets.length === 0) return <div className="flex justify-center items-center h-screen"><p className="text-xl text-gray-700">Cargando tickets...</p></div>;
-  if (error) return <div className="max-w-4xl mx-auto p-6 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-xl mt-10"><p className="text-center font-bold">¡Error!</p><p className="text-center">{error}</p></div>;
 
   // --- Renderizado Principal del Componente ---
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-lg border border-gray-200 my-10">
       <header>
         <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-center text-gray-800">Historial de Tickets</h2>
-        {isLoading && <p className="text-center text-blue-500 animate-pulse mb-4">Actualizando lista...</p>}
+        
+        {/* --- Formulario de Búsqueda Manual --- */}
+        <form onSubmit={handleSearchSubmit} className="mb-6 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2">
+          <div className="relative flex-grow">
+             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+               <SearchIcon />
+             </div>
+             <input
+               type="text"
+               id="search-tickets"
+               value={searchTerm}
+               onChange={handleSearchChange}
+               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[var(--principal)] focus:border-[var(--principal)] sm:text-sm"
+               placeholder="Buscar por ID, comprobante, cajero, cliente..."
+             />
+          </div>
+          <div className="flex gap-2">
+             <button
+               type="submit"
+               disabled={isLoading}
+               className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[var(--principal-shadow)] hover:bg-[(var(--principal-shadow)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal)] disabled:opacity-50"
+             >
+               Buscar
+             </button>
+             {activeSearchTerm && (
+               <button
+                 type="button"
+                 onClick={handleClearSearch}
+                 disabled={isLoading}
+                 className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+               >
+                 Limpiar
+               </button>
+             )}
+          </div>
+        </form>
+        
+        {isLoading && <p className="text-center text-[var(--principal)] animate-pulse mb-4">Actualizando lista...</p>}
       </header>
 
       <main>
@@ -160,12 +202,11 @@ export default function VerTiketsCompany() {
                   {ticket.cliente && (ticket.cliente.nombre || ticket.cliente.dniCuit) && (
                     <p>Cliente: {ticket.cliente.nombre || 'N/A'} ({ticket.cliente.dniCuit || 'N/A'})</p>
                   )}
-                  {/* BOTÓN DE PDF MEJORADO */}
                   <div>
                     <button
                       onClick={() => handleDownloadPdf(ticket.ventaId)}
                       disabled={pdfLoading === ticket.ventaId}
-                      className="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium text-blue-600 bg-transparent border border-blue-500 rounded-full hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-wait"
+                      className="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium text-[var(--principal-shadow)] bg-transparent border border-[var(--principal)] rounded-full hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal)] disabled:opacity-50 disabled:cursor-wait"
                     >
                       {pdfLoading === ticket.ventaId ? 'Cargando...' : <> <PdfIcon /> Ver PDF</>}
                     </button>
@@ -175,21 +216,19 @@ export default function VerTiketsCompany() {
             ))}
           </div>
         ) : (
-          !isLoading && <p className="text-center text-gray-500 py-10">No se encontraron tickets para esta empresa.</p>
+           !isLoading && <p className="text-center text-gray-500 py-10">No se encontraron tickets con los criterios actuales.</p>
         )}
       </main>
 
-      {/* --- CONTROLES DE PAGINACIÓN Y LÍMITE --- */}
       {paginationInfo && paginationInfo.totalPages > 0 && (
         <footer className="flex flex-col md:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-200">
-            {/* ... (código del footer de paginación sin cambios) ... */}
             <div className="text-sm text-gray-600 order-2 md:order-1">
                 Mostrando {tickets.length} de {paginationInfo.totalTickets} tickets
             </div>
             <nav className="order-1 md:order-2" aria-label="Paginación de tickets">
                 <ul className="flex items-center gap-1">
                     <li><button onClick={handlePreviousPage} disabled={!paginationInfo.hasPrevPage || isLoading} className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50"><ChevronLeftIcon /></button></li>
-                    {paginationRange.map((page, index) => (<li key={index}>{page === DOTS ? <span className="px-2 py-1">...</span> : <button onClick={() => handlePageChange(page)} disabled={isLoading} className={`w-9 h-9 rounded-md transition-colors ${currentPage === page ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'}`}>{page}</button>}</li>))}
+                    {paginationRange.map((page, index) => (<li key={index}>{page === DOTS ? <span className="px-2 py-1">...</span> : <button onClick={() => handlePageChange(page)} disabled={isLoading} className={`w-9 h-9 rounded-md transition-colors ${currentPage === page ? 'bg-[var(--principal-shadow)] text-white' : 'hover:bg-gray-100'}`}>{page}</button>}</li>))}
                     <li><button onClick={handleNextPage} disabled={!paginationInfo.hasNextPage || isLoading} className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50"><ChevronRightIcon /></button></li>
                 </ul>
             </nav>
