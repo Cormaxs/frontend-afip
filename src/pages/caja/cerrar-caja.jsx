@@ -1,32 +1,60 @@
-import React, { useContext, useState, useMemo, useEffect } from "react";
+import React, { useContext, useState, useMemo, useEffect, useCallback } from "react";
 import { apiContext } from "../../context/api_context";
 import Swal from 'sweetalert2';
 
 export default function CerrarCaja() {
     // 1. CONTEXTO Y ESTADO
-    // --------------------
-    const { cerrarCaja, cajasActivas, userData } = useContext(apiContext);
+    const { cerrarCaja, get_caja_company, userData } = useContext(apiContext);
 
-    // Estado para saber qué caja está seleccionada del array
+    const [cajasAbiertas, setCajasAbiertas] = useState([]);
     const [selectedCajaId, setSelectedCajaId] = useState('');
-
-    // Estado local para los campos del formulario
     const [montoFinal, setMontoFinal] = useState('');
     const [observaciones, setObservaciones] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Estado para el feedback al usuario
-    const [loading, setLoading] = useState(false);
+    // 2. LÓGICA DE BÚSQUEDA DE DATOS
+    const fetchCajasAbiertas = useCallback(async () => {
+        if (!userData) {
+            return;
+        }
 
-    // 2. LÓGICA DERIVADA Y EFECTOS
-    // ----------------------------
+        setInitialLoading(true);
+        setError(null);
 
-    // Obtenemos el objeto completo de la caja seleccionada.
+        const companyId = userData.empresa;
+        if (!companyId) {
+            setError("No se pudo identificar la empresa para buscar cajas.");
+            setInitialLoading(false);
+            return;
+        }
+        
+        try {
+            const response = await get_caja_company(companyId, 1, { 
+                estado: 'abierta', 
+                limit: 500 
+            });
+            setCajasAbiertas(response.cajas || []);
+        } catch (err) {
+            console.error("Error al buscar las cajas abiertas:", err);
+            setError("No se pudieron cargar las cajas activas. Por favor, recarga la página.");
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [userData, get_caja_company]);
+
+    useEffect(() => {
+        fetchCajasAbiertas();
+    }, [fetchCajasAbiertas]);
+
+
+    // 3. LÓGICA DERIVADA Y OTROS EFECTOS
     const selectedCaja = useMemo(() => {
-        if (!selectedCajaId || !Array.isArray(cajasActivas)) return null;
-        return cajasActivas.find(caja => caja._id === selectedCajaId);
-    }, [selectedCajaId, cajasActivas]);
+        if (!selectedCajaId) return null;
+        return cajasAbiertas.find(caja => caja._id === selectedCajaId);
+    }, [selectedCajaId, cajasAbiertas]);
 
-    // Usamos useMemo para calcular la diferencia
     const diferencia = useMemo(() => {
         if (!selectedCaja) return 0;
         const montoEsperadoEnCaja = selectedCaja.montoEsperadoEnCaja || 0;
@@ -35,15 +63,13 @@ export default function CerrarCaja() {
         return montoFinalNum - montoEsperadoEnCaja;
     }, [montoFinal, selectedCaja]);
 
-    // Efecto para limpiar el formulario si el usuario cambia de caja
     useEffect(() => {
         setMontoFinal('');
         setObservaciones('');
     }, [selectedCajaId]);
 
 
-    // 3. MANEJADOR DE ENVÍO
-    // --------------------
+    // 4. MANEJADOR DE ENVÍO
     const handleSubmit = async (event) => {
         event.preventDefault();
         
@@ -54,7 +80,7 @@ export default function CerrarCaja() {
 
         const result = await Swal.fire({
             title: '¿Estás seguro?',
-            text: `Vas a cerrar la caja "${selectedCaja.nombreCaja}" del punto de venta "${selectedCaja.puntoDeVenta?.nombre || 'Desconocido'}".`,
+            text: `Vas a cerrar la caja "${selectedCaja.nombreCaja}".`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -62,11 +88,9 @@ export default function CerrarCaja() {
             confirmButtonText: 'Sí, cerrar caja'
         });
 
-        if (!result.isConfirmed) {
-            return;
-        }
+        if (!result.isConfirmed) return;
 
-        setLoading(true);
+        setIsSubmitting(true);
 
         const payload = {
             montoFinalReal: parseFloat(montoFinal),
@@ -76,19 +100,32 @@ export default function CerrarCaja() {
 
         try {
             await cerrarCaja(payload, selectedCaja._id);
-            Swal.fire('¡Éxito!', 'Caja cerrada exitosamente.', 'success');
+            await Swal.fire('¡Éxito!', 'Caja cerrada exitosamente.', 'success');
+            
             setSelectedCajaId('');
+            fetchCajasAbiertas();
 
         } catch (submitError) {
             Swal.fire('Error', submitError.message || "No se pudo cerrar la caja.", 'error');
         } finally {
-            setLoading(false);
+            setIsSubmitting(false);
         }
     };
 
-    // 4. RENDERIZADO CONDICIONAL
-    // --------------------------
-    if (!Array.isArray(cajasActivas) || cajasActivas.length === 0) {
+    // 5. RENDERIZADO
+    if (initialLoading) {
+        return <div className="max-w-2xl mx-auto p-6 text-center"><p className="text-gray-500">Buscando cajas abiertas...</p></div>;
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-2xl mx-auto p-6 text-center bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md mt-10">
+                <h2 className="text-2xl font-bold mb-4">Error</h2><p>{error}</p>
+            </div>
+        );
+    }
+    
+    if (cajasAbiertas.length === 0) {
         return (
             <div className="max-w-2xl mx-auto p-6 text-center bg-white rounded-lg shadow-md mt-10">
                 <h2 className="text-2xl font-bold text-gray-700 mb-4">Cerrar Caja</h2>
@@ -101,11 +138,8 @@ export default function CerrarCaja() {
         <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-xl border mt-10">
             <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Cerrar Caja</h2>
             
-            {/* --- Selector de Caja --- */}
             <div className="mb-6">
-                <label htmlFor="cajaSelect" className="block text-sm font-bold text-gray-700 mb-2">
-                    Selecciona la Caja a Cerrar
-                </label>
+                <label htmlFor="cajaSelect" className="block text-sm font-bold text-gray-700 mb-2">Selecciona la Caja a Cerrar</label>
                 <select
                     id="cajaSelect"
                     value={selectedCajaId}
@@ -113,8 +147,7 @@ export default function CerrarCaja() {
                     className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 >
                     <option value="">-- Por favor, elige una opción --</option>
-                    {cajasActivas.map(caja => (
-                        // AQUÍ SE HIZO EL CAMBIO 1
+                    {cajasAbiertas.map(caja => (
                         <option key={caja._id} value={caja._id}>
                            {caja.nombreCaja} (P.V: {caja.puntoDeVenta?.nombre || 'N/A'})
                         </option>
@@ -122,18 +155,16 @@ export default function CerrarCaja() {
                 </select>
             </div>
 
-            {/* --- Formulario de Cierre --- */}
             {selectedCaja && (
                 <form onSubmit={handleSubmit} className="space-y-6 border-t pt-6">
                     <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                         <h4 className="font-bold text-lg text-gray-700 mb-2">Detalles de la Caja Seleccionada</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                            {/* AQUÍ SE HIZO EL CAMBIO 2 */}
-                            <p><strong>Nombre Caja:</strong></p><p>{selectedCaja.nombreCaja}</p>
-                            <p><strong>Punto de Venta:</strong></p><p>{selectedCaja.puntoDeVenta?.nombre}</p>
-                            <p><strong>Monto Inicial:</strong></p><p>${selectedCaja.montoInicial?.toFixed(2)}</p>
-                            <p><strong>Ventas en Efectivo:</strong></p><p>${selectedCaja.montoTotalVentasEfectivo?.toFixed(2) || '0.00'}</p>
-                            <p className="font-bold"><strong>Monto Esperado:</strong></p><p className="font-bold">${selectedCaja.montoEsperadoEnCaja?.toFixed(2) || '0.00'}</p>
+                           <p><strong>Nombre Caja:</strong></p><p>{selectedCaja.nombreCaja}</p>
+                           <p><strong>Punto de Venta:</strong></p><p>{selectedCaja.puntoDeVenta?.nombre || 'N/A'}</p>
+                           <p><strong>Monto Inicial:</strong></p><p>${selectedCaja.montoInicial?.toLocaleString('es-AR', {minimumFractionDigits: 2})}</p>
+                           <p><strong>Ventas en Efectivo:</strong></p><p>${selectedCaja.montoTotalVentasEfectivo?.toLocaleString('es-AR', {minimumFractionDigits: 2}) || '0,00'}</p>
+                           <p className="font-bold"><strong>Monto Esperado:</strong></p><p className="font-bold">${selectedCaja.montoEsperadoEnCaja?.toLocaleString('es-AR', {minimumFractionDigits: 2}) || '0,00'}</p>
                         </div>
                     </div>
                     
@@ -154,9 +185,9 @@ export default function CerrarCaja() {
                     
                     <div className="p-3 text-center rounded-lg border" style={{ backgroundColor: diferencia === 0 ? '#f0f0f0' : (diferencia < 0 ? '#fee2e2' : '#dcfce7') }}>
                         <h4 className="text-lg font-semibold" style={{ color: diferencia === 0 ? 'black' : (diferencia < 0 ? '#b91c1c' : '#166534') }}>
-                            Diferencia de Caja: ${diferencia.toFixed(2)}
+                            Diferencia de Caja: ${diferencia.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                         </h4>
-                        <p className="text-xs text-gray-500">{diferencia < 0 ? "Faltante" : "Sobrante"}</p>
+                        <p className="text-xs text-gray-500">{diferencia < 0 ? "Faltante" : (diferencia > 0 ? "Sobrante" : "Exacto")}</p>
                     </div>
 
                     <div>
@@ -172,8 +203,8 @@ export default function CerrarCaja() {
                     </div>
 
                     <div>
-                        <button type="submit" disabled={loading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400">
-                            {loading ? 'Cerrando...' : 'Confirmar y Cerrar Caja'}
+                        <button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400">
+                            {isSubmitting ? 'Cerrando...' : 'Confirmar y Cerrar Caja'}
                         </button>
                     </div>
                 </form>

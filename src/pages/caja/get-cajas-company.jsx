@@ -2,14 +2,72 @@ import React, { useContext, useEffect, useState, useCallback } from "react";
 import { apiContext } from "../../context/api_context";
 import Swal from 'sweetalert2';
 
-// --- Componente principal para mostrar el historial de cajas ---
+// --- SUB-COMPONENTE PARA LA FILA Y SUS DETALLES ---
+function RowItem({ caja, isExpanded, onRowClick, formatCurrency, formatDateTime }) {
+    return (
+        <React.Fragment>
+            {/* Fila Principal */}
+            <tr onClick={() => onRowClick(caja._id)} className={`hover:bg-gray-100 cursor-pointer ${isExpanded ? 'bg-gray-100' : ''}`}>
+                <td className="px-4 py-2 text-center">
+                    <span className={`transform transition-transform duration-200 inline-block ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                </td>
+                <td className="px-4 py-2">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${caja.estado === 'abierta' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>{caja.estado}</span>
+                </td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                    <div className="font-medium">{caja.puntoDeVenta?.nombre || 'N/A'}</div>
+                    <div className="text-gray-500">{caja.vendedorAsignado?.nombre || 'N/A'}</div>
+                </td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{formatDateTime(caja.fechaApertura)}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatCurrency(caja.montoFinalReal)}</td>
+                <td className={`px-4 py-2 whitespace-nowrap text-sm font-medium text-right ${caja.diferencia < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(caja.diferencia)}</td>
+            </tr>
+            {/* Fila de Detalles */}
+            {isExpanded && (
+                <tr>
+                    <td colSpan="6" className="p-0 bg-gray-100">
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-b">
+                            {/* Columna 1: Resumen de Caja */}
+                            <div className="space-y-2">
+                                <h4 className="font-bold text-gray-700 border-b pb-2">Resumen de Caja</h4>
+                                <div className="flex justify-between text-sm"><span className="text-gray-600">Monto Inicial:</span> <span className="font-medium">{formatCurrency(caja.montoInicial)}</span></div>
+                                <div className="flex justify-between text-sm"><span className="text-gray-600">Ingresos Totales:</span> <span className="font-medium text-green-600">{formatCurrency(caja.ingresos)}</span></div>
+                                <div className="flex justify-between text-sm"><span className="text-gray-600">Egresos Totales:</span> <span className="font-medium text-red-600">{formatCurrency(caja.egresos)}</span></div>
+                                <div className="flex justify-between text-sm pt-2 border-t"><span className="text-gray-600">Monto Final Esperado:</span> <span className="font-medium">{formatCurrency(caja.montoFinalEsperado)}</span></div>
+                            </div>
+                             {/* Columna 2: Lista de Transacciones */}
+                             <div>
+                                <h4 className="font-bold text-gray-700 border-b pb-2">Movimientos</h4>
+                                {!caja?.transacciones?.length ? <p className="text-sm text-gray-500 mt-2">No hay movimientos para mostrar.</p> : (
+                                    <ul className="divide-y divide-gray-200 max-h-48 overflow-y-auto">
+                                        {caja.transacciones.map(t => (
+                                            <li key={t._id} className="py-2 flex justify-between items-center">
+                                                <span className="text-sm text-gray-700">{t.descripcion || 'Sin descripción'} ({t.metodoPago})</span>
+                                                <span className={`font-medium text-sm ${t.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {t.tipo === 'ingreso' ? '+' : '-'}{formatCurrency(t.monto)}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </React.Fragment>
+    );
+}
+
+
+// --- COMPONENTE PRINCIPAL PARA MOSTRAR EL HISTORIAL DE CAJAS ---
 export default function HistorialCajas() {
     // --- ESTADOS ---
     const { companyData, get_caja_company, getPointsByCompany } = useContext(apiContext);
     const [apiData, setApiData] = useState({ cajas: [], pagination: {} });
-    const [loading, setLoading] = useState(false); // No carga datos al inicio
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [hasSearched, setHasSearched] = useState(false); // Para saber si ya se hizo una búsqueda
+    const [hasSearched, setHasSearched] = useState(false);
 
     // Estados para la paginación y filtros
     const [currentPage, setCurrentPage] = useState(1);
@@ -18,6 +76,7 @@ export default function HistorialCajas() {
         vendedor: '',
         fechaDesde: '',
         fechaHasta: '',
+        estado: '',
     });
     const [puntosDeVenta, setPuntosDeVenta] = useState([]);
 
@@ -36,13 +95,12 @@ export default function HistorialCajas() {
                 }
             } catch (err) {
                 console.error("Error al obtener los puntos de venta:", err);
-                // Opcional: mostrar un error al usuario
             }
         };
         fetchPuntosDeVenta();
     }, [companyData?._id, getPointsByCompany]);
 
-    // --- OBTENCIÓN DE DATOS (AHORA MANUAL) ---
+    // --- OBTENCIÓN DE DATOS (MANUAL) ---
     const fetchData = useCallback(async (page = 1) => {
         const companyId = companyData?._id;
         if (!companyId) {
@@ -51,7 +109,7 @@ export default function HistorialCajas() {
         }
         setLoading(true);
         setError(null);
-        setHasSearched(true); // Marca que se ha realizado al menos una búsqueda
+        setHasSearched(true);
         try {
             const response = await get_caja_company(companyId, page, filters);
             setApiData(response || { cajas: [], pagination: {} });
@@ -65,11 +123,10 @@ export default function HistorialCajas() {
     
     // Efecto para cambiar de página
     useEffect(() => {
-        if(hasSearched) { // Solo busca si ya se hizo una búsqueda inicial
+        if(hasSearched) {
             fetchData(currentPage);
         }
-    }, [currentPage, hasSearched]);
-
+    }, [currentPage, hasSearched, fetchData]);
 
     // --- MANEJADORES DE EVENTOS ---
     const handleFilterChange = (e) => {
@@ -79,15 +136,21 @@ export default function HistorialCajas() {
 
     const handleFilterSubmit = (e) => {
         e.preventDefault();
-        setCurrentPage(1); // Reinicia a la página 1
-        fetchData(1);      // Inicia la búsqueda en la página 1
+        setCurrentPage(1);
+        fetchData(1);
     };
 
     const handleClearFilters = () => {
-        setFilters({ puntoVenta: '', vendedor: '', fechaDesde: '', fechaHasta: '' });
+        setFilters({
+            puntoVenta: '',
+            vendedor: '',
+            fechaDesde: '',
+            fechaHasta: '',
+            estado: ''
+        });
         setCurrentPage(1);
-        setApiData({ cajas: [], pagination: {} }); // Limpia los resultados
-        setHasSearched(false); // Resetea el estado de búsqueda
+        setApiData({ cajas: [], pagination: {} });
+        setHasSearched(false);
     };
     
     const handleRowClick = (cajaId) => {
@@ -112,7 +175,7 @@ export default function HistorialCajas() {
 
                 {/* Panel de Filtros */}
                 <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border">
-                    <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                         <div className="lg:col-span-1">
                             <label htmlFor="puntoVenta" className="block text-sm font-medium text-gray-700">P. de Venta</label>
                             <select
@@ -125,6 +188,19 @@ export default function HistorialCajas() {
                                 {puntosDeVenta.map(punto => (
                                     <option key={punto._id} value={punto._id}>{punto.nombre}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div className="lg:col-span-1">
+                            <label htmlFor="estado" className="block text-sm font-medium text-gray-700">Estado</label>
+                            <select
+                                name="estado"
+                                value={filters.estado}
+                                onChange={handleFilterChange}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"
+                            >
+                                <option value="">Todos</option>
+                                <option value="abierta">Abierta</option>
+                                <option value="cerrada">Cerrada</option>
                             </select>
                         </div>
                         <div className="lg:col-span-1">
@@ -194,64 +270,5 @@ export default function HistorialCajas() {
                 </div>
             </div>
         </div>
-    );
-}
-
-
-// --- SUB-COMPONENTE PARA LA FILA Y SUS DETALLES (SIN CAMBIOS) ---
-function RowItem({ caja, isExpanded, onRowClick, formatCurrency, formatDateTime }) {
-    // ... (El código de este sub-componente permanece igual)
-    return (
-        <React.Fragment>
-            {/* Fila Principal */}
-            <tr onClick={() => onRowClick(caja._id)} className={`hover:bg-gray-100 cursor-pointer ${isExpanded ? 'bg-gray-100' : ''}`}>
-                <td className="px-4 py-2 text-center">
-                    <span className={`transform transition-transform duration-200 inline-block ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
-                </td>
-                <td className="px-4 py-2">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${caja.estado === 'abierta' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>{caja.estado}</span>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                    <div className="font-medium">{caja.puntoDeVenta?.nombre || 'N/A'}</div>
-                    <div className="text-gray-500">{caja.vendedorAsignado?.nombre || 'N/A'}</div>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{formatDateTime(caja.fechaApertura)}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatCurrency(caja.montoFinalReal)}</td>
-                <td className={`px-4 py-2 whitespace-nowrap text-sm font-medium text-right ${caja.diferencia < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(caja.diferencia)}</td>
-            </tr>
-            {/* Fila de Detalles */}
-            {isExpanded && (
-                <tr>
-                    <td colSpan="6" className="p-0 bg-gray-100">
-                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-b">
-                            {/* Columna 1: Resumen de Caja */}
-                            <div className="space-y-2">
-                                <h4 className="font-bold text-gray-700 border-b pb-2">Resumen de Caja</h4>
-                                <div className="flex justify-between text-sm"><span className="text-gray-600">Monto Inicial:</span> <span className="font-medium">{formatCurrency(caja.montoInicial)}</span></div>
-                                <div className="flex justify-between text-sm"><span className="text-gray-600">Ingresos Totales:</span> <span className="font-medium text-green-600">{formatCurrency(caja.ingresos)}</span></div>
-                                <div className="flex justify-between text-sm"><span className="text-gray-600">Egresos Totales:</span> <span className="font-medium text-red-600">{formatCurrency(caja.egresos)}</span></div>
-                                <div className="flex justify-between text-sm pt-2 border-t"><span className="text-gray-600">Monto Final Esperado:</span> <span className="font-medium">{formatCurrency(caja.montoFinalEsperado)}</span></div>
-                            </div>
-                             {/* Columna 2: Lista de Transacciones */}
-                             <div>
-                                <h4 className="font-bold text-gray-700 border-b pb-2">Movimientos</h4>
-                                {!caja?.transacciones?.length ? <p className="text-sm text-gray-500 mt-2">No hay movimientos para mostrar.</p> : (
-                                    <ul className="divide-y divide-gray-200 max-h-48 overflow-y-auto">
-                                        {caja.transacciones.map(t => (
-                                            <li key={t._id} className="py-2 flex justify-between items-center">
-                                                <span className="text-sm text-gray-700">{t.descripcion || 'Sin descripción'} ({t.metodoPago})</span>
-                                                <span className={`font-medium text-sm ${t.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {t.tipo === 'ingreso' ? '+' : '-'}{formatCurrency(t.monto)}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            )}
-        </React.Fragment>
     );
 }
