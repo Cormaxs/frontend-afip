@@ -17,11 +17,13 @@ const ProductSearchModal = ({ onProductSelect, onClose, puntoVentaId }) => {
 
     useEffect(() => {
         const loadOptions = async () => {
-            if (userData?.empresa) {
+            // CORRECCIÓN: Se agrega `puntoVentaId` para asegurar que existan ambos IDs antes de llamar a la API.
+            if (userData?.empresa && puntoVentaId) {
                 try {
                     const [cats, marcs] = await Promise.all([
-                        getCategoryEmpresa(userData.empresa),
-                        getMarcaEmpresa(userData.empresa)
+                        // CORRECCIÓN: Se pasa `puntoVentaId` para filtrar las categorías y marcas por sucursal.
+                        getCategoryEmpresa(userData.empresa, puntoVentaId),
+                        getMarcaEmpresa(userData.empresa, puntoVentaId)
                     ]);
                     setCategories(cats || []);
                     setMarcas(marcs || []);
@@ -29,17 +31,26 @@ const ProductSearchModal = ({ onProductSelect, onClose, puntoVentaId }) => {
             }
         };
         loadOptions();
-    }, [userData?.empresa, getCategoryEmpresa, getMarcaEmpresa]);
+        // CORRECCIÓN: Se añade `puntoVentaId` a las dependencias para que se recarguen las opciones si cambia el punto de venta.
+    }, [userData?.empresa, puntoVentaId, getCategoryEmpresa, getMarcaEmpresa]);
 
     useEffect(() => {
         const fetchProducts = async () => {
             if (!userData?.empresa || !puntoVentaId) return;
             setIsLoading(true);
             try {
+                // CORRECCIÓN: La llamada a `getProductsEmpresa` ahora coincide con su definición en el contexto.
+                // Se pasa un solo objeto `filters` como segundo argumento.
                 const response = await getProductsEmpresa(
-                    userData.empresa, currentPage, 10,
-                    activeFilters.category, activeFilters.product, activeFilters.marca,
-                    puntoVentaId
+                    userData.empresa,
+                    {
+                        page: currentPage,
+                        limit: 10,
+                        category: activeFilters.category,
+                        product: activeFilters.product,
+                        marca: activeFilters.marca,
+                        puntoVenta: puntoVentaId
+                    }
                 );
                 setProductsData(response || { products: [], pagination: {} });
             } catch (error) {
@@ -322,7 +333,7 @@ export default function CreateTikets() {
             const salesDate = new Date(invoiceDateTime);
             const formattedSalesDate = salesDate.toLocaleString('es-AR', { hour12: false });
             const salesId = `VK${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-            const invoiceNumber = `0001-${Math.floor(Math.random() * 9000) + 1000}`;
+            const invoiceNumber = `000${puntosDeVenta.find(p => p._id === puntoSeleccionado)?.numero}`;
 
             const ticketData = {
                 ventaId: salesId,

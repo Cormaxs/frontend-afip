@@ -4,7 +4,7 @@ import {
     addPointSale, getPointSales, addVendedores, getProductsCompany,
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
-    get_caja_company_api, getCategoryCompany, getMarcaCompany
+    get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
@@ -147,9 +147,11 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
-    const getProductsEmpresa = useCallback(async (idEmpresa, page,limit , category, product, marca, puntoVenta  ) => {
+    const getProductsEmpresa = useCallback(async (idEmpresa, filters = {}) => {
         try {
-            console.log(`pagina -> ${page} limite -> ${limit} categoria -> ${category} producto -> ${product} marca -> ${marca} punto de venta -> ${puntoVenta}`);
+          // Extraemos los valores del objeto filters. Si no vienen, serán undefined.
+          const { page, limit, category, product, marca, puntoVenta } = filters;
+            console.log(`getproducts : -> pagina -> ${page} limite -> ${limit} categoria -> ${category} producto -> ${product} marca -> ${marca} punto de venta -> ${puntoVenta}`);
             return await getProductsCompany(idEmpresa, page, limit, category, product, marca, puntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
@@ -158,9 +160,10 @@ export const ApiProvider = ({ children }) => {
     }, []);
 
 
-    const getCategoryEmpresa = useCallback(async (idEmpresa  ) => {
+    const getCategoryEmpresa = useCallback(async (idEmpresa, idPuntoVenta  ) => {
         try {
-            return await getCategoryCompany(idEmpresa);
+            console.log(idPuntoVenta)
+            return await getCategoryCompany(idEmpresa, idPuntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
             throw error;
@@ -169,9 +172,10 @@ export const ApiProvider = ({ children }) => {
 
 
 
-    const getMarcaEmpresa = useCallback(async (idEmpresa  ) => {
+    const getMarcaEmpresa = useCallback(async (idEmpresa, idPuntoVenta  ) => {
         try {
-            return await getMarcaCompany(idEmpresa);
+            console.log("desde marca -> ", idPuntoVenta)
+            return await getMarcaCompany(idEmpresa, idPuntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
             throw error;
@@ -193,10 +197,10 @@ export const ApiProvider = ({ children }) => {
         }
     }, [userData]); // Depende de userData, así que se añade a las dependencias
 
-    const getTiketsContext = useCallback(async (id, page, limit, searchQuery) => { // 1. Añade searchQuery aquí
+    const getTiketsContext = useCallback(async (id, page, limit, searchQuery, puntoventa) => { // 1. Añade searchQuery aquí
         try {
           // 2. Pasa searchQuery a la función de la API
-          return await getTikets(id, page, limit, searchQuery);
+          return await getTikets(id, page, limit, searchQuery, puntoventa);
         } catch (error) {
           console.error("Error en getTiketsContext (Context):", error);
           throw error;
@@ -302,6 +306,30 @@ export const ApiProvider = ({ children }) => {
     }, []);
     
 
+
+    const get_products_agotados = useCallback(async (idEmpresa, idPuntoVenta, filters) => {
+        try {
+            console.log("Datos recibidos para productos agotados:", idEmpresa, idPuntoVenta, filters);
+            return await getProductsAgotados(idEmpresa, idPuntoVenta, filters);
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+    const get_price_inventario = useCallback(async (idEmpresa, idPuntoVenta) => {
+        try {
+            console.log("Datos recibidos precio inventario:", idEmpresa, idPuntoVenta);
+            const respuesta = await getPriceInventario(idEmpresa, idPuntoVenta);
+            console.log(`respuesta precio -> ${respuesta?.valorTotalInventario}`)
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
     return (
         <apiContext.Provider value={{
             login,
@@ -326,6 +354,8 @@ export const ApiProvider = ({ children }) => {
             get_caja_company,
             getCategoryEmpresa,
             getMarcaEmpresa,
+            get_products_agotados,
+            get_price_inventario,
             isAuthenticated,
             userData,
             companyData,

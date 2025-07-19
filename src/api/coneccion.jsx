@@ -160,23 +160,24 @@ export async function getProductsCompany(idEmpresa, page, limit, category, produ
     return response.data;
 }
 
-export async function getCategoryCompany(idEmpresa) {
+export async function getCategoryCompany(idEmpresa, idPuntoVenta) {
     // Es mejor práctica pasar parámetros de URL a través del objeto `params`
-    const response = await axiosInstance.get(`/products/get/all/category/${idEmpresa}`);
+    const response = await axiosInstance.get(`/products/get/all/category/${idEmpresa}`, {params: { idPuntoVenta }});
     return response.data;
 }
 
-export async function getMarcaCompany(idEmpresa) {
+export async function getMarcaCompany(idEmpresa, idPuntoVenta) {
     // Es mejor práctica pasar parámetros de URL a través del objeto `params`
-    const response = await axiosInstance.get(`/products/get/all/Marca/${idEmpresa}`);
+    const response = await axiosInstance.get(`/products/get/all/marca/${idEmpresa}`, {params: { idPuntoVenta }});
     return response.data;
 }
 
-export async function getTikets(idEmpresa, page, limit, searchQuery) {
+export async function getTikets(idEmpresa, page, limit, searchQuery, puntoventa) {
     // Construimos los parámetros para la petición
     const params = {
       page,
       limit,
+      puntoventa,
     };
   
     // Solo añadimos el parámetro de búsqueda si no está vacío
@@ -209,4 +210,22 @@ export async function getTiketsPdfDescargar(idAdmin, idVenta) {
     const pdfUrl = URL.createObjectURL(pdfBlob);
     window.open(pdfUrl, '_blank');
     return pdfUrl;
+}
+
+
+
+export async function getProductsAgotados(idEmpresa, puntoDeVenta, filters) {
+    const {page, limit} = filters || {};
+    const response = await axiosInstance.get(`/products/agotados/${idEmpresa}/${puntoDeVenta}`, { params: { page, limit} });
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+
+export async function getPriceInventario(idEmpresa, puntoDeVenta) {
+    const response = await axiosInstance.get(`/products/totalInventario/${idEmpresa}/${puntoDeVenta}`);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
 }
