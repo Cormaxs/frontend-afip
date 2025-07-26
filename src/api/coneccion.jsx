@@ -229,3 +229,11 @@ export async function getPriceInventario(idEmpresa, puntoDeVenta) {
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
     return response.data;
 }
+
+
+export async function update_product_inventario(idProduct, dateproduct) {
+    const response = await axiosInstance.post(`/products/update/${idProduct}`, dateproduct);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}

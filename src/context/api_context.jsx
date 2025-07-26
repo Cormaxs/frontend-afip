@@ -4,7 +4,8 @@ import {
     addPointSale, getPointSales, addVendedores, getProductsCompany,
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
-    get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario
+    get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
+    update_product_inventario
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
@@ -330,6 +331,18 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
+
+    const update_product = useCallback(async (idProduct, dateproduct) => {
+        try {
+            console.log("Datos recibidos precio inventario:", idProduct, dateproduct);
+            const respuesta = await update_product_inventario(idProduct, dateproduct);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
     return (
         <apiContext.Provider value={{
             login,
@@ -340,6 +353,7 @@ export const ApiProvider = ({ children }) => {
             createPointSale,
             getPointsByCompany,
             createVendedor,
+            update_product,
             getProductsEmpresa,
             getTiketsContext,
             createTiketContext,

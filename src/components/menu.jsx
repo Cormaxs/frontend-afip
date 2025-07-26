@@ -13,22 +13,34 @@ const menuGroups = {
             { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line"></i> }
         ]
     },
-    operations: {
+
+    ventas: {
+        title: "ventas 'BETA' ",
+        icon: <i className="bi bi-columns-gap"></i>,
+        items: [
+            { path: "/tiket/create", label: "Cobrar", icon: <i className="bi bi-cash-coin"></i> },
+            { path: "/get-puntoVenta", label: "Puntos venta", icon: <i className="bi bi-list-ol"></i> },
+            { path: "/productos", label: "Productos", icon: <i className="bi bi-box-seam"></i> },
+            { path: "/get-cajas-empresa", label: "Historial cajas", icon: <i className="bi bi-file-medical"></i> },
+            { path: "/tiket/get", label: "Historial tikets", icon: <i className="bi bi-ticket-detailed"></i> }
+        ]
+    },
+   /* operations: {
         title: "Operaciones",
         icon: <i className="bi bi-collection"></i>,
         items: [
             { path: "/ventas", label: "Ventas", icon: <i className="bi bi-bag-fill"></i> },
             { path: "/create-factura", label: "Facturación", icon: <i className="bi bi-receipt-cutoff"></i> }
         ]
-    },
+    },*/
     caja: {
         title: "Caja",
         icon: <i className="bi bi-box"></i>,
         items: [
             { path: "/abrir-caja", label: "Abrir Caja", icon: <i className="bi bi-check-circle-fill"></i> },
             { path: "/cerrar-caja", label: "Cerrar Caja", icon: <i className="bi bi-x-circle-fill"></i> },
-            { path: "/ingreso-egreso-caja", label: "Ingreso/Egreso", icon: <i className="bi bi-currency-dollar"></i> },
-            { path: "/get-cajas-empresa", label: "Historial", icon: <i className="bi bi-file-medical"></i> }
+           // { path: "/ingreso-egreso-caja", label: "Ingreso/Egreso", icon: <i className="bi bi-currency-dollar"></i> },
+            { path: "/get-cajas-empresa", label: "Historial cajas", icon: <i className="bi bi-file-medical"></i> }
         ]
     },
     products: {
@@ -36,7 +48,7 @@ const menuGroups = {
         icon: <i className="bi bi-diagram-3"></i>,
         items: [
             { path: "/productos", label: "Listado", icon: <i className="bi bi-card-checklist"></i> },
-            { path: "/add-product", label: "Agregar producto", icon: <i className="bi bi-file-earmark-plus"></i> },
+            { path: "/add-product", label: "Agregar", icon: <i className="bi bi-file-earmark-plus"></i> },
             { path: "/carga-masiva-productos", label: "Carga Masiva", icon: <i className="bi bi-folder-plus"></i> }
         ]
     },
@@ -64,7 +76,7 @@ const menuGroups = {
             { path: "/tiket/get", label: "Ver Tickets", icon: <i className="bi bi-ticket-detailed"></i> }
         ]
     },
-    config: {
+   /* config: {
         title: "Configuración AFIP",
         icon: <i className="bi bi-gear-wide-connected"></i>,
         items: [
@@ -80,7 +92,7 @@ const menuGroups = {
             { path: "/login", label: "Login", icon: <i className="bi bi-box-arrow-in-right"></i> },
             { path: "/register", label: "Registro", icon: <i className="bi bi-plus-square"></i> }
         ]
-    },
+    },*/
 };
 
 // Componente para un solo ítem de menú

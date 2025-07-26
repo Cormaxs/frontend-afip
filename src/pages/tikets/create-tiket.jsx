@@ -17,11 +17,9 @@ const ProductSearchModal = ({ onProductSelect, onClose, puntoVentaId }) => {
 
     useEffect(() => {
         const loadOptions = async () => {
-            // CORRECCIÓN: Se agrega `puntoVentaId` para asegurar que existan ambos IDs antes de llamar a la API.
             if (userData?.empresa && puntoVentaId) {
                 try {
                     const [cats, marcs] = await Promise.all([
-                        // CORRECCIÓN: Se pasa `puntoVentaId` para filtrar las categorías y marcas por sucursal.
                         getCategoryEmpresa(userData.empresa, puntoVentaId),
                         getMarcaEmpresa(userData.empresa, puntoVentaId)
                     ]);
@@ -31,7 +29,6 @@ const ProductSearchModal = ({ onProductSelect, onClose, puntoVentaId }) => {
             }
         };
         loadOptions();
-        // CORRECCIÓN: Se añade `puntoVentaId` a las dependencias para que se recarguen las opciones si cambia el punto de venta.
     }, [userData?.empresa, puntoVentaId, getCategoryEmpresa, getMarcaEmpresa]);
 
     useEffect(() => {
@@ -39,8 +36,6 @@ const ProductSearchModal = ({ onProductSelect, onClose, puntoVentaId }) => {
             if (!userData?.empresa || !puntoVentaId) return;
             setIsLoading(true);
             try {
-                // CORRECCIÓN: La llamada a `getProductsEmpresa` ahora coincide con su definición en el contexto.
-                // Se pasa un solo objeto `filters` como segundo argumento.
                 const response = await getProductsEmpresa(
                     userData.empresa,
                     {
@@ -113,7 +108,7 @@ export default function CreateTikets() {
     const {
         createTiketContext, getPointsByCompany, getProductCodBarra, getTiketsPdf,
         userData, companyData, getProductsEmpresa, getCategoryEmpresa, getMarcaEmpresa,
-        cajasActivas,
+        get_caja_company,
         abrirCaja,
         ingreso_egreso
     } = useContext(apiContext);
@@ -124,7 +119,7 @@ export default function CreateTikets() {
     const [userId, setUserId] = useState(null);
     const [puntosDeVenta, setPuntosDeVenta] = useState([]);
     const [puntoSeleccionado, setPuntoSeleccionado] = useState('');
-    const [puntosDeVentaLoading, setPuntosDeVentaLoading] = useState(true);
+    const [cajasAbiertas, setCajasAbiertas] = useState([]);
     const [codBarra, setCodBarra] = useState('');
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -144,40 +139,47 @@ export default function CreateTikets() {
     const inputRef = useRef(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // --- EFECTO DE INICIALIZACIÓN ---
+    // --- EFECTO DE INICIALIZACIÓN Y CARGA DE DATOS ---
     useEffect(() => {
         const initData = async () => {
             setLoading(true);
             setErrorConfig(false);
             try {
-                if (!companyData?._id) throw new Error('ID de empresa no encontrado.');
+                if (!companyData?._id || !userData?._id) {
+                    throw new Error('No se pudo encontrar la información de la empresa o del usuario.');
+                }
+                
                 setEmpresaId(companyData._id);
                 setEmpresaNombre(companyData.nombreEmpresa || companyData.nombre || 'N/A');
-
-                if (!userData?._id) throw new Error('ID de usuario no encontrado.');
                 setUserId(userData._id);
                 
-                setPuntosDeVentaLoading(true);
-                const response = await getPointsByCompany(companyData._id, 1, 500);
-                const allPoints = response?.puntosDeVenta || [];
+                const [pointsResponse, cajasResponse] = await Promise.all([
+                    getPointsByCompany(companyData._id, 1, 500),
+                    get_caja_company(companyData._id, 1, { estado: 'abierta', limit: 500 })
+                ]);
 
-                if (allPoints.length > 0) {
-                    setPuntosDeVenta(allPoints);
-                } else {
-                    Swal.fire({ icon: 'info', title: 'Sin Puntos de Venta', text: 'No se encontraron puntos de venta.' });
-                }
+                const allPoints = pointsResponse?.puntosDeVenta || [];
+                setPuntosDeVenta(allPoints);
+                setCajasAbiertas(cajasResponse?.cajas || []);
+
             } catch (error) {
                 setErrorConfig(true);
                 Swal.fire({ icon: 'error', title: 'Error de Configuración', text: error.message });
             } finally {
-                setPuntosDeVentaLoading(false);
-                const now = new Date();
-                setInvoiceDateTime(`${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}T${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
                 setLoading(false);
             }
         };
-        initData();
-    }, [companyData, getPointsByCompany, userData]);
+        
+        if (companyData?._id && userData?._id) {
+            initData();
+        } else {
+            setLoading(false);
+        }
+
+        const now = new Date();
+        setInvoiceDateTime(`${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}T${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
+
+    }, [companyData, userData, getPointsByCompany, get_caja_company]);
 
     // --- LÓGICA DE ITEMS Y HANDLERS ---
     const addItem = useCallback((product) => {
@@ -272,8 +274,8 @@ export default function CreateTikets() {
         let idCajaParaLaVenta;
 
         try {
-            const cajaActiva = Array.isArray(cajasActivas) && cajasActivas.find(
-                caja => caja.puntoDeVenta === puntoSeleccionado && caja.estado === 'Abierta'
+            const cajaActiva = cajasAbiertas.find(
+                caja => (caja.puntoDeVenta?._id === puntoSeleccionado || caja.puntoDeVenta === puntoSeleccionado) && caja.estado === 'Abierta'
             );
 
             if (cajaActiva) {
@@ -282,7 +284,7 @@ export default function CreateTikets() {
                 const { value: formValues } = await Swal.fire({
                     title: 'Abrir Nueva Caja',
                     html:
-                        `<p class="text-left text-sm mb-4">No hay una caja abierta. Completa los datos para continuar con la venta.</p>` +
+                        `<p class="text-left text-sm mb-4">No hay una caja abierta para este punto de venta. Completa los datos para continuar.</p>` +
                         `<input id="swal-input-nombre" class="swal2-input" placeholder="Nombre de la Caja (Ej: Caja Mañana)">` +
                         `<input id="swal-input-monto" class="swal2-input" type="number" placeholder="Monto Inicial" value="0.00" step="0.01">`,
                     focusConfirm: false,
@@ -301,10 +303,7 @@ export default function CreateTikets() {
                             Swal.showValidationMessage('Necesitas ingresar un monto inicial válido');
                             return false;
                         }
-                        return {
-                            nombreCaja: nombreCaja.trim(),
-                            montoInicial: montoInicial
-                        };
+                        return { nombreCaja: nombreCaja.trim(), montoInicial: montoInicial };
                     }
                 });
                 
@@ -327,18 +326,22 @@ export default function CreateTikets() {
                     throw new Error("La API no devolvió una caja válida al intentar abrirla.");
                 }
                 idCajaParaLaVenta = nuevaCajaAbierta._id;
+                
+                setCajasAbiertas(prevCajas => [...prevCajas, nuevaCajaAbierta]);
+                
                 await Swal.fire('¡Caja Abierta!', `La caja "${formValues.nombreCaja}" se ha abierto correctamente.`, 'success');
             }
 
             const salesDate = new Date(invoiceDateTime);
             const formattedSalesDate = salesDate.toLocaleString('es-AR', { hour12: false });
             const salesId = `VK${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-            const invoiceNumber = `000${puntosDeVenta.find(p => p._id === puntoSeleccionado)?.numero}`;
+            const puntoVentaInfo = puntosDeVenta.find(p => p._id === puntoSeleccionado);
+            const invoiceNumber = `000${puntoVentaInfo?.numero || '0'}`;
 
             const ticketData = {
                 ventaId: salesId,
                 fechaHora: formattedSalesDate,
-                puntoDeVenta: puntosDeVenta.find(p => p._id === puntoSeleccionado)?.nombre,
+                puntoDeVenta: puntoVentaInfo?.nombre,
                 tipoComprobante: invoiceDetails.tipoComprobante,
                 numeroComprobante: invoiceNumber,
                 items: items.map(item => ({
@@ -354,7 +357,7 @@ export default function CreateTikets() {
                 cliente: (invoiceDetails.nombreCliente || invoiceDetails.dniCuitCliente) ? { nombre: invoiceDetails.nombreCliente, dniCuit: invoiceDetails.dniCuitCliente, condicionIVA: invoiceDetails.condicionIVACliente } : undefined,
                 observaciones: invoiceDetails.observaciones,
                 cajero: userData.username,
-                sucursal: puntosDeVenta.find(p => p._id === puntoSeleccionado)?.nombre,
+                sucursal: puntoVentaInfo?.nombre,
                 idUsuario: userId,
                 idEmpresa: empresaId,
                 idCaja: idCajaParaLaVenta
@@ -401,7 +404,7 @@ export default function CreateTikets() {
     };
 
     // --- RENDERIZADO ---
-    if (loading && (!empresaId || puntosDeVenta.length === 0) && !errorConfig) {
+    if (loading) {
         return <div className="text-center text-lg text-gray-600 mt-10">Cargando configuración inicial...</div>;
     }
     if (errorConfig) {
@@ -431,24 +434,31 @@ export default function CreateTikets() {
                 <form onSubmit={handleSubmit}>
                     <div className="mb-5">
                         <label htmlFor="puntoVentaSelect" className="block text-gray-700 text-sm font-bold mb-2">Punto de Venta:</label>
-                        <select id="puntoVentaSelect" value={puntoSeleccionado} onChange={(e) => setPuntoSeleccionado(e.target.value)} disabled={puntosDeVentaLoading || puntosDeVenta.length === 0} className="shadow border rounded w-full py-2 px-3 text-gray-700">
-                            {puntosDeVentaLoading ? <option value="">Cargando...</option> :
-                                puntosDeVenta.length > 0 ?
-                                    <>
-                                        <option value="">-- Selecciona un punto --</option>
-                                        {puntosDeVenta.map((p) => <option key={p._id} value={p._id}>{p.nombre || `Punto ID: ${p._id}`}</option>)}
-                                    </> :
-                                    <option value="">No hay puntos de venta</option>}
+                        <select 
+                            id="puntoVentaSelect" 
+                            value={puntoSeleccionado} 
+                            onChange={(e) => setPuntoSeleccionado(e.target.value)} 
+                            disabled={puntosDeVenta.length === 0} 
+                            className="shadow border rounded w-full py-2 px-3 text-gray-700"
+                        >
+                            {puntosDeVenta.length > 0 ? (
+                                <>
+                                    <option value="">-- Selecciona un punto --</option>
+                                    {puntosDeVenta.map((p) => <option key={p._id} value={p._id}>{p.nombre || `Punto ID: ${p._id}`}</option>)}
+                                </>
+                            ) : (
+                                <option value="">No hay puntos de venta disponibles</option>
+                            )}
                         </select>
                     </div>
 
                     <div className="mb-6">
                         <label className="block text-gray-700 text-sm font-bold mb-2">Agregar Producto</label>
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <input ref={inputRef} type="text" value={codBarra} onChange={(e) => setCodBarra(e.target.value)} onKeyDown={handleKeyDown} placeholder="Escanear o ingresar código de barras" disabled={loading || !puntoSeleccionado} className="flex-grow shadow border rounded w-full py-2 px-3" autoFocus />
+                            <input ref={inputRef} type="text" value={codBarra} onChange={(e) => setCodBarra(e.target.value)} onKeyDown={handleKeyDown} placeholder="Escanear o ingresar código de barras" disabled={!puntoSeleccionado} className="flex-grow shadow border rounded w-full py-2 px-3" autoFocus />
                             <div className="flex gap-3">
-                                <button type="button" onClick={handleSearchAndAddItem} disabled={loading || !puntoSeleccionado || !codBarra.trim()} className="w-full sm:w-auto bg-[var(--principal)] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded whitespace-nowrap">Agregar</button>
-                                <button type="button" onClick={() => setIsModalOpen(true)} disabled={loading || !puntoSeleccionado} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded whitespace-nowrap">Buscar</button>
+                                <button type="button" onClick={handleSearchAndAddItem} disabled={!puntoSeleccionado || !codBarra.trim()} className="w-full sm:w-auto bg-[var(--principal)] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded whitespace-nowrap disabled:bg-gray-400">Agregar</button>
+                                <button type="button" onClick={() => setIsModalOpen(true)} disabled={!puntoSeleccionado} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded whitespace-nowrap disabled:bg-gray-400">Buscar</button>
                             </div>
                         </div>
                     </div>
