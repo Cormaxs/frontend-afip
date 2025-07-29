@@ -5,7 +5,7 @@ import axios from 'axios';
 // ============================================================================
 
 // Determina la URL base según el entorno (desarrollo vs. producción) http://localhost:3000/api/v1  https://api.facstock.com/api/v1
-const URL_BACKEND = "http://localhost:3000/api/v1"
+const URL_BACKEND = "https://api.facstock.com/api/v1"
 
 // Crea una instancia de Axios con configuración predeterminada
 const axiosInstance = axios.create({
