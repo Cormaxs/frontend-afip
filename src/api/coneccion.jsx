@@ -5,7 +5,7 @@ import axios from 'axios';
 // ============================================================================
 
 // Determina la URL base según el entorno (desarrollo vs. producción) http://localhost:3000/api/v1  https://api.facstock.com/api/v1
-const URL_BACKEND = "https://api.facstock.com/api/v1"
+const URL_BACKEND = "http://localhost:3000/api/v1"
 
 // Crea una instancia de Axios con configuración predeterminada
 const axiosInstance = axios.create({
@@ -233,6 +233,14 @@ export async function getPriceInventario(idEmpresa, puntoDeVenta) {
 
 export async function update_product_inventario(idProduct, dateproduct) {
     const response = await axiosInstance.post(`/products/update/${idProduct}`, dateproduct);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+
+export async function deleted_product_coneccion(idProduct) {
+    const response = await axiosInstance.delete(`/products/delete/${idProduct}`);
     // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
     return response.data;

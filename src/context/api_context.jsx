@@ -5,7 +5,7 @@ import {
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
     get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
-    update_product_inventario
+    update_product_inventario, deleted_product_coneccion
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
@@ -343,6 +343,17 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
+
+    const deleted_product = useCallback(async (idProduct) => {
+        try {
+            console.log("Datos recibidos producto a eliminar:", idProduct);
+            const respuesta = await deleted_product_coneccion(idProduct);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
     return (
         <apiContext.Provider value={{
             login,
@@ -370,6 +381,7 @@ export const ApiProvider = ({ children }) => {
             getMarcaEmpresa,
             get_products_agotados,
             get_price_inventario,
+            deleted_product,
             isAuthenticated,
             userData,
             companyData,
