@@ -19,7 +19,6 @@ const CertificateUploader = lazy(() => import("../pages/credenciales/create-crt.
 const GetProductsCompany = lazy(() => import("../pages/productos/productos-junto.jsx"));
 const GetPointsSales = lazy(() => import("../pages/puntos-venta/puntosDeVenta.jsx"));
 const AddVendedores = lazy(() => import("../pages/vendedores/create-vendedor.jsx"));
-const GestionDeCaja = lazy(() => import("../pages/caja/GestionDeCaja.jsx")); // Si es necesario, puedes usar este componente en lugar de AbrirCaja para una vista más completa.
 const HistorialCajas = lazy(() => import("../pages/caja/get-cajas-company.jsx"));
 const CreateTikets = lazy(() => import("../pages/tikets/create-tiket.jsx"));
 const VerTiketsCompany = lazy(() => import("../pages/tikets/get-tikets.jsx"));
@@ -57,7 +56,7 @@ export default function LoadRoutes() {
 
                 
                 <Route path="/get-cajas-empresa" element={<HistorialCajas />} />
-                <Route path="/gestion-cajas" element={<GestionDeCaja />} />
+               
                 
 
                 {/* Tikets */}
@@ -66,6 +65,10 @@ export default function LoadRoutes() {
 
                 {/* Operaciones */}
                 <Route path="/create-factura" element={<CrearFactura />} />
+
+
+                {/* Rutas no encontradas */}
+                <Route path="*" element={<div>404 - Página no encontrada</div>} />
             </Routes>
         </Suspense>
     );

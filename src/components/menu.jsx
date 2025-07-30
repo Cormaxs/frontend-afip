@@ -34,8 +34,7 @@ const menuGroups = {
         icon: <i className="bi bi-safe2"></i>,
         items: [
             // Apunta al nuevo componente unificado
-            { path: "/gestion-cajas", label: "Gestión de Cajas", icon: <i className="bi bi-arrow-repeat"></i> },
-            { path: "/get-cajas-empresa", label: "Historial de Cajas", icon: <i className="bi bi-archive"></i> }
+            { path: "/get-cajas-empresa", label: "Cajas", icon: <i className="bi bi-archive"></i> }
         ]
     },
     configuracion: {

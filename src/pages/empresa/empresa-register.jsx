@@ -55,7 +55,7 @@ export default function EmpresaRegister() {
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4">
             <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-                <div className="bg-gradient-to-r from-[var(--principal)] to-indigo-700 p-6 text-center">
+                <div className="bg-gradient-to-r from-[var(--principal)] to-[var(--principal-shadow)] p-6 text-center">
                     <h1 className="text-3xl font-bold text-white">Registrar Nueva Empresa</h1>
                     <p className="text-blue-100 mt-1">Completa los datos esenciales para empezar.</p>
                 </div>

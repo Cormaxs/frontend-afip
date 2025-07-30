@@ -1,11 +1,18 @@
 @import "tailwindcss";
 @import "bootstrap-icons";
 
-:root{
-    --principal:#722ff9;
-    --principal-activo:#a377fc;
-    --principal-shadow:#6017f3;
+:root {
+    --principal: #42a5f5;           /* Azul Celeste Principal */
+    --principal-activo: #64b5f6;    /* Celeste más claro para hover/activo */
+    --principal-shadow: #1e88e5;    /* Celeste más oscuro para sombras */
+  
+    --color-fondo-util: #e3f2fd;    /* Fondo claro, muy suave (casi blanco con tinte celeste) */
 
-    --color-fondo-util: #967fd448;
-}
+    --rojo-cerrar: #ce2421;         /* Rojo base elegante y moderno */
+    --rojo-cerrar-hover: #c62828;   /* Rojo más oscuro para hover */
+
+    --verdes-principal: #61d165;
+    --verdes-shadow: #4caf50; /* Verde más oscuro para sombras */
+  }
+  
  

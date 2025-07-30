@@ -69,7 +69,7 @@ const ProductSearchModal = ({ onProductSelect, onClose, puntoVentaId }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
             <div className="relative w-full max-w-3xl max-h-[90vh] p-6 bg-white rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <h3 className="text-2xl font-bold mb-4 text-gray-800">Buscar Producto</h3>
                 <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 items-end">
@@ -409,10 +409,10 @@ export default function CreateTikets() {
     }
     if (errorConfig) {
         return (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md mx-auto my-10 text-center">
+            <div className="bg-red-100 border border-[var(--rojo-cerrar)] text-[var(--rojo-cerrar-hover)] px-4 py-3 rounded max-w-md mx-auto my-10 text-center">
                 <h3 className="font-bold text-xl mb-2">Error de Configuración</h3>
                 <p>No se pudo cargar la información de la empresa o usuario.</p>
-                <button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4">Recargar</button>
+                <button onClick={() => window.location.reload()} className="bg-[var(--rojo-cerrar)] hover:bg-[var(--rojo-cerrar-hover)] text-white font-bold py-2 px-4 rounded mt-4">Recargar</button>
             </div>
         );
     }
@@ -429,7 +429,7 @@ export default function CreateTikets() {
                 </div>
 
                 {message && (<div className="bg-green-100 border-green-400 text-green-700 px-4 py-3 rounded mb-4"><strong>¡Éxito! </strong><span>{message}</span></div>)}
-                {errorMessage && (<div className="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded mb-4"><strong>¡Error! </strong><span>{errorMessage}</span></div>)}
+                {errorMessage && (<div className="bg-red-100 border-[var(--rojo-cerrar)] text-[var(--rojo-cerrar-hover)] px-4 py-3 rounded mb-4"><strong>¡Error! </strong><span>{errorMessage}</span></div>)}
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-5">
@@ -478,7 +478,7 @@ export default function CreateTikets() {
                                         <div className="flex items-center gap-3">
                                             <input type="number" min="1" value={item.cantidad} onChange={(e) => handleQuantityChange(index, e.target.value)} className="w-20 p-2 border rounded-md text-center" />
                                             <span className="font-bold text-lg text-[var(--principal)]">${(item.precio * item.cantidad).toFixed(2)}</span>
-                                            <button type="button" onClick={() => handleRemoveItem(index)} className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full w-7 h-7 flex items-center justify-center">X</button>
+                                            <button type="button" onClick={() => handleRemoveItem(index)} className="bg-red-500 hover:bg-[var(--rojo-cerrar)] text-white font-bold rounded-full w-7 h-7 flex items-center justify-center">X</button>
                                         </div>
                                     </li>
                                 ))}
@@ -556,7 +556,7 @@ export default function CreateTikets() {
                                     .then((result) => { if (result.isConfirmed) { setItems([]); setCodBarra(''); inputRef.current?.focus(); } });
                                 }}
                                 disabled={items.length === 0 || loading}
-                                className={`py-3 px-6 rounded-lg text-white text-lg font-bold transition duration-300 ${items.length === 0 || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'}`}
+                                className={`py-3 px-6 rounded-lg text-white text-lg font-bold transition duration-300 ${items.length === 0 || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-[var(--rojo-cerrar)]'}`}
                         >
                             Limpiar Factura
                         </button>

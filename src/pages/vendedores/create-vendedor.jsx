@@ -116,7 +116,7 @@ export default function AddVendedores() {
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4">
             <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[var(--principal-activo)] to-indigo-700 p-6 text-center">
+                <div className="bg-gradient-to-r from-[var(--principal-activo)] to-[var(--principal-shadow)] p-6 text-center">
                     <h1 className="text-2xl font-bold text-white tracking-wide">Agregar Nuevo Empleado</h1>
                 </div>
 
@@ -240,7 +240,7 @@ export default function AddVendedores() {
                     
                     {/* --- BOTÓN DE ENVÍO Y MENSAJES --- */}
                     <div className="pt-4">
-                        <button type="submit" disabled={isSubmitting || isLoading} className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors shadow-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400">
+                        <button type="submit" disabled={isSubmitting || isLoading} className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors shadow-md bg-[var(--principal)] hover:bg-[var(--principal-shadow)] disabled:bg-indigo-400">
                             {isSubmitting || isLoading ? 'Guardando...' : 'Registrar Empleado'}
                         </button>
                         {serverFeedback.msg && (
