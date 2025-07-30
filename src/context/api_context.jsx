@@ -5,7 +5,7 @@ import {
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
     get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
-    update_product_inventario, deleted_product_coneccion
+    update_product_inventario, deleted_product_coneccion, UpdateUser, UpdateEmpresa
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
@@ -76,7 +76,6 @@ export const ApiProvider = ({ children }) => {
         setUserData(null);
         setCompanyData(null);
         setIsAuthenticated(false);
-        console.log("Sesión cerrada.");
     };
 
     // --- FUNCIONES WRAPPER DE LA API ---
@@ -128,10 +127,10 @@ export const ApiProvider = ({ children }) => {
 
     const getPointsByCompany = useCallback(async (idEmpresa, page, limit, filters) => { // Añadido `page` para consistencia
         try {
-            console.log("llego a puntos de venta, page _ >", page, limit, filters);
+           
             // Pasamos los parámetros que necesite la función de la API
             const respuesta = await getPointSales(idEmpresa, page, limit, filters);
-            console.log(respuesta)
+           
             return respuesta; 
         } catch (error) {
             console.error("Error en getPointsByCompany (Context):", error);
@@ -152,7 +151,6 @@ export const ApiProvider = ({ children }) => {
         try {
           // Extraemos los valores del objeto filters. Si no vienen, serán undefined.
           const { page, limit, category, product, marca, puntoVenta } = filters;
-            console.log(`getproducts : -> pagina -> ${page} limite -> ${limit} categoria -> ${category} producto -> ${product} marca -> ${marca} punto de venta -> ${puntoVenta}`);
             return await getProductsCompany(idEmpresa, page, limit, category, product, marca, puntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
@@ -163,7 +161,6 @@ export const ApiProvider = ({ children }) => {
 
     const getCategoryEmpresa = useCallback(async (idEmpresa, idPuntoVenta  ) => {
         try {
-            console.log(idPuntoVenta)
             return await getCategoryCompany(idEmpresa, idPuntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
@@ -175,7 +172,6 @@ export const ApiProvider = ({ children }) => {
 
     const getMarcaEmpresa = useCallback(async (idEmpresa, idPuntoVenta  ) => {
         try {
-            console.log("desde marca -> ", idPuntoVenta)
             return await getMarcaCompany(idEmpresa, idPuntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
@@ -247,13 +243,11 @@ export const ApiProvider = ({ children }) => {
 
     const abrirCaja = useCallback(async (data) => {
         try {
-            console.log("Datos recibidos para abrir caja:", data);
            const respuesta = await AbrirCaja_api(data)
            if(respuesta._id){
             localStorage.setItem("cajasActivas", JSON.stringify(respuesta)); // Guardamos la caja activa en localStorage
             const datosParaGuardar = Array.isArray(respuesta) ? respuesta : (respuesta ? [respuesta] : []);
             setCajasActivas(datosParaGuardar);
-            console.log("caja desd context -> ",cajasActivas)
            }
             return respuesta;
         } catch (error) {
@@ -265,8 +259,6 @@ export const ApiProvider = ({ children }) => {
 
     const cerrarCaja = useCallback(async (data, idCaja) => {
         try {
-            console.log(data)
-            console.log("Datos recibidos para cerrar caja:", data, idCaja);
             setCajasActivas([])
             return await CerrarCaja_api(data, idCaja);
         } catch (error) {
@@ -277,7 +269,6 @@ export const ApiProvider = ({ children }) => {
 
     const ingreso_egreso = useCallback(async (data, idCaja) => {
         try {
-            console.log("Datos recibidos para abrir caja:", data);
             return await Ingreso_Egreso_Caja_api(data, idCaja);
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -287,7 +278,6 @@ export const ApiProvider = ({ children }) => {
 
     const get_caja_id = useCallback(async (idCaja) => {
         try {
-            console.log("Datos recibidos para abrir caja:", data);
             return await get_caja_id_api(idCaja);
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -298,7 +288,6 @@ export const ApiProvider = ({ children }) => {
 
     const get_caja_company = useCallback(async (idEmpresa, currentPage, filters) => {
         try {
-            console.log("Datos recibidos para abrir caja:", idEmpresa, currentPage, filters);
             return await get_caja_company_api(idEmpresa, currentPage, filters);
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -310,7 +299,6 @@ export const ApiProvider = ({ children }) => {
 
     const get_products_agotados = useCallback(async (idEmpresa, idPuntoVenta, filters) => {
         try {
-            console.log("Datos recibidos para productos agotados:", idEmpresa, idPuntoVenta, filters);
             return await getProductsAgotados(idEmpresa, idPuntoVenta, filters);
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -321,9 +309,7 @@ export const ApiProvider = ({ children }) => {
 
     const get_price_inventario = useCallback(async (idEmpresa, idPuntoVenta) => {
         try {
-            console.log("Datos recibidos precio inventario:", idEmpresa, idPuntoVenta);
             const respuesta = await getPriceInventario(idEmpresa, idPuntoVenta);
-            console.log(`respuesta precio -> ${respuesta?.valorTotalInventario}`)
             return respuesta;
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -334,7 +320,6 @@ export const ApiProvider = ({ children }) => {
 
     const update_product = useCallback(async (idProduct, dateproduct) => {
         try {
-            console.log("Datos recibidos precio inventario:", idProduct, dateproduct);
             const respuesta = await update_product_inventario(idProduct, dateproduct);
             return respuesta;
         } catch (error) {
@@ -346,8 +331,41 @@ export const ApiProvider = ({ children }) => {
 
     const deleted_product = useCallback(async (idProduct) => {
         try {
-            console.log("Datos recibidos producto a eliminar:", idProduct);
             const respuesta = await deleted_product_coneccion(idProduct);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+
+    const updateUser = useCallback(async (idUser, data) => {
+        try {
+            const respuesta = await UpdateUser(idUser,data);
+            if(respuesta.user != null){
+                setUserData(respuesta.user);
+                localStorage.setItem("userData", JSON.stringify(respuesta.user));
+            }
+           
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+
+    const updateEmpresa = useCallback(async (idEmpresa, data) => {
+        try {
+            const respuesta = await UpdateEmpresa(idEmpresa,data);
+            if(respuesta.status === "success"){
+                setCompanyData(respuesta.empresa);
+                localStorage.setItem("dataEmpresa", JSON.stringify(respuesta.empresa));
+            }
+           
             return respuesta;
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -382,6 +400,8 @@ export const ApiProvider = ({ children }) => {
             get_products_agotados,
             get_price_inventario,
             deleted_product,
+            updateUser,
+            updateEmpresa,
             isAuthenticated,
             userData,
             companyData,

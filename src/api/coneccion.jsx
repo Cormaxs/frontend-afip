@@ -245,3 +245,20 @@ export async function deleted_product_coneccion(idProduct) {
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
     return response.data;
 }
+
+export async function UpdateUser(idUser, data) {
+    console.log(data)
+    const response = await axiosInstance.post(`/auth/update/${idUser}`, data);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+
+export async function UpdateEmpresa(idEmpresa, data) {
+    console.log("desde coneccion -> ",data, idEmpresa)
+    const response = await axiosInstance.post(`/companies/update/${idEmpresa}`, data);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}

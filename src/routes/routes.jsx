@@ -23,7 +23,8 @@ const HistorialCajas = lazy(() => import("../pages/caja/get-cajas-company.jsx"))
 const CreateTikets = lazy(() => import("../pages/tikets/create-tiket.jsx"));
 const VerTiketsCompany = lazy(() => import("../pages/tikets/get-tikets.jsx"));
 const CrearFactura = lazy(() => import("../pages/facturas/create-factura.jsx"));
-
+const UpdateUser = lazy(() => import("../pages/propietario/update-user.jsx"));
+const UpdateEmpresa = lazy(() => import("../pages/empresa/update-empresa.jsx"));
 
 export default function LoadRoutes() {
     return (
@@ -40,6 +41,7 @@ export default function LoadRoutes() {
                 
                 {/* Configuración inicial */}
                 <Route path="/empresa-register" element={<EmpresaRegister />} />
+                <Route path="/update-empresa" element={<UpdateEmpresa />} />
                 <Route path="/generate-key-crs" element={<GenerarCertificadoDigital />} />
                 <Route path="/generate-crt" element={<CertificateUploader />} />
                 
@@ -57,7 +59,7 @@ export default function LoadRoutes() {
                 
                 <Route path="/get-cajas-empresa" element={<HistorialCajas />} />
                
-                
+                <Route path="/update-user" element={<UpdateUser />} />
 
                 {/* Tikets */}
                 <Route path="/tiket/create" element={<CreateTikets />} />
