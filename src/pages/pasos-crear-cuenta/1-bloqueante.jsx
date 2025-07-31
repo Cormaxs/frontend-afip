@@ -26,7 +26,6 @@ export function Bloqueante() {
 
 export const PrivateRoute = ({ isAuthenticated, children }) => {
   // Si el usuario no está autenticado, redirige a la página de login
-  console.log("autenticado -> ",isAuthenticated)
   if (!isAuthenticated) {
     return <Navigate to="/elegir" replace />; // 'replace' evita que la página privada quede en el historial
   }

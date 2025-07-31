@@ -34,7 +34,7 @@ axiosInstance.interceptors.request.use(
     }
 );
 
-//console.log("backend -> ", URL_BACKEND)
+
 // --- Interceptor de Respuesta (Response) ---
 // Se ejecuta DESPUÉS de recibir una respuesta. Ideal para manejar errores globales.
 axiosInstance.interceptors.response.use(
@@ -133,7 +133,6 @@ export async function get_caja_id_api(idCaja) {
 }
 
 export async function get_caja_company_api(idEmpresa, currentPage, filters) {
-    console.log("id empresa desde coneccion -> ",idEmpresa)
     // Para cargas de archivos, Axios detecta FormData y establece el 'Content-Type' correcto.
     const response = await axiosInstance.get(`/cajas/empresa/${idEmpresa}`, {params: { page: currentPage, ...filters }});
     return response.data;
@@ -147,7 +146,6 @@ export async function Ingreso_Egreso_Caja_api(data, idCaja) {
 // --- Obtención de Recursos (GET) ---
 
 export async function getPointSales(idEmpresa, page, limit, filters) {
-    console.log(page, limit, filters)
     const { nombre, provincia, numero } = filters || {};
     const response = await axiosInstance.get(`/point-sales/${idEmpresa}`, { params: { page, limit,nombre, provincia, numero  } });
     return response.data;
@@ -155,7 +153,6 @@ export async function getPointSales(idEmpresa, page, limit, filters) {
 
 export async function getProductsCompany(idEmpresa, page, limit, category, product, marca, puntoVenta) {
     // Es mejor práctica pasar parámetros de URL a través del objeto `params`
-    console.log(page, limit)
     const response = await axiosInstance.get(`/products/${idEmpresa}`, { params: { page, limit, category, product, marca, puntoVenta} });
     return response.data;
 }
@@ -247,7 +244,6 @@ export async function deleted_product_coneccion(idProduct) {
 }
 
 export async function UpdateUser(idUser, data) {
-    console.log(data)
     const response = await axiosInstance.post(`/auth/update/${idUser}`, data);
     // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
@@ -256,8 +252,37 @@ export async function UpdateUser(idUser, data) {
 
 
 export async function UpdateEmpresa(idEmpresa, data) {
-    console.log("desde coneccion -> ",data, idEmpresa)
     const response = await axiosInstance.post(`/companies/update/${idEmpresa}`, data);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+
+export async function updateOrCreateMarcas_coneccion(data) {
+    const response = await axiosInstance.post(`/products/marcas/`, data);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+export async function updateOrCreateCategorias_coneccion(data) {
+    const response = await axiosInstance.post(`/products/categorias/`, data);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+export async function deleteCategoria_coneccion(categoria, empresaId) {
+    const response = await axiosInstance.delete(`products/delete/categoria/${categoria}/${empresaId}`);
+    // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
+    // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
+    return response.data;
+}
+
+
+export async function deleteMarca_coneccion(marca, empresaId) {
+    const response = await axiosInstance.delete(`products/delete/Marca/${marca}/${empresaId}`);
     // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
     return response.data;

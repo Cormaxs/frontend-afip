@@ -5,7 +5,9 @@ import {
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
     get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
-    update_product_inventario, deleted_product_coneccion, UpdateUser, UpdateEmpresa
+    update_product_inventario, deleted_product_coneccion, UpdateUser, UpdateEmpresa, updateOrCreateMarcas_coneccion, updateOrCreateCategorias_coneccion,
+    deleteCategoria_coneccion,deleteMarca_coneccion, 
+
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
@@ -372,6 +374,52 @@ export const ApiProvider = ({ children }) => {
             throw error;
         }
     }, []);
+
+
+    const updateOrCreateMarcas = useCallback(async ( data) => {
+        try {
+            console.log("Datos recibidos en updateOrCreateMarcas (Context):", data);
+            const respuesta = await updateOrCreateMarcas_coneccion(data);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const updateOrCreateCategorias = useCallback(async ( data) => {
+        try {
+            console.log("Datos recibidos en updateOrCreateMarcas (Context):", data);
+            const respuesta = await updateOrCreateCategorias_coneccion(data);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const deleteCategoria = useCallback(async ( categoria, empresaId) => {
+        try {
+            console.log("Datos recibidos en updateOrCreateMarcas (Context):", categoria, empresaId);
+            const respuesta = await deleteCategoria_coneccion(categoria, empresaId);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+    const deleteMarca = useCallback(async ( marca, empresaId) => {
+        try {
+            console.log("Datos recibidos en updateOrCreateMarcas (Context):", marca, empresaId);
+            const respuesta = await deleteMarca_coneccion(marca, empresaId);
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
     return (
         <apiContext.Provider value={{
             login,
@@ -402,6 +450,10 @@ export const ApiProvider = ({ children }) => {
             deleted_product,
             updateUser,
             updateEmpresa,
+            updateOrCreateMarcas,
+            updateOrCreateCategorias,
+            deleteCategoria,
+            deleteMarca,
             isAuthenticated,
             userData,
             companyData,
