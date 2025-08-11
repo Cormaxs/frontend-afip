@@ -274,7 +274,7 @@ export async function updateOrCreateCategorias_coneccion(data) {
 }
 
 export async function deleteCategoria_coneccion(categoria, empresaId) {
-    const response = await axiosInstance.delete(`products/delete/categoria/${categoria}/${empresaId}`);
+    const response = await axiosInstance.delete(`/products/delete/categoria/${categoria}/${empresaId}`);
     // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
     return response.data;
@@ -282,8 +282,67 @@ export async function deleteCategoria_coneccion(categoria, empresaId) {
 
 
 export async function deleteMarca_coneccion(marca, empresaId) {
-    const response = await axiosInstance.delete(`products/delete/Marca/${marca}/${empresaId}`);
+    const response = await axiosInstance.delete(`/products/delete/Marca/${marca}/${empresaId}`);
     // OJO: antes devolvías `response`, ahora devolvemos `response.data` para ser consistentes.
     // Si necesitas el status o headers, puedes seguir devolviendo `response` completo.
     return response.data;
+}
+
+
+export async function GenerateFacturas_coneccion(data) {
+    try {
+        const response = await axiosInstance.post(`/facturas/create/probar-facturas`, data, {
+            responseType: 'blob' // <-- ¡Esta es la corrección clave!
+        });
+
+        // La respuesta ya es un Blob, por lo que la devolvemos directamente
+        return response.data;
+
+    } catch (error) {
+        // Manejo de errores: Si el servidor devuelve un error, este será un Blob.
+        // Necesitamos leerlo como texto para obtener el mensaje de error.
+        if (error.response && error.response.data instanceof Blob) {
+            const errorBlob = error.response.data;
+            const text = await errorBlob.text();
+            
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.message || "Error desconocido del servidor.");
+            } catch {
+                throw new Error(text || "Ocurrió un error inesperado al generar el PDF.");
+            }
+        }
+        throw error; // Re-lanza cualquier otro tipo de error
+    }
+}
+
+
+
+export async function getFacturas_coneccion(options) {
+    try {
+        const response = await axiosInstance.get(`/facturas/get/facturas`, {
+            params: options,
+        });
+
+        return response.data;
+    } catch (error) {
+        // Verifica si el error es una cancelación de Axios
+        if (!axios.isCancel(error)) {
+            console.error("Error en getFacturas_coneccion:", error);
+        }
+        throw error;
+    }
+}
+
+
+export async function getFacturasPdfDescargar(idAdmin, ventaId) {
+    console.log("Descargando factura para:", idAdmin, ventaId);
+    const response = await axiosInstance.get(`/archivos/facturas/${idAdmin}/${ventaId}`, {
+        responseType: 'blob' // La configuración específica se mantiene en la llamada que la necesita
+    });
+
+    const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
+    return pdfUrl;
 }

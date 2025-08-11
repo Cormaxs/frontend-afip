@@ -22,9 +22,10 @@ const AddVendedores = lazy(() => import("../pages/vendedores/create-vendedor.jsx
 const HistorialCajas = lazy(() => import("../pages/caja/get-cajas-company.jsx"));
 const CreateTikets = lazy(() => import("../pages/tikets/create-tiket.jsx"));
 const VerTiketsCompany = lazy(() => import("../pages/tikets/get-tikets.jsx"));
-const CrearFactura = lazy(() => import("../pages/facturas/create-factura.jsx"));
+const CrearFacturas = lazy(() => import("../pages/facturas/create-factura.jsx"));
 const UpdateUser = lazy(() => import("../pages/propietario/update-user.jsx"));
 const UpdateEmpresa = lazy(() => import("../pages/empresa/update-empresa.jsx"));
+const VerFacturasCompany = lazy(() => import("../pages/facturas/getFacturas.jsx"));
 
 export default function LoadRoutes() {
     return (
@@ -66,7 +67,8 @@ export default function LoadRoutes() {
                 <Route path="/tiket/get" element={<VerTiketsCompany />} />
 
                 {/* Operaciones */}
-                <Route path="/create-factura" element={<CrearFactura />} />
+                <Route path="/create-factura" element={<CrearFacturas />} />
+                <Route path="/ver-facturas" element={<VerFacturasCompany />} />
 
 
                 {/* Rutas no encontradas */}

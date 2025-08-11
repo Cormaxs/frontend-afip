@@ -9,7 +9,10 @@ const menuGroups = {
         icon: <i className="bi bi-columns-gap"></i>,
         items: [
             { path: "/dashboard", label: "Inicio", icon: <i className="bi bi-house-door-fill"></i> },
-            { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line-fill"></i> }
+            { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line-fill"></i> },
+            { path: "/create-factura", label: "crear Facturas 'BETA'", icon: <i className="bi bi-bar-chart-line-fill"></i> },
+            { path: "/ver-facturas", label: "Historial de Facturas", icon: <i className="bi bi-receipt"></i> },
+            
         ]
     },
     ventas: {

@@ -6,7 +6,7 @@ import {
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
     get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
     update_product_inventario, deleted_product_coneccion, UpdateUser, UpdateEmpresa, updateOrCreateMarcas_coneccion, updateOrCreateCategorias_coneccion,
-    deleteCategoria_coneccion,deleteMarca_coneccion, 
+    deleteCategoria_coneccion,deleteMarca_coneccion, GenerateFacturas_coneccion, getFacturas_coneccion, getFacturasPdfDescargar
 
 } from "../api/coneccion";
 
@@ -420,6 +420,50 @@ export const ApiProvider = ({ children }) => {
             throw error;
         }
     }, []);
+
+
+    const generateFacturas = useCallback(async ( data) => {
+        try {
+            console.log("Datos recibidos en generateFacturas (Context):", data);
+            const respuesta = await GenerateFacturas_coneccion(data);
+            console.log("Respuesta de generateFacturas (Context):", respuesta);	
+            return respuesta;
+        } catch (error) {
+            console.error("Error en cargaMasiva (Context):", error);
+            throw error;
+        }
+    }, []);
+
+
+    const getFacturas = useCallback(async (options) => {
+        try {
+            console.log("Datos recibidos en getFacturas (Context):", options);
+            
+            const respuesta = await getFacturas_coneccion(options);
+            
+            console.log("Respuesta de getFacturas (Context):", respuesta);
+            return respuesta;
+        } catch (error) {
+            // Verifica si el error es una cancelación de Axios
+            if (!axios.isCancel(error)) {
+                console.error("Error en getFacturas (Context):", error);
+            }
+            throw error;
+        }
+    }, []); // Asegúrate de que las dependencias de useCallback estén correctas si las tienes
+
+
+
+    const getFacturasPdf = useCallback(async (idAdmin, ventaID) => {
+        try {
+        
+            return await getFacturasPdfDescargar(idAdmin, ventaID);
+        } catch (error) {
+            console.error("Error en getTiketsPdf (Context):", error);
+            throw error;
+        }
+    }, []);
+    
     return (
         <apiContext.Provider value={{
             login,
@@ -454,6 +498,9 @@ export const ApiProvider = ({ children }) => {
             updateOrCreateCategorias,
             deleteCategoria,
             deleteMarca,
+            generateFacturas,
+            getFacturas,
+            getFacturasPdf,
             isAuthenticated,
             userData,
             companyData,
