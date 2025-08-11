@@ -1366,13 +1366,13 @@ export default function GenerarComprobantes() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                    <div className="md:col-span-2"><label className="block text-sm font-medium">Razón Social*</label><input type="text" value={state.facturaData.receptor.razonSocial} onChange={e => handleStateChange('receptor', 'razonSocial', e.target.value)} required className="mt-1 w-full border-gray-300 rounded-md" /></div>
+                                    <div className="md:col-span-2"><label className="block text-sm font-medium">Razón Social</label><input type="text" value={state.facturaData.receptor.razonSocial || ' no especificada'} onChange={e => handleStateChange('receptor', 'razonSocial', e.target.value)} required className="mt-1 w-full border-gray-300 rounded-md" /></div>
 
-                                    <div><label className="block text-sm font-medium">CUIT/DNI*</label><input type="text" value={state.facturaData.receptor.cuit} onChange={e => handleStateChange('receptor', 'cuit', e.target.value)} required className="mt-1 w-full border-gray-300 rounded-md" /></div>
+                                    <div><label className="block text-sm font-medium">CUIT/DNI</label><input type="text" value={state.facturaData.receptor.cuit || ' 999999999'} onChange={e => handleStateChange('receptor', 'cuit', e.target.value)} className="mt-1 w-full border-gray-300 rounded-md" /></div>
 
                                     <div>
 
-                                        <label className="block text-sm font-medium">Condición IVA*</label>
+                                        <label className="block text-sm font-medium">Condición IVA</label>
 
                                         <select value={state.facturaData.receptor.condicionIVA} onChange={e => handleStateChange('receptor', 'condicionIVA', e.target.value)} required disabled={esFacturaA} className={`mt-1 w-full border-gray-300 rounded-md ${esFacturaA ? 'bg-gray-200' : ''}`}>
 
