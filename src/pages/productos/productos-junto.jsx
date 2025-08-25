@@ -25,14 +25,15 @@ const IVA_OPTIONS = [
 ];
 
 // ###################################################################################
-// --- MODAL PARA AGREGAR PRODUCTO (sin cambios) ---
+// --- MODAL PARA AGREGAR PRODUCTO (modificado para cálculo automático y manual) ---
 // ###################################################################################
 const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => {
     const { createProduct, getPointsByCompany, userData, companyData } = useContext(apiContext);
-    const createInitialState = useCallback(() => ({ empresa: userData?.empresa || '', cName: companyData?.nombreEmpresa || '', puntoVenta: '', codigoInterno: '', codigoBarra: '', producto: '', descripcion: '', marca: '', categoria: '', unidadMedida: '94', ancho_cm: '', alto_cm: '', profundidad_cm: '', peso_kg: '', precioCosto: '', precioLista: '', alic_IVA: 21, markupPorcentaje: '', stock_disponible: '', stockMinimo: '', ubicacionAlmacen: '', activo: true, }), [userData, companyData]);
+    const createInitialState = useCallback(() => ({ empresa: userData?.empresa || '', cName: companyData?.nombreEmpresa || '', puntoVenta: '', codigoInterno: '', codigoBarra: '', producto: '', descripcion: '', marca: '', categoria: '', unidadMedida: '94', ancho_cm: '', alto_cm: '', profundidad_cm: '', peso_kg: '', precioCosto: '', precioLista: '', alic_IVA: 21, markupPorcentaje: '', stock_disponible: '', stockMinimo: '', ubicacionAlmacen: '', activo: true, precioListaManual: false }), [userData, companyData]);
     const [formData, setFormData] = useState(createInitialState);
     const [puntosVenta, setPuntosVenta] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    
     useEffect(() => {
         if (isOpen) {
             const fetchPoints = async () => {
@@ -48,20 +49,58 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
             setFormData(createInitialState());
         }
     }, [isOpen, userData?.empresa, getPointsByCompany, createInitialState]);
+
     const handleChange = useCallback((e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: type === 'checkbox' ? checked : value 
+        }));
     }, []);
+
+    // Calcular precio lista automáticamente
     const precioListaCalculado = useMemo(() => {
+        if (formData.precioListaManual) return parseFloat(formData.precioLista) || 0;
+        
         const costo = parseFloat(formData.precioCosto) || 0;
         const markup = parseFloat(formData.markupPorcentaje) || 0;
-        return costo * (1 + markup / 100);
-    }, [formData.precioCosto, formData.markupPorcentaje]);
+        const iva = parseFloat(formData.alic_IVA) || 0;
+        const precioSinIVA = costo * (1 + markup / 100);
+        const precioConIVA = precioSinIVA * (1 + iva / 100);
+        
+        return precioConIVA;
+    }, [formData.precioCosto, formData.markupPorcentaje, formData.alic_IVA, formData.precioListaManual, formData.precioLista]);
+    
+    // Actualizar precio lista cuando cambian los valores de cálculo (incluyendo IVA)
     useEffect(() => {
-        if (formData.precioCosto && !isNaN(parseFloat(formData.precioCosto))) {
-            setFormData(prev => ({ ...prev, precioLista: precioListaCalculado.toFixed(2) }));
+        if (!formData.precioListaManual && formData.precioCosto && !isNaN(parseFloat(formData.precioCosto))) {
+            setFormData(prev => ({ 
+                ...prev, 
+                precioLista: precioListaCalculado.toFixed(2) 
+            }));
         }
-    }, [precioListaCalculado, formData.precioCosto]);
+    }, [precioListaCalculado, formData.precioCosto, formData.precioListaManual, formData.alic_IVA]);
+
+    // Manejar cambio manual del precio lista
+    const handlePrecioListaChange = (e) => {
+        const { value } = e.target;
+        setFormData(prev => ({ 
+            ...prev, 
+            precioLista: value,
+            precioListaManual: true // Marcar que se editó manualmente
+        }));
+    };
+
+    // Restablecer cálculo automático si se modifica el precio de costo o markup
+    useEffect(() => {
+        if (formData.precioListaManual) {
+            setFormData(prev => ({ 
+                ...prev, 
+                precioListaManual: false 
+            }));
+        }
+    }, [formData.precioCosto, formData.markupPorcentaje]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.producto || formData.producto.trim().length < 3) {
@@ -76,14 +115,18 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
         try {
             const dataToSend = { ...formData };
             delete dataToSend.cName;
+            delete dataToSend.precioListaManual; // No enviar este campo al backend
+            
             const numericFields = ['ancho_cm', 'alto_cm', 'profundidad_cm', 'peso_kg', 'precioCosto', 'alic_IVA', 'markupPorcentaje', 'stock_disponible', 'stockMinimo'];
             numericFields.forEach(field => {
                 const numValue = parseFloat(dataToSend[field]);
                 dataToSend[field] = isNaN(numValue) ? 0 : numValue;
             });
+            
             dataToSend.codigoBarra = dataToSend.codigoBarra ? parseFloat(dataToSend.codigoBarra) : null;
             dataToSend.puntoVenta = dataToSend.puntoVenta || null;
             dataToSend.precioLista = parseFloat(dataToSend.precioLista) || 0;
+            
             await createProduct(dataToSend);
             Swal.fire('¡Éxito!', 'Producto registrado correctamente.', 'success');
             onProductAdded();
@@ -94,9 +137,12 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
             setIsLoading(false);
         }
     };
+
     if (!isOpen) return null;
+    
     const commonInputClasses = "mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal-activo)] focus:border-[var(--principal-activo)]";
     const labelClasses = "block text-sm font-medium text-gray-700";
+    
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={onClose}>
             <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -170,7 +216,21 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
                             </div>
                             <div>
                                 <label htmlFor="precioLista" className={labelClasses}>Precio Lista (calculado)</label>
-                                <input type="number" id="precioLista" name="precioLista" value={formData.precioLista || ''} onChange={handleChange} min="0" step="0.01" className={commonInputClasses} />
+                                <input 
+                                    type="number" 
+                                    id="precioLista" 
+                                    name="precioLista" 
+                                    value={formData.precioLista || ''} 
+                                    onChange={handlePrecioListaChange} 
+                                    min="0" 
+                                    step="0.01" 
+                                    className={commonInputClasses} 
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formData.precioListaManual 
+                                        ? "Modo manual - El precio no se recalculará automáticamente" 
+                                        : "Modo automático - Se recalcula con Markup %"}
+                                </p>
                             </div>
                             <div>
                                 <label htmlFor="stockMinimo" className={labelClasses}>Stock Mínimo</label>
@@ -220,6 +280,7 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
         </div>
     );
 };
+
 // ###################################################################################
 // --- MODAL PARA CARGA MASIVA (sin cambios) ---
 // ###################################################################################
@@ -231,6 +292,7 @@ const BulkUploadModal = ({ isOpen, onClose, onSuccess }) => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [message, setMessage] = useState({ type: '', text: '' });
     const idEmpresa = companyData?._id;
+    
     useEffect(() => {
         if (isOpen && idEmpresa) {
             const fetchPuntosDeVenta = async () => {
@@ -250,6 +312,7 @@ const BulkUploadModal = ({ isOpen, onClose, onSuccess }) => {
             setMessage({ type: '', text: '' });
         }
     }, [isOpen, idEmpresa, getPointsByCompany]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!selectedPuntoVentaId || !selectedFile) {
@@ -272,8 +335,11 @@ const BulkUploadModal = ({ isOpen, onClose, onSuccess }) => {
             setMessage({ type: 'error', text: err.message || "Ocurrió un error al cargar el archivo." });
         }
     };
+
     if (!isOpen) return null;
+    
     const isLoading = status === 'loading' || status === 'submitting';
+    
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={onClose}>
             <div className="relative w-full max-w-lg bg-white rounded-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -308,25 +374,29 @@ const BulkUploadModal = ({ isOpen, onClose, onSuccess }) => {
         </div>
     );
 };
+
 // ###################################################################################
-// --- NUEVO MODAL PARA CREAR/EDITAR MARCAS ---
+// --- MODAL PARA CREAR/EDITAR MARCAS ---
 // ###################################################################################
 const ManageMarcaModal = ({ isOpen, onClose, onMarcaUpdated, filterOptions }) => {
-    const { companyData, updateOrCreateMarcas, deleteMarca } = useContext(apiContext); // ✅ Añadido deleteMarca
+    const { companyData, updateOrCreateMarcas, deleteMarca } = useContext(apiContext);
     const [selectedMarca, setSelectedMarca] = useState('');
     const [newMarcaName, setNewMarcaName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    
     useEffect(() => {
         if (isOpen) {
             setSelectedMarca('');
             setNewMarcaName('');
         }
     }, [isOpen]);
+
     const handleSelectChange = (e) => {
         const marcaSeleccionada = e.target.value;
         setSelectedMarca(marcaSeleccionada);
         setNewMarcaName(marcaSeleccionada);
     };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!newMarcaName.trim()) {
@@ -349,7 +419,7 @@ const ManageMarcaModal = ({ isOpen, onClose, onMarcaUpdated, filterOptions }) =>
             setIsLoading(false);
         }
     };
-    // ✅ NUEVA FUNCIÓN PARA ELIMINAR MARCAS
+
     const handleDeleteMarca = async () => {
         if (!selectedMarca) {
             Swal.fire('Error', 'Por favor, selecciona una marca para eliminar.', 'error');
@@ -370,7 +440,7 @@ const ManageMarcaModal = ({ isOpen, onClose, onMarcaUpdated, filterOptions }) =>
             try {
                 const response = await deleteMarca(selectedMarca, companyData?._id);
                 Swal.fire('¡Eliminada!', response.message, 'success');
-                onMarcaUpdated(); // Recarga la lista de marcas
+                onMarcaUpdated();
             } catch (err) {
                 Swal.fire('Error', err.response?.data?.error || 'No se pudo eliminar la marca.', 'error');
             } finally {
@@ -378,8 +448,11 @@ const ManageMarcaModal = ({ isOpen, onClose, onMarcaUpdated, filterOptions }) =>
             }
         }
     };
+
     if (!isOpen) return null;
+    
     const modalTitle = selectedMarca ? `Editando marca: ${selectedMarca}` : 'Crear Nueva Marca';
+    
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={onClose}>
             <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -402,7 +475,6 @@ const ManageMarcaModal = ({ isOpen, onClose, onMarcaUpdated, filterOptions }) =>
                         </div>
                     </div>
                     <div className="flex justify-between items-center gap-3 mt-6">
-                        {/* ✅ BOTÓN DE ELIMINAR */}
                         {selectedMarca && (
                             <button type="button" onClick={handleDeleteMarca} disabled={isLoading} className="text-sm font-medium text-white bg-[var(--rojo-cerrar)] hover:opacity-90 disabled:opacity-50 py-2 px-4 rounded-md">
                                 {isLoading ? '...' : 'Eliminar'}
@@ -426,21 +498,24 @@ const ManageMarcaModal = ({ isOpen, onClose, onMarcaUpdated, filterOptions }) =>
 // --- MODAL PARA CREAR/EDITAR CATEGORIAS ---
 // ###################################################################################
 const ManageCategoriaModal = ({ isOpen, onClose, onCategoriaUpdated, filterOptions }) => {
-    const { companyData, updateOrCreateCategorias, deleteCategoria } = useContext(apiContext); // ✅ Añadido deleteCategoria
+    const { companyData, updateOrCreateCategorias, deleteCategoria } = useContext(apiContext);
     const [selectedCategoria, setSelectedCategoria] = useState('');
     const [newCategoriaName, setNewCategoriaName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    
     useEffect(() => {
         if (isOpen) {
             setSelectedCategoria('');
             setNewCategoriaName('');
         }
     }, [isOpen]);
+
     const handleSelectChange = (e) => {
         const categoriaSeleccionada = e.target.value;
         setSelectedCategoria(categoriaSeleccionada);
         setNewCategoriaName(categoriaSeleccionada);
     };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!newCategoriaName.trim()) {
@@ -463,7 +538,7 @@ const ManageCategoriaModal = ({ isOpen, onClose, onCategoriaUpdated, filterOptio
             setIsLoading(false);
         }
     };
-    // ✅ NUEVA FUNCIÓN PARA ELIMINAR CATEGORÍAS
+
     const handleDeleteCategoria = async () => {
         if (!selectedCategoria) {
             Swal.fire('Error', 'Por favor, selecciona una categoría para eliminar.', 'error');
@@ -484,7 +559,7 @@ const ManageCategoriaModal = ({ isOpen, onClose, onCategoriaUpdated, filterOptio
             try {
                 const response = await deleteCategoria(selectedCategoria, companyData?._id);
                 Swal.fire('¡Eliminada!', response.message, 'success');
-                onCategoriaUpdated(); // Recarga la lista de categorías
+                onCategoriaUpdated();
             } catch (err) {
                 Swal.fire('Error', err.response?.data?.error || 'No se pudo eliminar la categoría.', 'error');
             } finally {
@@ -492,8 +567,11 @@ const ManageCategoriaModal = ({ isOpen, onClose, onCategoriaUpdated, filterOptio
             }
         }
     };
+
     if (!isOpen) return null;
+    
     const modalTitle = selectedCategoria ? `Editando categoría: ${selectedCategoria}` : 'Crear Nueva Categoría';
+    
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={onClose}>
             <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -516,7 +594,6 @@ const ManageCategoriaModal = ({ isOpen, onClose, onCategoriaUpdated, filterOptio
                         </div>
                     </div>
                     <div className="flex justify-between items-center gap-3 mt-6">
-                        {/* ✅ BOTÓN DE ELIMINAR */}
                         {selectedCategoria && (
                             <button type="button" onClick={handleDeleteCategoria} disabled={isLoading} className="text-sm font-medium text-white bg-[var(--rojo-cerrar)] hover:opacity-90 disabled:opacity-50 py-2 px-4 rounded-md">
                                 {isLoading ? '...' : 'Eliminar'}
@@ -537,7 +614,7 @@ const ManageCategoriaModal = ({ isOpen, onClose, onCategoriaUpdated, filterOptio
 };
 
 // ###################################################################################
-// --- COMPONENTE PRINCIPAL (refactorizado) ---
+// --- COMPONENTE PRINCIPAL (refactorizado con cálculo automático y manual) ---
 // ###################################################################################
 export default function GestionProductos() {
     const { 
@@ -556,6 +633,8 @@ export default function GestionProductos() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [editableProduct, setEditableProduct] = useState(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [precioListaManual, setPrecioListaManual] = useState(false);
+
     const fetchProducts = useCallback(async (page = 1) => {
         if (!userData?.empresa) {
             setIsLoading(false);
@@ -574,6 +653,7 @@ export default function GestionProductos() {
             setIsLoading(false);
         }
     }, [userData?.empresa, getProductsEmpresa, filters]);
+
     const loadFilterOptions = useCallback(async () => {
         if (userData?.empresa) {
             try {
@@ -588,27 +668,42 @@ export default function GestionProductos() {
             }
         }
     }, [userData?.empresa, filters.puntoVenta, getCategoryEmpresa, getMarcaEmpresa, getPointsByCompany]);
+
     useEffect(() => {
         fetchProducts(currentPage);
     }, [currentPage, fetchProducts]);
+
     useEffect(() => {
         loadFilterOptions();
     }, [loadFilterOptions]);
+
     useEffect(() => {
         if (selectedProduct) {
             setEditableProduct({ ...selectedProduct });
+            setPrecioListaManual(false);
         } else {
             setEditableProduct(null);
         }
     }, [selectedProduct]);
+
+    // Calcular precio lista para edición
     const calculatedEditPrice = useMemo(() => {
-        if (!editableProduct) return 0;
+        if (!editableProduct || precioListaManual) return parseFloat(editableProduct?.precioLista) || 0;
+        
         const costo = parseFloat(editableProduct.precioCosto) || 0;
         const markup = parseFloat(editableProduct.markupPorcentaje) || 0;
-        return costo * (1 + markup / 100);
-    }, [editableProduct?.precioCosto, editableProduct?.markupPorcentaje]);
+        const iva = parseFloat(editableProduct.alic_IVA) || 0;
+    
+        // Calcular: Precio costo + markup, luego agregar IVA
+        const precioSinIVA = costo * (1 + markup / 100);
+        const precioConIVA = precioSinIVA * (1 + iva / 100);
+        
+        return precioConIVA;
+    }, [editableProduct?.precioCosto, editableProduct?.markupPorcentaje, editableProduct?.alic_IVA, precioListaManual, editableProduct?.precioLista]);
+    
+    // Actualizar precio lista cuando cambian los valores de cálculo (incluyendo IVA)
     useEffect(() => {
-        if (editableProduct && editableProduct.precioCosto && !isNaN(parseFloat(editableProduct.precioCosto))) {
+        if (editableProduct && !precioListaManual && editableProduct.precioCosto && !isNaN(parseFloat(editableProduct.precioCosto))) {
             setEditableProduct(prev => {
                 if (parseFloat(prev.precioLista) !== calculatedEditPrice) {
                     return { ...prev, precioLista: calculatedEditPrice.toFixed(2) };
@@ -616,24 +711,43 @@ export default function GestionProductos() {
                 return prev;
             });
         }
-    }, [calculatedEditPrice, editableProduct?.precioCosto]);
+    }, [calculatedEditPrice, editableProduct?.precioCosto, precioListaManual, editableProduct?.alic_IVA]);
+
+    // Restablecer cálculo automático si se modifica el precio de costo o markup
+    useEffect(() => {
+        if (precioListaManual) {
+            setPrecioListaManual(false);
+        }
+    }, [editableProduct?.precioCosto, editableProduct?.markupPorcentaje]);
+
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
+
     const handleApplyFilters = () => {
         setCurrentPage(1);
         fetchProducts(1);
     };
+
     const handleClearFilters = () => {
         setFilters({ product: "", category: "", marca: "", puntoVenta: "" });
         setCurrentPage(1);
     };
+
     const handleEditInputChange = (e) => {
         const { name, value, type, checked } = e.target;
         const finalValue = type === 'checkbox' ? checked : value;
         setEditableProduct(prev => ({ ...prev, [name]: finalValue }));
     };
+
+    // Manejar cambio manual del precio lista en edición
+    const handleEditPrecioListaChange = (e) => {
+        const { value } = e.target;
+        setEditableProduct(prev => ({ ...prev, precioLista: value }));
+        setPrecioListaManual(true); // Marcar que se editó manualmente
+    };
+
     const handleUpdateSubmit = async (e) => {
         e.preventDefault();
         if (!editableProduct) return;
@@ -651,6 +765,7 @@ export default function GestionProductos() {
             setIsUpdating(false);
         }
     };
+
     const handleDeleteProduct = async (productId) => {
         if (!productId) return;
         const result = await Swal.fire({
@@ -671,10 +786,13 @@ export default function GestionProductos() {
             }
         }
     };
+
     if (isLoading && !data) return <div className="text-center p-10"><SpinnerIcon className="h-8 w-8 mx-auto" /> <p>Cargando productos...</p></div>;
     if (error) return <div className="text-center p-10 bg-red-100 text-[var(--rojo-cerrar)]">{error}</div>;
+    
     const commonInputClassesModal = "mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--principal-activo)] focus:border-[var(--principal-activo)]";
     const labelClassesModal = "block text-sm font-medium text-gray-700";
+    
     return (
         <>
             <div className="bg-slate-100 min-h-screen">
@@ -789,8 +907,20 @@ export default function GestionProductos() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label htmlFor="edit-precioLista" className={labelClassesModal}>Precio Lista (calculado)</label>
-                                    <input type="number" id="edit-precioLista" name="precioLista" value={editableProduct.precioLista || ''} onChange={handleEditInputChange} className={commonInputClassesModal} />
+                                    <label htmlFor="edit-precioLista" className={labelClassesModal}>Precio Lista</label>
+                                    <input 
+                                        type="number" 
+                                        id="edit-precioLista" 
+                                        name="precioLista" 
+                                        value={editableProduct.precioLista || ''} 
+                                        onChange={handleEditPrecioListaChange} 
+                                        className={commonInputClassesModal} 
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {precioListaManual 
+                                            ? "Modo manual - El precio no se recalculará automáticamente" 
+                                            : "Modo automático - Se recalcula con Markup %"}
+                                    </p>
                                 </div>
                                 <div>
                                     <label htmlFor="edit-stock_disponible" className={labelClassesModal}>Stock Disponible*</label>
@@ -857,5 +987,3 @@ export default function GestionProductos() {
         </>
     );
 }
-
-// ... (Resto de los componentes y exportaciones)
