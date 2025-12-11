@@ -196,9 +196,8 @@ export const ApiProvider = ({ children }) => {
         }
     }, [userData]); // Depende de userData, así que se añade a las dependencias
 
-    const getTiketsContext = useCallback(async (id, page, limit, searchQuery, puntoventa) => { // 1. Añade searchQuery aquí
+    const getTiketsContext = useCallback(async (id, page, limit, searchQuery, puntoventa) => {
         try {
-          // 2. Pasa searchQuery a la función de la API
           return await getTikets(id, page, limit, searchQuery, puntoventa);
         } catch (error) {
           console.error("Error en getTiketsContext (Context):", error);
@@ -444,13 +443,12 @@ export const ApiProvider = ({ children }) => {
             console.log("Respuesta de getFacturas (Context):", respuesta);
             return respuesta;
         } catch (error) {
-            // Verifica si el error es una cancelación de Axios
             if (!axios.isCancel(error)) {
                 console.error("Error en getFacturas (Context):", error);
             }
             throw error;
         }
-    }, []); // Asegúrate de que las dependencias de useCallback estén correctas si las tienes
+    }, []); 
 
 
 

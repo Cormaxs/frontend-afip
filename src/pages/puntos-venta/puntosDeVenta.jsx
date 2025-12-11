@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom'; // <--- 1. Importar useNavigate
 import { apiContext } from "../../context/api_context.jsx";
-import Swal from 'sweetalert2'; // Asegúrate de tener instalado SweetAlert2
+import Swal from 'sweetalert2';
 
 // --- Componentes de UI Genéricos ---
 
@@ -19,6 +20,7 @@ const Button = ({ children, onClick, type = 'button', variant = 'primary', disab
         primary: 'bg-[var(--principal)] text-white border-transparent hover:bg-[var(--principal-shadow)] disabled:bg-[var(--principal-activo)] focus:ring-[var(--principal)]',
         secondary: 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 disabled:opacity-50 focus:ring-[var(--principal)]',
         danger: 'bg-[var(--rojo-cerrar)] text-white border-transparent hover:bg-[var(--rojo-cerrar-hover)] disabled:bg-red-300 focus:ring-[var(--rojo-cerrar)]',
+        ghost: 'bg-transparent text-gray-600 border-transparent hover:bg-gray-100 disabled:opacity-50 focus:ring-[var(--principal)]', // Nuevo estilo para el botón de regreso
     };
     return (
         <button type={type} onClick={onClick} disabled={disabled} className={`${baseClasses} ${variants[variant]} ${className}`}>
@@ -48,8 +50,10 @@ const CloseIcon = (props) => <Icon path="M6 18L18 6M6 6l12 12" {...props} />;
 const ShopIcon = (props) => <Icon path="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h2.64m-13.5 0L12 15.75M3.75 21L12 15.75m0 0l8.25 5.25M12 15.75V3" {...props} />;
 const LocationIcon = (props) => <Icon path="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" {...props} />;
 const CalendarIcon = (props) => <Icon path="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0h18" {...props} />;
+const ArrowLeftIcon = (props) => <Icon path="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" {...props} />; // Ícono de flecha izquierda
 
 // --- Componente Modal para Agregar Punto de Venta ---
+// (Contenido omitido por brevedad, se mantiene el original)
 const AddPointSaleModal = ({ isOpen, onClose, onPointAdded }) => {
     const { createPointSale, userData, companyData } = useContext(apiContext);
     const provinciasArgentinas = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
@@ -124,8 +128,8 @@ const AddPointSaleModal = ({ isOpen, onClose, onPointAdded }) => {
         </div>
     );
 };
-
 // --- Sub-componentes de la Página Principal ---
+// (PointOfSaleCard, SkeletonCard, EmptyState omitidos por brevedad, se mantienen los originales)
 
 const PointOfSaleCard = ({ point }) => {
     const formatDateTime = (isoString) => {
@@ -189,6 +193,7 @@ const EmptyState = () => (
 // --- Componente Principal Unificado ---
 export default function GestionPuntosDeVenta() {
     const { getPointsByCompany, userData, companyData } = useContext(apiContext);
+    const navigate = useNavigate(); // <--- 2. Inicializar useNavigate
     const [data, setData] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
@@ -197,6 +202,7 @@ export default function GestionPuntosDeVenta() {
     const [searchParams, setSearchParams] = useState({ nombre: '', provincia: '', numero: '' });
 
     const fetchPoints = useCallback(async (page, filters) => {
+        // ... (lógica de fetchPoints)
         if (!userData?.empresa) {
             setIsLoading(false);
             return;
@@ -246,6 +252,12 @@ export default function GestionPuntosDeVenta() {
         });
         handleClearSearch(); // Limpia filtros y recarga desde la página 1
     };
+    
+    // <--- 3. Handler para navegar a la ruta de ventas
+    const handleGoBack = () => {
+        navigate('/ventas-junto');
+    };
+    // ----------------------------------------------------
 
     if (error) {
         return <div className="p-8 text-center bg-red-100 text-[var(--rojo-cerrar-hover)] rounded-lg m-4 sm:m-8">{error}</div>;
@@ -255,6 +267,15 @@ export default function GestionPuntosDeVenta() {
         <>
             <div className="bg-gray-50 min-h-screen">
                 <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+                    
+                    {/* Botón de regreso añadido aquí */}
+                    <div className="mb-4">
+                        <Button onClick={handleGoBack} variant="ghost" className="text-sm">
+                            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+                            Volver a Ventas
+                        </Button>
+                    </div>
+
                     <header className="md:flex md:justify-between md:items-center mb-8">
                         <div>
                             <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">Puntos de Venta</h1>

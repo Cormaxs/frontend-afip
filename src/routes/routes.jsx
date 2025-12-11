@@ -26,6 +26,7 @@ const CrearFacturas = lazy(() => import("../pages/facturas/create-factura.jsx"))
 const UpdateUser = lazy(() => import("../pages/propietario/update-user.jsx"));
 const UpdateEmpresa = lazy(() => import("../pages/empresa/update-empresa.jsx"));
 const VerFacturasCompany = lazy(() => import("../pages/facturas/getFacturas.jsx"));
+const VentasClamp = lazy (()=> import ("../pages/ventas/ventas-clamp.jsx"));
 
 export default function LoadRoutes() {
     return (
@@ -69,7 +70,7 @@ export default function LoadRoutes() {
                 {/* Operaciones */}
                 <Route path="/create-factura" element={<CrearFacturas />} />
                 <Route path="/ver-facturas" element={<VerFacturasCompany />} />
-
+                <Route path='/ventas-junto' element = {<VentasClamp/>}/>
 
                 {/* Rutas no encontradas */}
                 <Route path="*" element={<div>404 - Página no encontrada</div>} />

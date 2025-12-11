@@ -7,33 +7,42 @@ const menuGroups = {
     dashboard: {
         title: "Dashboard",
         icon: <i className="bi bi-columns-gap"></i>,
+        isDirectLink: true, // <-- ¡NUEVA PROPIEDAD!
+        path: "/dashboard",  // <-- La ruta directa
         items: [
             { path: "/dashboard", label: "Inicio", icon: <i className="bi bi-house-door-fill"></i> },
-            { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line-fill"></i> },
-            { path: "/create-factura", label: "crear Facturas 'BETA'", icon: <i className="bi bi-bar-chart-line-fill"></i> },
-            { path: "/ver-facturas", label: "Historial de Facturas", icon: <i className="bi bi-receipt"></i> },
+          
+           
             
         ]
     },
     ventas: {
         title: "Ventas",
         icon: <i className="bi bi-cart3"></i>,
+        isDirectLink: true, // <-- ¡NUEVA PROPIEDAD!
+        path: "/ventas-junto",  // <-- La ruta directa
         items: [
             { path: "/tiket/create", label: "Nueva Venta / Cobrar", icon: <i className="bi bi-cash-coin"></i> },
             { path: "/get-puntoVenta", label: "Puntos de Venta", icon: <i className="bi bi-shop"></i> },
             { path: "/tiket/get", label: "Historial de tikets", icon: <i className="bi bi-receipt"></i> },
+             { path: "/ver-facturas", label: "Historial de Facturas", icon: <i className="bi bi-receipt"></i> },
         ]
     },
     inventario: {
         title: "Inventario",
         icon: <i className="bi bi-box-seam-fill"></i>,
+        isDirectLink: true, // <-- ¡NUEVA PROPIEDAD!
+        path: "/productos",  // <-- La ruta directa
         items: [
+            // El item sigue ahí por si quieres que aparezca como activo
             { path: "/productos", label: "Productos", icon: <i className="bi bi-card-checklist"></i> },
         ]
     },
     caja: {
         title: "Caja",
         icon: <i className="bi bi-safe2-fill"></i>,
+        isDirectLink: true,
+        path: "/get-cajas-empresa",
         items: [
             { path: "/get-cajas-empresa", label: "Cajas", icon: <i className="bi bi-archive-fill"></i> }
         ]
@@ -45,6 +54,15 @@ const menuGroups = {
             { path: "/add-vendedor", label: "Agregar vendedores", icon: <i className="bi bi-person-add"></i> }
         ]
     },
+    Tester: {
+        title: "funciones demo",
+        icon: <i className="bi bi-gear-fill"></i>,
+        items: [
+            { path: "/create-factura", label: "crear Facturas 'BETA'", icon: <i className="bi bi-bar-chart-line-fill"></i> },
+            { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line-fill"></i> },
+        ]
+    },
+
 };
 
 
@@ -173,10 +191,40 @@ export default function SidePanel() {
                 </header>
 
                 <nav className="p-3 flex-grow overflow-y-auto custom-scrollbar">
-                    {Object.entries(menuGroups).map(([key, group]) => (
-                        <SubMenu key={key} group={group} open={openSubmenu === key} isActivePath={isActivePath} toggleSubmenu={() => toggleSubmenu(key)} />
-                    ))}
-                </nav>
+                {Object.entries(menuGroups).map(([key, group]) => {
+                    // 1. Verificar si es un enlace directo
+                    if (group.isDirectLink) {
+                        const isActive = isActivePath(group.path);
+
+                        // 2. Renderizar un Link directo con el estilo de botón de SubMenu
+                        return (
+                            <div key={key} className="mb-1">
+                                <Link 
+                                    to={group.path} 
+                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg ${isActive ? 'bg-[var(--principal-activo)] text-white' : 'text-white hover:bg-white/10 hover:text-white'} transition-colors duration-200 ease-in-out text-left`}
+                                >
+                                    <div className="flex items-center">
+                                        <span className="mr-3 text-xl">{group.icon}</span>
+                                        <span className="font-semibold text-base">{group.title}</span>
+                                    </div>
+                                    {/* Opcional: Quitar la flecha (bi-chevron-down) si es enlace directo */}
+                                </Link>
+                            </div>
+                        );
+                    }
+
+                    // 3. Si NO es un enlace directo, renderizar el SubMenu como lo hacías antes
+                    return (
+                        <SubMenu 
+                            key={key} 
+                            group={group} 
+                            open={openSubmenu === key} 
+                            isActivePath={isActivePath} 
+                            toggleSubmenu={() => toggleSubmenu(key)} 
+                        />
+                    );
+                })}
+            </nav>
 
                 <footer className="mt-auto p-4 border-t border-white/10 space-y-2">
                     <UserProfile user={userData} />

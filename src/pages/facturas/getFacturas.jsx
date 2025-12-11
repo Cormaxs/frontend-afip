@@ -1,6 +1,7 @@
 import { apiContext } from "../../context/api_context";
 import { useContext, useEffect, useState, useCallback, useMemo } from "react";
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // <--- 1. Importar useNavigate
 
 // --- Constantes y Helpers para Paginación ---
 const DOTS = '...';
@@ -19,11 +20,28 @@ const PdfIcon = () => (
 const SearchIcon = (props) => (
     <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20" {...props}><path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" /></svg>
 );
+// --- 2. Nuevo Ícono de Flecha Izquierda ---
+const ArrowLeftIcon = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-4 h-4 ${props.className || ''}`}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+    </svg>
+);
+// --- 3. Componente simple para el botón de regresar ---
+const GoBackButton = ({ onClick }) => (
+    <button
+        onClick={onClick}
+        className="inline-flex items-center text-sm font-medium text-gray-600 hover:text-[var(--principal)] transition-colors duration-200 p-2 rounded-lg"
+    >
+        <ArrowLeftIcon className="mr-2" />
+        Volver a Ventas
+    </button>
+);
 
 
 // --- Componente Principal ---
 export default function VerFacturasCompany() {
     const apiContextValue = useContext(apiContext);
+    const navigate = useNavigate(); // <--- 4. Inicializar useNavigate
 
     if (!apiContextValue) {
         return <div>Error: Contexto de API no disponible.</div>;
@@ -32,7 +50,7 @@ export default function VerFacturasCompany() {
     // AHORA SE DESTRUCTURA 'getFacturasPdf' EN LUGAR DE 'getTiketsPdf'
     const { getFacturas, userData, getFacturasPdf } = apiContextValue;
 
-    // --- Estados del Componente ---
+    // --- Estados del Componente (sin cambios) ---
     const [facturas, setFacturas] = useState([]);
     const [paginationInfo, setPaginationInfo] = useState({
         total: 0,
@@ -48,11 +66,11 @@ export default function VerFacturasCompany() {
     const [error, setError] = useState(null);
     const [pdfLoading, setPdfLoading] = useState(null);
 
-    // --- Estados para la Búsqueda Manual ---
+    // --- Estados para la Búsqueda Manual (sin cambios) ---
     const [searchTerm, setSearchTerm] = useState('');
     const [activeSearchTerm, setActiveSearchTerm] = useState('');
 
-    // --- Lógica de Petición de Datos ---
+    // --- Lógica de Petición de Datos (sin cambios) ---
     const fetchFacturas = useCallback(async (page, itemsLimit, searchQuery, signal) => {
         setIsLoading(true);
         setError(null);
@@ -92,14 +110,14 @@ export default function VerFacturasCompany() {
         }
     }, [getFacturas]);
 
-    // --- Efecto para Cargar Datos ---
+    // --- Efecto para Cargar Datos (sin cambios) ---
     useEffect(() => {
         const controller = new AbortController();
         fetchFacturas(currentPage, limit, activeSearchTerm, controller.signal);
         return () => controller.abort();
     }, [currentPage, limit, activeSearchTerm, fetchFacturas]);
 
-    // --- Lógica de Paginación ---
+    // --- Lógica de Paginación (sin cambios) ---
     const paginationRange = useMemo(() => {
         if (!paginationInfo || !paginationInfo.totalPages) return [];
         const { totalPages } = paginationInfo;
@@ -116,7 +134,7 @@ export default function VerFacturasCompany() {
         return [];
     }, [currentPage, paginationInfo]);
 
-    // --- Manejadores de Eventos ---
+    // --- Manejadores de Eventos (sin cambios) ---
     const handlePageChange = (page) => {
         if (typeof page !== 'number' || page < 1 || page > (paginationInfo?.totalPages || 1) || page === currentPage || isLoading) return;
         setCurrentPage(page);
@@ -140,15 +158,15 @@ export default function VerFacturasCompany() {
         setActiveSearchTerm('');
         setCurrentPage(1);
     };
-    
-    // --- Lógica de descarga de PDF actualizada ---
+
+    // --- Lógica de descarga de PDF actualizada (sin cambios) ---
     const handleDownloadPdf = async (factura) => {
-       /* if(factura.tipoComprobante){
-          
-            const pdfFilename = `${factura.tipoComprobante.replace(' ', '_')}_${factura.numeroComprobanteCompleto}.pdf`;
-            console.log("tipo de copmprovbante ->", pdfFilename)
-        }*/
-        const pdfFilename = `${factura.tipoComprobante.replace(' ','_')}_${factura.numeroComprobanteCompleto}`;
+        /* if(factura.tipoComprobante){
+           
+             const pdfFilename = `${factura.tipoComprobante.replace(' ', '_')}_${factura.numeroComprobanteCompleto}.pdf`;
+             console.log("tipo de copmprovbante ->", pdfFilename)
+         }*/
+        const pdfFilename = `${factura.tipoComprobante.replace(' ', '_')}_${factura.numeroComprobanteCompleto}`;
         console.log("nombre comprobvante -> ", pdfFilename, factura)
         setPdfLoading(factura._id);
         try {
@@ -161,6 +179,13 @@ export default function VerFacturasCompany() {
         }
     };
 
+    // <--- 5. Handler para navegar a la ruta de ventas
+    const handleGoBack = () => {
+        navigate('/ventas-junto');
+    };
+    // ----------------------------------------------------
+
+
     // --- Renderizado de Estados de Carga y Error ---
     if (isLoading && facturas.length === 0) return <div className="flex justify-center items-center h-screen"><p className="text-xl text-gray-700">Cargando facturas...</p></div>;
     if (error) return <div className="flex justify-center items-center h-screen text-red-500"><p className="text-xl">Error: {error}</p></div>;
@@ -168,6 +193,11 @@ export default function VerFacturasCompany() {
     // --- Renderizado Principal del Componente ---
     return (
         <div className="max-w-5xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-lg border border-gray-200 my-10">
+            {/* 6. Botón de regreso añadido aquí */}
+            <div className="mb-4 -mt-2">
+                <GoBackButton onClick={handleGoBack} />
+            </div>
+
             <header>
                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-center text-gray-800">Historial de Facturas</h2>
 

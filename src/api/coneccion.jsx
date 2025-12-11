@@ -1,22 +1,12 @@
 import axios from 'axios';
 
-// ============================================================================
-// 1. CONFIGURACIÓN CENTRAL DE AXIOS
-// ============================================================================
-
 // Determina la URL base según el entorno (desarrollo vs. producción) http://localhost:3000/api/v1  https://api.facstock.com/api/v1
 const URL_BACKEND = "https://api.facstock.com/api/v1"
 
-// Crea una instancia de Axios con configuración predeterminada
 const axiosInstance = axios.create({
     baseURL: URL_BACKEND,
     // headers: { 'Content-Type': 'application/json' } // Puedes añadir headers por defecto aquí
 });
-
-// ============================================================================
-// 2. INTERCEPTORES (LÓGICA AUTOMÁTICA PARA CADA LLAMADA)
-// ============================================================================
-
 // --- Interceptor de Petición (Request) ---
 // Se ejecuta ANTES de que cada petición sea enviada. Ideal para añadir tokens.
 axiosInstance.interceptors.request.use(
