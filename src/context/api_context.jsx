@@ -3,10 +3,10 @@ import {
     Login, Register, createEmpresaApi, addProduct,
     addPointSale, getPointSales, addVendedores, getProductsCompany,
     createTiket, getTikets, getEmpresaDataId, getProductCodBarraApi, getTiketsPdfDescargar,
-    CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api,get_caja_id_api,
+    CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api, get_caja_id_api,
     get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
     update_product_inventario, deleted_product_coneccion, UpdateUser, UpdateEmpresa, updateOrCreateMarcas_coneccion, updateOrCreateCategorias_coneccion,
-    deleteCategoria_coneccion,deleteMarca_coneccion, GenerateFacturas_coneccion, getFacturas_coneccion, getFacturasPdfDescargar
+    deleteCategoria_coneccion, deleteMarca_coneccion, GenerateFacturas_coneccion, getFacturas_coneccion, getFacturasPdfDescargar
 
 } from "../api/coneccion";
 
@@ -15,7 +15,7 @@ const getInitialStateFromStorage = (key) => {
     try {
         const storedData = localStorage.getItem(key);
         if (!storedData) {
-            return null; // No hay datos, devuelve null
+            return null;
         }
 
         const parsedData = JSON.parse(storedData);
@@ -23,12 +23,8 @@ const getInitialStateFromStorage = (key) => {
         // --- ¡LA VALIDACIÓN CLAVE! ---
         // Verifica si el dato parseado es realmente un array.
         if (Array.isArray(parsedData)) {
-            return parsedData; // Es un array, perfecto.
+            return parsedData;
         }
-        
-        // Si no es un array (es un objeto, etc.), trátalo como inválido.
-       // console.warn(`Los datos para '${key}' no son un array, se limpiarán.`);
-        //localStorage.removeItem(key); // Opcional: limpiar datos incorrectos.
         return parsedData;
 
     } catch (error) {
@@ -41,18 +37,17 @@ const getInitialStateFromStorage = (key) => {
 export const apiContext = createContext();
 
 export const ApiProvider = ({ children }) => {
-    // --- ESTADOS ---
     // Inicialización limpia usando el helper
     const [userData, setUserData] = useState(() => getInitialStateFromStorage("userData"));
     const [companyData, setCompanyData] = useState(() => getInitialStateFromStorage("dataEmpresa"));
     const [isAuthenticated, setIsAuthenticated] = useState(() => !!getInitialStateFromStorage("userData"));
-    const [cajasActivas, setCajasActivas] = useState(() => getInitialStateFromStorage("cajasActivas") || []); // Inicializa como un array vacío si no hay datos
+    const [cajasActivas, setCajasActivas] = useState(() => getInitialStateFromStorage("cajasActivas") || []);
     // --- MANEJO DE SESIÓN ---
 
     const login = async (data) => {
         try {
             const userResponse = await Login(data);
-            
+
             // Obtenemos los datos de la empresa después de un login exitoso
             const companyResponse = await getEmpresaDataId(userResponse.empresa);
 
@@ -96,7 +91,6 @@ export const ApiProvider = ({ children }) => {
     const createEmpresa = useCallback(async (empresaData) => {
         try {
             const response = await createEmpresaApi(empresaData);
-            // Actualiza los datos de la empresa en el contexto si es exitoso
             if (response) {
                 localStorage.setItem("dataEmpresa", JSON.stringify(response));
                 setCompanyData(response);
@@ -107,8 +101,7 @@ export const ApiProvider = ({ children }) => {
             throw error;
         }
     }, []);
-    
-    // El resto de las funciones ahora simplemente llaman a la API y manejan errores de forma unificada.
+
     const createProduct = useCallback(async (productData) => {
         try {
             return await addProduct(productData);
@@ -127,13 +120,10 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
-    const getPointsByCompany = useCallback(async (idEmpresa, page, limit, filters) => { // Añadido `page` para consistencia
+    const getPointsByCompany = useCallback(async (idEmpresa, page, limit, filters) => {
         try {
-           
-            // Pasamos los parámetros que necesite la función de la API
             const respuesta = await getPointSales(idEmpresa, page, limit, filters);
-           
-            return respuesta; 
+            return respuesta;
         } catch (error) {
             console.error("Error en getPointsByCompany (Context):", error);
             throw error;
@@ -151,8 +141,7 @@ export const ApiProvider = ({ children }) => {
 
     const getProductsEmpresa = useCallback(async (idEmpresa, filters = {}) => {
         try {
-          // Extraemos los valores del objeto filters. Si no vienen, serán undefined.
-          const { page, limit, category, product, marca, puntoVenta } = filters;
+            const { page, limit, category, product, marca, puntoVenta } = filters;
             return await getProductsCompany(idEmpresa, page, limit, category, product, marca, puntoVenta);
         } catch (error) {
             console.error("Error en getProductsEmpresa (Context):", error);
@@ -161,7 +150,7 @@ export const ApiProvider = ({ children }) => {
     }, []);
 
 
-    const getCategoryEmpresa = useCallback(async (idEmpresa, idPuntoVenta  ) => {
+    const getCategoryEmpresa = useCallback(async (idEmpresa, idPuntoVenta) => {
         try {
             return await getCategoryCompany(idEmpresa, idPuntoVenta);
         } catch (error) {
@@ -172,7 +161,7 @@ export const ApiProvider = ({ children }) => {
 
 
 
-    const getMarcaEmpresa = useCallback(async (idEmpresa, idPuntoVenta  ) => {
+    const getMarcaEmpresa = useCallback(async (idEmpresa, idPuntoVenta) => {
         try {
             return await getMarcaCompany(idEmpresa, idPuntoVenta);
         } catch (error) {
@@ -198,12 +187,12 @@ export const ApiProvider = ({ children }) => {
 
     const getTiketsContext = useCallback(async (id, page, limit, searchQuery, puntoventa) => {
         try {
-          return await getTikets(id, page, limit, searchQuery, puntoventa);
+            return await getTikets(id, page, limit, searchQuery, puntoventa);
         } catch (error) {
-          console.error("Error en getTiketsContext (Context):", error);
-          throw error;
+            console.error("Error en getTiketsContext (Context):", error);
+            throw error;
         }
-      }, []);
+    }, []);
 
     const getCompanyID = useCallback(async (idEmpresa) => {
         try {
@@ -244,12 +233,12 @@ export const ApiProvider = ({ children }) => {
 
     const abrirCaja = useCallback(async (data) => {
         try {
-           const respuesta = await AbrirCaja_api(data)
-           if(respuesta._id){
-            localStorage.setItem("cajasActivas", JSON.stringify(respuesta)); // Guardamos la caja activa en localStorage
-            const datosParaGuardar = Array.isArray(respuesta) ? respuesta : (respuesta ? [respuesta] : []);
-            setCajasActivas(datosParaGuardar);
-           }
+            const respuesta = await AbrirCaja_api(data)
+            if (respuesta._id) {
+                localStorage.setItem("cajasActivas", JSON.stringify(respuesta)); // Guardamos la caja activa en localStorage
+                const datosParaGuardar = Array.isArray(respuesta) ? respuesta : (respuesta ? [respuesta] : []);
+                setCajasActivas(datosParaGuardar);
+            }
             return respuesta;
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -295,7 +284,7 @@ export const ApiProvider = ({ children }) => {
             throw error;
         }
     }, []);
-    
+
 
 
     const get_products_agotados = useCallback(async (idEmpresa, idPuntoVenta, filters) => {
@@ -344,12 +333,12 @@ export const ApiProvider = ({ children }) => {
 
     const updateUser = useCallback(async (idUser, data) => {
         try {
-            const respuesta = await UpdateUser(idUser,data);
-            if(respuesta.user != null){
+            const respuesta = await UpdateUser(idUser, data);
+            if (respuesta.user != null) {
                 setUserData(respuesta.user);
                 localStorage.setItem("userData", JSON.stringify(respuesta.user));
             }
-           
+
             return respuesta;
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -361,12 +350,12 @@ export const ApiProvider = ({ children }) => {
 
     const updateEmpresa = useCallback(async (idEmpresa, data) => {
         try {
-            const respuesta = await UpdateEmpresa(idEmpresa,data);
-            if(respuesta.status === "success"){
+            const respuesta = await UpdateEmpresa(idEmpresa, data);
+            if (respuesta.status === "success") {
                 setCompanyData(respuesta.empresa);
                 localStorage.setItem("dataEmpresa", JSON.stringify(respuesta.empresa));
             }
-           
+
             return respuesta;
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -375,7 +364,7 @@ export const ApiProvider = ({ children }) => {
     }, []);
 
 
-    const updateOrCreateMarcas = useCallback(async ( data) => {
+    const updateOrCreateMarcas = useCallback(async (data) => {
         try {
             console.log("Datos recibidos en updateOrCreateMarcas (Context):", data);
             const respuesta = await updateOrCreateMarcas_coneccion(data);
@@ -386,7 +375,7 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
-    const updateOrCreateCategorias = useCallback(async ( data) => {
+    const updateOrCreateCategorias = useCallback(async (data) => {
         try {
             console.log("Datos recibidos en updateOrCreateMarcas (Context):", data);
             const respuesta = await updateOrCreateCategorias_coneccion(data);
@@ -397,7 +386,7 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
-    const deleteCategoria = useCallback(async ( categoria, empresaId) => {
+    const deleteCategoria = useCallback(async (categoria, empresaId) => {
         try {
             console.log("Datos recibidos en updateOrCreateMarcas (Context):", categoria, empresaId);
             const respuesta = await deleteCategoria_coneccion(categoria, empresaId);
@@ -409,7 +398,7 @@ export const ApiProvider = ({ children }) => {
     }, []);
 
 
-    const deleteMarca = useCallback(async ( marca, empresaId) => {
+    const deleteMarca = useCallback(async (marca, empresaId) => {
         try {
             console.log("Datos recibidos en updateOrCreateMarcas (Context):", marca, empresaId);
             const respuesta = await deleteMarca_coneccion(marca, empresaId);
@@ -421,11 +410,11 @@ export const ApiProvider = ({ children }) => {
     }, []);
 
 
-    const generateFacturas = useCallback(async ( data) => {
+    const generateFacturas = useCallback(async (data) => {
         try {
             console.log("Datos recibidos en generateFacturas (Context):", data);
             const respuesta = await GenerateFacturas_coneccion(data);
-            console.log("Respuesta de generateFacturas (Context):", respuesta);	
+            console.log("Respuesta de generateFacturas (Context):", respuesta);
             return respuesta;
         } catch (error) {
             console.error("Error en cargaMasiva (Context):", error);
@@ -437,9 +426,9 @@ export const ApiProvider = ({ children }) => {
     const getFacturas = useCallback(async (options) => {
         try {
             console.log("Datos recibidos en getFacturas (Context):", options);
-            
+
             const respuesta = await getFacturas_coneccion(options);
-            
+
             console.log("Respuesta de getFacturas (Context):", respuesta);
             return respuesta;
         } catch (error) {
@@ -448,20 +437,20 @@ export const ApiProvider = ({ children }) => {
             }
             throw error;
         }
-    }, []); 
+    }, []);
 
 
 
     const getFacturasPdf = useCallback(async (idAdmin, ventaID) => {
         try {
-        
+
             return await getFacturasPdfDescargar(idAdmin, ventaID);
         } catch (error) {
             console.error("Error en getTiketsPdf (Context):", error);
             throw error;
         }
     }, []);
-    
+
     return (
         <apiContext.Provider value={{
             login,

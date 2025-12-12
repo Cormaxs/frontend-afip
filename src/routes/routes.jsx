@@ -47,7 +47,7 @@ export default function LoadRoutes() {
                 <Route path="/generate-key-crs" element={<GenerarCertificadoDigital />} />
                 <Route path="/generate-crt" element={<CertificateUploader />} />
                 
-                
+                {/*todo lo relacionado con el inventario*/}
                 <Route path="/productos" element={<GetProductsCompany />} />
                 
 
@@ -58,18 +58,19 @@ export default function LoadRoutes() {
                 <Route path="/add-vendedor" element={<AddVendedores />} />
                 <Route path="/usuarios" element={<div>Próximamente...</div>} /> {/* Ejemplo de ruta simple */}
 
-                
+                {/*historial de cajas y gestion de las mismas*/}
                 <Route path="/get-cajas-empresa" element={<HistorialCajas />} />
-               
+               {/*editar datos del usuario*/}
                 <Route path="/update-user" element={<UpdateUser />} />
 
-                {/* Tikets */}
-                <Route path="/tiket/create" element={<CreateTikets />} />
-                <Route path="/tiket/get" element={<VerTiketsCompany />} />
+                {/* Tikets*/}
+                <Route path="/tiket/create" element={<CreateTikets />} />{/*en desuso*/}
+                <Route path="/tiket/get" element={<VerTiketsCompany />} />{/*historial de tikets pdf*/}
 
                 {/* Operaciones */}
-                <Route path="/create-factura" element={<CrearFacturas />} />
-                <Route path="/ver-facturas" element={<VerFacturasCompany />} />
+                <Route path="/create-factura" element={<CrearFacturas />} />{/*demo-desarrollo*/}
+                <Route path="/ver-facturas" element={<VerFacturasCompany />} />{/*historial facturas pdf*/}
+                {/*ventas agrupando de a poco todo lo relacionado*/}
                 <Route path='/ventas-junto' element = {<VentasClamp/>}/>
 
                 {/* Rutas no encontradas */}
