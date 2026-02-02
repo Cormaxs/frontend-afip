@@ -7,7 +7,8 @@ const TIPOS_COMPROBANTE = [
     { valor: "Factura A", codigo: "001", letra: "A" },
     { valor: "Factura B", codigo: "006", letra: "B" },
     { valor: "Factura C", codigo: "011", letra: "C" },
-    { valor: "Nota de Pedido X", codigo: "099", letra: "X", noFiscal: true }
+    { valor: "Nota de Pedido X", codigo: "099", letra: "X", noFiscal: true },
+    { valor: "Orden de compra", codigo: "OC", letra: "OC", noFiscal: true, esOrdenCompra: true } // nuevo orden de compra
 ];
 
 const CONDICIONES_IVA = {
@@ -172,7 +173,14 @@ const initialState = {
     facturaData: {
         emisor: {},
         receptor: { razonSocial: "", cuit: "", condicionIVA: CONDICIONES_IVA.CONSUMIDOR_FINAL, domicilio: "", localidad: "", provincia: "" },
-        comprobante: { tipo: "Factura B", codigoTipo: "006", letra: "B", fecha: "" },
+        comprobante: { 
+            tipo: "Factura B", 
+            codigoTipo: "006", 
+            letra: "B", 
+            fecha: "",
+            numeroOrden: "", // Nuevo campo para número de orden
+            puntoVentaNumero: "" // Nuevo campo para punto de venta específico
+        },
         items: [],
         pagos: { formaPago: "Transferencia Bancaria", monto: 0 },
         totales: { subtotal: 0, iva: 0, total: 0, importeNetoNoGravado: 0, importeExento: 0, importeOtrosTributos: 0, ivaDetalladoAFIP: [] },
@@ -183,6 +191,41 @@ const initialState = {
 
 const facturaReducer = (state, action) => {
     switch (action.type) {
+        //nuevo 
+        case 'UPDATE_COMPROBANTE_FIELD':
+            return {
+                ...state,
+                facturaData: {
+                    ...state.facturaData,
+                    comprobante: {
+                        ...state.facturaData.comprobante,
+                        [action.payload.name]: action.payload.value
+                    }
+                }
+            };
+            
+        case 'SET_COMPROBANTE_DATA':
+            return {
+                ...state,
+                facturaData: {
+                    ...state.facturaData,
+                    comprobante: {
+                        ...state.facturaData.comprobante,
+                        tipo: action.payload.tipo,
+                        codigoTipo: action.payload.codigoTipo,
+                        letra: action.payload.letra,
+                        // Resetear campos de orden de compra si no es una orden
+                        numeroOrden: action.payload.esOrdenCompra ? state.facturaData.comprobante.numeroOrden : "",
+                        puntoVentaNumero: action.payload.esOrdenCompra ? state.facturaData.comprobante.puntoVentaNumero : ""
+                    },
+                    receptor: {
+                        ...state.facturaData.receptor,
+                        condicionIVA: action.payload.nuevaCondicionIVA
+                    }
+                }
+            };
+
+            //antiguo
         case 'SET_INITIAL_DATA':
             return {
                 ...state,
@@ -282,7 +325,11 @@ const facturaReducer = (state, action) => {
                     emisor: state.facturaData.emisor,
                     comprobante: {
                         ...initialState.facturaData.comprobante,
-                        fecha: action.payload.fecha
+                        fecha: action.payload.fecha,
+                        // Mantener el tipo de comprobante actual
+                        tipo: state.facturaData.comprobante.tipo,
+                        codigoTipo: state.facturaData.comprobante.codigoTipo,
+                        letra: state.facturaData.comprobante.letra
                     }
                 }
             };
@@ -412,6 +459,7 @@ export default function GenerarComprobantes() {
         dispatch({ type: 'UPDATE_FIELD', payload: { section, name, value } });
     };
 
+    //modificado apra orden de compra
     const handleTipoComprobanteChange = (e) => {
         const tipo = TIPOS_COMPROBANTE.find(t => t.codigo === e.target.value);
         if (tipo) {
@@ -423,11 +471,19 @@ export default function GenerarComprobantes() {
                     tipo: tipo.valor,
                     codigoTipo: tipo.codigo,
                     letra: tipo.letra,
-                    nuevaCondicionIVA
+                    nuevaCondicionIVA,
+                    esOrdenCompra: tipo.esOrdenCompra || false
                 }
             });
             setOpcionesIVAReceptor(nuevasOpcionesIVA);
         }
+    };
+
+    const handleComprobanteFieldChange = (name, value) => {
+        dispatch({ 
+            type: 'UPDATE_COMPROBANTE_FIELD', 
+            payload: { name, value } 
+        });
     };
 
     const handleProductSelect = useCallback((product) => {
@@ -506,7 +562,10 @@ export default function GenerarComprobantes() {
                 
                 dispatch({ 
                     type: 'CLEAR_FORM', 
-                    payload: { fecha: formattedDate } 
+                    payload: { 
+                        fecha: formattedDate,
+                        tipoComprobanteActual: state.facturaData.comprobante.codigoTipo // Mantener el tipo actual
+                    } 
                 });
             }
         });
@@ -545,46 +604,28 @@ export default function GenerarComprobantes() {
             Swal.fire('Atención', "Debes seleccionar un punto de venta.", 'warning');
             return;
         }
+        
+        // Validaciones específicas para orden de compra
+        if (esOrdenCompra) {
+            if (!state.facturaData.comprobante.numeroOrden || !state.facturaData.comprobante.puntoVentaNumero) {
+                Swal.fire('Atención', "Para Orden de Compra debes completar el número de orden y punto de venta.", 'warning');
+                return;
+            }
+        }
+        
         if (state.facturaData.items.length === 0) {
             Swal.fire('Atención', "El comprobante no tiene productos.", 'warning');
             return;
         }
-
+    
         setLoading(true);
         try {
             const puntoVentaObj = puntosDeVenta.find(p => p._id === puntoSeleccionado);
             const docData = CONDICIONES_IVA_AFIP[state.facturaData.receptor.condicionIVA];
-
-            const payloadFinal = {
+    
+            // Estructura base del payload
+            const payloadBase = {
                 id: userData._id,
-                afipRequestData: {
-                    Auth: { Token: "", Sign: "", Cuit: state.facturaData.emisor.cuit.replace(/-/g, '') },
-                    FeCAEReq: {
-                        FeCabReq: { CantReg: 1, PtoVta: puntoVentaObj?.numero || 1, CbteTipo: parseInt(state.facturaData.comprobante.codigoTipo) },
-                        FeDetReq: [{
-                            Concepto: 1,
-                            DocTipo: docData.DocTipo,
-                            DocNro: state.facturaData.receptor.cuit.replace(/-/g, '') || "0",
-                            CbteDesde: 1,
-                            CbteHasta: 1,
-                            CbteFch: state.facturaData.comprobante.fecha.replace(/-/g, ''),
-                            ImpTotal: parseFloat(state.facturaData.totales.total.toFixed(2)),
-                            ImpTotConc: 0,
-                            ImpNeto: parseFloat(state.facturaData.totales.subtotal.toFixed(2)),
-                            ImpOpEx: parseFloat(state.facturaData.totales.importeExento.toFixed(2)),
-                            ImpTrib: parseFloat(state.facturaData.totales.importeOtrosTributos.toFixed(2)),
-                            ImpIVA: parseFloat(state.facturaData.totales.iva.toFixed(2)),
-                            FchServDesde: "",
-                            FchServHasta: "",
-                            FchVtoPago: "",
-                            MonId: "PES",
-                            MonCotiz: 1,
-                            CondicionIVAReceptorId: docData.Id,
-                            Tributos: state.tributos,
-                            Iva: state.facturaData.totales.ivaDetalladoAFIP
-                        }]
-                    }
-                },
                 facturaData: {
                     emisor: {
                         ...state.facturaData.emisor,
@@ -597,8 +638,8 @@ export default function GenerarComprobantes() {
                     receptor: state.facturaData.receptor,
                     comprobante: {
                         ...state.facturaData.comprobante,
-                        puntoVenta: puntoVentaObj?.numero,
-                        numero: null,
+                        puntoVenta: esOrdenCompra ? state.facturaData.comprobante.puntoVentaNumero : puntoVentaObj?.numero,
+                        numero: esOrdenCompra ? state.facturaData.comprobante.numeroOrden : null,
                         cae: null,
                         fechaVtoCae: null,
                         leyendaAFIP: null,
@@ -615,34 +656,66 @@ export default function GenerarComprobantes() {
                 idEmpresa: companyData._id,
                 puntoVenta: puntoSeleccionado,
             };
-
+    
+            let payloadFinal;
             const tipoComprobanteSeleccionado = TIPOS_COMPROBANTE.find(t => t.codigo === state.facturaData.comprobante.codigoTipo);
+            
             if (tipoComprobanteSeleccionado?.noFiscal) {
-                delete payloadFinal.afipRequestData;
-                delete payloadFinal.facturaData.comprobante.cae;
-                delete payloadFinal.facturaData.comprobante.fechaVtoCae;
-                delete payloadFinal.facturaData.comprobante.leyendaAFIP;
-                delete payloadFinal.facturaData.comprobante.qrImage;
+                // Para comprobantes no fiscales (Orden de compra, Nota de pedido)
+                payloadFinal = payloadBase;
+            } else {
+                // Para comprobantes fiscales (Facturas A, B, C)
+                payloadFinal = {
+                    ...payloadBase,
+                    afipRequestData: {
+                        Auth: { Token: "", Sign: "", Cuit: state.facturaData.emisor.cuit.replace(/-/g, '') },
+                        FeCAEReq: {
+                            FeCabReq: { CantReg: 1, PtoVta: puntoVentaObj?.numero || 1, CbteTipo: parseInt(state.facturaData.comprobante.codigoTipo) },
+                            FeDetReq: [{
+                                Concepto: 1,
+                                DocTipo: docData.DocTipo,
+                                DocNro: state.facturaData.receptor.cuit.replace(/-/g, '') || "0",
+                                CbteDesde: 1,
+                                CbteHasta: 1,
+                                CbteFch: state.facturaData.comprobante.fecha.replace(/-/g, ''),
+                                ImpTotal: parseFloat(state.facturaData.totales.total.toFixed(2)),
+                                ImpTotConc: 0,
+                                ImpNeto: parseFloat(state.facturaData.totales.subtotal.toFixed(2)),
+                                ImpOpEx: parseFloat(state.facturaData.totales.importeExento.toFixed(2)),
+                                ImpTrib: parseFloat(state.facturaData.totales.importeOtrosTributos.toFixed(2)),
+                                ImpIVA: parseFloat(state.facturaData.totales.iva.toFixed(2)),
+                                FchServDesde: "",
+                                FchServHasta: "",
+                                FchVtoPago: "",
+                                MonId: "PES",
+                                MonCotiz: 1,
+                                CondicionIVAReceptorId: docData.Id,
+                                Tributos: state.tributos,
+                                Iva: state.facturaData.totales.ivaDetalladoAFIP
+                            }]
+                        }
+                    }
+                };
             }
-
+    
             const response = await generateFacturas(payloadFinal);
-
+    
             const blob = new Blob([response], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
             window.open(url, '_blank');
-
+    
             setTimeout(() => window.URL.revokeObjectURL(url), 100);
-
+    
             Swal.fire('¡Éxito!', 'El comprobante ha sido generado y abierto en una nueva pestaña.', 'success')
-
+    
         } catch (err) {
             console.error("Error al generar el comprobante:", err);
             let errorMessage = "Ocurrió un error inesperado al generar el comprobante.";
-
+    
             if (err.message && !err.response) {
                 errorMessage = err.message;
             }
-
+    
             if (err.response && err.response.data) {
                 try {
                     const errorData = JSON.parse(new TextDecoder().decode(err.response.data));
@@ -651,9 +724,9 @@ export default function GenerarComprobantes() {
                     // Si no es un JSON, usamos el mensaje por defecto
                 }
             }
-
+    
             Swal.fire('Error', errorMessage, 'error');
-
+    
         } finally {
             setLoading(false);
         }
@@ -663,7 +736,8 @@ export default function GenerarComprobantes() {
     if (errorMessage) return <div className="text-center p-10 text-red-500">{errorMessage}</div>;
 
     const esFacturaA = state.facturaData.comprobante.letra === 'A';
-
+// Al final del componente, antes del return, agrega:
+const esOrdenCompra = state.facturaData.comprobante.codigoTipo === 'OC';
     return (
         <>
             <div className="p-4 bg-gray-100 min-h-screen font-sans">
@@ -672,7 +746,7 @@ export default function GenerarComprobantes() {
                         <h1 className="text-2xl font-bold">Generación de Comprobantes</h1>
                     </header>
                     <form onSubmit={handleSubmit} className="p-6 space-y-8">
-                        {/* SECCIÓN DE CONFIGURACIÓN INICIAL */}
+                        {/* SECCIÓN DE CONFIGURACIÓN INICIAL 
                         <fieldset className="border p-4 rounded-lg shadow-md bg-slate-50">
                             <legend className="font-semibold text-lg px-2 text-slate-700">1. Configuración Inicial</legend>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -686,6 +760,7 @@ export default function GenerarComprobantes() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Tipo de Comprobante*</label>
                                     <select value={state.facturaData.comprobante.codigoTipo} onChange={handleTipoComprobanteChange} required className="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        {console.log("comprbantes -> ",state.facturaData.comprobante.codigoTipo)}
                                         {TIPOS_COMPROBANTE.map(t => <option key={t.codigo} value={t.codigo}>{t.valor}</option>)}
                                     </select>
                                 </div>
@@ -694,7 +769,57 @@ export default function GenerarComprobantes() {
                                     <input type="date" value={state.facturaData.comprobante.fecha} onChange={e => handleStateChange('comprobante', 'fecha', e.target.value)} required className="mt-1 w-full border-gray-300 rounded-md shadow-sm py-2 px-3" />
                                 </div>
                             </div>
-                        </fieldset>
+                        </fieldset>*/}
+                        <fieldset className="border p-4 rounded-lg shadow-md bg-slate-50">
+    <legend className="font-semibold text-lg px-2 text-slate-700">1. Configuración Inicial</legend>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+            <label className="block text-sm font-medium text-gray-700">Punto de Venta*</label>
+            <select value={puntoSeleccionado} onChange={e => setPuntoSeleccionado(e.target.value)} required className="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3">
+                <option value="">-- Seleccionar --</option>
+                {puntosDeVenta.map(p => <option key={p._id} value={p._id}>{p.nombre} (Nº {p.numero})</option>)}
+            </select>
+        </div>
+        <div>
+            <label className="block text-sm font-medium text-gray-700">Tipo de Comprobante*</label>
+            <select value={state.facturaData.comprobante.codigoTipo} onChange={handleTipoComprobanteChange} required className="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3">
+                {TIPOS_COMPROBANTE.map(t => <option key={t.codigo} value={t.codigo}>{t.valor}</option>)}
+            </select>
+        </div>
+        <div>
+            <label className="block text-sm font-medium text-gray-700">Fecha del Comprobante*</label>
+            <input type="date" value={state.facturaData.comprobante.fecha} onChange={e => handleComprobanteFieldChange('fecha', e.target.value)} required className="mt-1 w-full border-gray-300 rounded-md shadow-sm py-2 px-3" />
+        </div>
+        
+        {/* Campos específicos para Orden de Compra */}
+        {esOrdenCompra && (
+            <>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Número de Orden*</label>
+                    <input 
+                        type="text" 
+                        value={state.facturaData.comprobante.numeroOrden} 
+                        onChange={e => handleComprobanteFieldChange('numeroOrden', e.target.value)} 
+                        required 
+                        placeholder="Ej: OC-2025-001"
+                        className="mt-1 w-full border-gray-300 rounded-md shadow-sm py-2 px-3" 
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Punto de Venta Número*</label>
+                    <input 
+                        type="text" 
+                        value={state.facturaData.comprobante.puntoVentaNumero} 
+                        onChange={e => handleComprobanteFieldChange('puntoVentaNumero', e.target.value)} 
+                        required 
+                        placeholder="Ej: 0001"
+                        className="mt-1 w-full border-gray-300 rounded-md shadow-sm py-2 px-3" 
+                    />
+                </div>
+            </>
+        )}
+    </div>
+</fieldset>
 
                         {/* SECCIONES DE DATOS DEL EMISOR Y RECEPTOR */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
