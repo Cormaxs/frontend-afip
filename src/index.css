@@ -1,0 +1,113 @@
+:root {
+  /* Colores de Marca */
+  --brand-primary: #28a4d5;   /* Tu Cian */
+  --brand-success: #10b981;   /* Para facturas pagadas */
+  --brand-danger: #ef4444;    /* Para errores o deudas */
+  
+  /* Escala de Grises (La clave de la elegancia) */
+  --slate-50: #f8fafc;  /* Fondo de la página */
+  --slate-100: #f1f5f9; /* Fondos de inputs o tablas */
+  --slate-300: #cbd5e1; /* Bordes suaves */
+  --slate-600: #475569; /* Texto secundario */
+  --slate-900: #0f172a; /* Títulos principales */
+
+  /* Espaciado y Sombras */
+  --radius-md: 12px;
+  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Reset de Box Model */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Títulos con escala de Panel Administrativo */
+h1 {
+  font-family: var(--heading);
+  font-size: 1.5rem; /* ~24px: Menos agresivo, más ejecutivo */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.25rem;
+  color: var(--text-h);
+}
+
+h2 {
+  font-family: var(--heading);
+  font-size: 1.15rem; /* ~18px: Encabezado de sección o Card */
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+  color: var(--text-h);
+}
+
+h3 {
+  font-size: 0.95rem; /* ~15px: Subsecciones */
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 0.5rem;
+}
+
+/* Párrafos y Texto */
+p {
+  font-size: 0.925rem; /* ~14.5px */
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+/* Estilo para etiquetas pequeñas (ej. ID de factura, fechas) */
+small, .text-muted {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+/* Código y Datos Técnicos (Monospace) */
+code {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 0.2em 0.4em;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--primary-dark);
+}
+
+/* Links (Sin subrayado, color cian) */
+a {
+  color: var(--primary-cian);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Responsive Scaling */
+@media (max-width: 1024px) {
+  :root { font-size: 13.5px; }
+  h1 { font-size: 1.35rem; } /* ~21px */
+  h2 { font-size: 1.05rem; } /* ~16px */
+}
+
+/* Scrollbar personalizada estilo moderno */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

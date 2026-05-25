@@ -1,0 +1,47 @@
+/* Contenedor principal de la tarjeta */
+.section-card {
+    background: #ffffff;
+    border: 1px solid #e3e6f0;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+/* Fila flexible */
+.filters-row {
+    display: flex;
+    flex-wrap: wrap; /* Importante para que en móvil bajen los campos */
+    gap: 10px;       /* Espacio entre columnas */
+    width: 100%;     /* Ocupa todo el ancho */
+}
+
+.col-filtro {
+    display: flex;
+    flex-direction: column;
+    min-width: 135px; /* Evita que los inputs se aplasten demasiado */
+}
+
+/* Estilo de las etiquetas (ahora siempre arriba) */
+.form-label-custom {
+    font-size: 11px;
+    font-weight: 700;
+    color: #28a4d5;
+    text-transform: uppercase;
+    margin-bottom: 6px; /* Espacio entre label e input */
+    display: block;
+}
+
+/* Inputs y Selects */
+.form-control, .form-select {
+    height: 38px;
+    border: 1px solid #d1d3e2;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+}
+
+/* Contenedor de botones */
+.botones-container {
+    display: flex;
+    gap: 8px;
+    padding: 0 10px 10px 10px;
+}

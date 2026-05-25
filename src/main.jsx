@@ -1,19 +1,25 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import {BrowserRouter} from 'react-router-dom';
-import {ApiProvider} from "./context/api_context.jsx";
-
+import './styles/main.css';
 import App from './App.jsx'
-import './App.css'
+import { BrowserRouter } from 'react-router'
+import { AuthProvider } from './contexts/auth/authContext.jsx'
 
 createRoot(document.getElementById('root')).render(
-   <ApiProvider>
-    <StrictMode>
-    
+  <StrictMode>
     <BrowserRouter>
+    <AuthProvider>
     <App />
+    </AuthProvider>
     </BrowserRouter>
-  
-  </StrictMode>  
-  </ApiProvider>,
+  </StrictMode>,
 )
+
+// Register service worker (if available)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(() => {
+      console.log('Service worker registrado');
+    }).catch(err => console.warn('SW register failed', err));
+  });
+}

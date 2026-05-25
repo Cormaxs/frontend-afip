@@ -1,0 +1,44 @@
+.door-container {
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; background: #e9ecef; font-family: 'Open Sans', sans-serif;
+}
+
+.door-card {
+  background: #fff; padding: 25px; width: 300px;
+  border: 1px solid #ced4da; border-radius: 3px; text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+h1 { 
+  margin: 0 0 20px; font-size: 18px; color: #28a4d5; 
+  border-bottom: 1px solid #dee2e6; padding-bottom: 10px; font-weight: 600;
+}
+
+.option { margin-bottom: 15px; color: #6c757d; font-size: 14px; text-align: left; }
+.option p { text-align: center; margin: 0 0 5px; }
+
+.input-field {
+  width: 100%; padding: 8px; box-sizing: border-box;
+  border: 1px solid #ced4da; border-radius: 2px;
+  background: #f8f9fa; color: #495057; outline: none; transition: 0.2s;
+}
+.input-field:focus { border-color: #28a4d5; background: #fff; }
+
+.btn {
+  display: block; text-decoration: none; padding: 10px; margin-top: 10px;
+  border-radius: 2px; font-size: 13px; font-weight: 700; 
+  text-align: center; transition: 0.2s; cursor: pointer; border: 1px solid transparent;
+}
+
+/* Botón Principal (Azul Oficina/Cianbox) */
+.btn-primary, .btn-login { background: #28a4d5; color: #fff; }
+.btn-primary:hover, .btn-login:hover { background: #2189b3; }
+
+/* Botón Secundario (Gris/Contorno) */
+.btn-reg, .btn-outline { 
+  background: #f8f9fa; color: #28a4d5; border: 1px solid #ced4da; 
+}
+.btn-reg:hover, .btn-outline:hover { background: #e2e6ea; border-color: #28a4d5; }
+
+.error-text { color: #d9534f; font-size: 11px; margin-top: 4px; display: block; }
+.divider { margin: 15px 0; border-top: 1px solid #dee2e6; }

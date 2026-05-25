@@ -1,0 +1,110 @@
+.factura-container { padding: 20px; background-color: #f8fafc; }
+.section-card { background: white;  padding: 20px; border-radius: 4px; }
+.section-title { font-size: 1rem; font-weight: 800; color: #28a4d5; text-transform: uppercase; margin-bottom: 15px; }
+
+/* Grilla Horizontal Estricta */
+.form-row { 
+    display: flex; 
+    gap: 12px; 
+    align-items: flex-end; 
+    flex-wrap: wrap; 
+}
+
+.form-field { display: flex; flex-direction: column; }
+.form-field label { 
+    font-size: 0.65rem; 
+    font-weight: 700; 
+    color: #64748b; 
+    margin-bottom: 4px; 
+    text-transform: uppercase; 
+}
+
+.form-control-cian, .form-select-cian { 
+    height: 35px; 
+    border: 1px solid #cbd5e1; 
+    border-radius: 2px; 
+    padding: 0 8px; 
+    font-size: 0.8rem; 
+}
+
+/* Tabla Estilo Factura */
+.table-items { width: 100%; border-collapse: collapse; text-align: left; }
+.table-items th { background: #f1f5f9; padding: 10px; font-size: 0.7rem; text-transform: uppercase; }
+.table-items td { border-bottom: 1px solid #f1f5f9; padding: 0; }
+.input-table { border: none; width: 100%; padding: 10px; font-size: 0.85rem; background: transparent; }
+.input-table:focus { background: #fff; outline: 1px solid #28a4d5; }
+
+.btn-cian-primary { background: #28a4d5; color: white; border: none; font-weight: 700; border-radius: 4px; }
+.btn-cian-outline { border: 1px solid #28a4d5; color: #28a4d5; background: white; font-size: 0.7rem; font-weight: 700; padding: 5px 15px; }
+.totales-box { background: white; border: 1px solid #e2e8f0; padding: 20px; border-top: 4px solid #28a4d5; }
+.total-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; }
+.total-main { font-size: 1.3rem; font-weight: 800; color: #28a4d5; }
+
+
+/* Botones principales */
+.btn-cian-primary {
+    background: #28a4d5;
+    color: white;
+    border: none;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 12px 20px;          /* Aumento del padding vertical y horizontal */
+    font-size: 1rem;             /* Tamaño de fuente más grande */
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-cian-primary:hover {
+    background: #2189b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-cian-primary:active {
+    transform: translateY(1px);
+}
+
+.btn-cian-outline {
+    border: 2px solid #28a4d5;   /* Borde más grueso */
+    color: #28a4d5;
+    background: white;
+    font-size: 0.9rem;           /* Aumento del tamaño de fuente */
+    font-weight: 700;
+    padding: 8px 20px;           /* Padding más generoso */
+    border-radius: 4px;
+    margin: 10px 0;                /* Espaciado vertical */
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-cian-outline:hover {
+    background: #28a4d5;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-cian-outline:active {
+    transform: translateY(1px);
+}
+
+/* Ajuste adicional para el botón dentro del área de totales */
+.totales-box .btn-cian-primary {
+    width: 100%;
+    margin-top: 20px;          /* Separación adicional */
+}
+
+
+/* Esto asegura que la fila ocupe todo el ancho disponible del card */
+.filters-row {
+    display: flex;
+    flex-wrap: wrap; /* Importante para que en móvil bajen los campos */
+    gap: 10px;       /* Espacio entre columnas */
+    width: 100%;     /* Ocupa todo el ancho */
+}
+
+.col-filtro {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px; /* Evita que los inputs se aplasten demasiado */
+}

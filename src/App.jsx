@@ -1,92 +1,93 @@
-// App.jsx
-import React, { useContext, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-
-// CONTEXTO Y COMPONENTES ESENCIALES (import estático)
-import { apiContext } from './context/api_context.jsx';
-import { PrivateRoute } from './pages/pasos-crear-cuenta/1-bloqueante.jsx';
-
-// ---- COMPONENTES CARGADOS CON LAZY ----
-
-// Fallback visual mientras se cargan los componentes
-const LoadingFallback = () => (
-    <div className="flex h-full w-full items-center justify-center">
-        <p className="text-lg font-semibold text-gray-500">Cargando...</p>
-    </div>
-);
-
-// Componentes de página y menú
-const SidePanel = lazy(() => import('./components/menu.jsx'));
-const LoadRoutes = lazy(() => import('./routes/routes.jsx'));
-const LoginPage = lazy(() => import('./pages/propietario/login.jsx'));
-const RegisterPage = lazy(() => import('./pages/propietario/register.jsx'));
-const GetDashboardData = lazy(() => import('./pages/dashboard.jsx'));
-const EmpresaRegister = lazy(() => import('./pages/empresa/empresa-register.jsx'));
-const Elegir = lazy(() => import('./pages/pasos-crear-cuenta/0-elegir.jsx'));
+import { Route, Routes } from 'react-router'
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 
-// Componente que contiene la lógica condicional de la aplicación
-function AppContent() {
-  const { isAuthenticated } = useContext(apiContext);
+//paginas login y register
+import Door from './pages/auth/Entrada.jsx';
+import LoginUsuarios from './pages/auth/Register/register-usuarios.jsx';
+import RegisterEmpresa from './pages/auth/Register/Register-empresa.jsx';
+import IniciarSesion from './pages/auth/Login/sign-in.jsx';
 
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Suspense para el SidePanel que se carga de forma diferida */}
-      <Suspense fallback={null}>
-        {isAuthenticated && <SidePanel />}
-      </Suspense>
+//paginas inventario
+import BuscadorProductos from './pages/inventario/buscadorProductos.jsx';
+import CategoriasYMarcas from './pages/inventario/CategoriasYMarcas.jsx';
+import ImportacionMasiva from './pages/inventario/ImportacionMasiva.jsx';
 
-      <main className="flex-1 overflow-y-auto">
-        {/* Suspense principal para todas las rutas de páginas */}
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
-            {/* Ruta raíz que redirige según el estado de autenticación */}
-            <Route
-              path="/"
-              element={
-                isAuthenticated ? (
-                  <Navigate to="/dashboard" replace />
-                ) : (
-                  <Navigate to="/elegir" replace />
-                )
-              }
-            />
+//paginas cajas
+import GestionCajas from './pages/cajas/GestionCajas.jsx';
 
-            {/* Rutas Públicas */}
-            <Route path='/elegir' element={<Elegir />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path='/empresa-register' element={<EmpresaRegister />} />
-            
-            {/* Rutas Privadas */}
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute isAuthenticated={isAuthenticated}>
-                  <GetDashboardData />
-                </PrivateRoute>
-              }
-            />
-            {/* El resto de las rutas privadas también se cargan con lazy dentro de LoadRoutes */}
-            <Route 
-              path="/*" 
-              element={
-                <PrivateRoute isAuthenticated={isAuthenticated}>
-                  <LoadRoutes />
-                </PrivateRoute>
-              } 
-            />
-          </Routes>
-        </Suspense>
-      </main>
-    </div>
-  );
-}
+//paginas vendedores
+import GestionVendedores from './pages/vendedores/GestionVendedores.jsx';
 
-// Componente principal de la aplicación
+//paginas reportes
+import Reportes from './pages/reportes/Reportes.jsx';
+
+//configuracion usuarios
+import DatosUsuarios from './pages/config-datos/usuarios.jsx';
+
+//layout
+import Layout from './layouts/layout.jsx';
+
+//configuracion empresa
+import DatosEmpresa from './pages/auth/afip/datosEmpresa.jsx';
+
+//pruebas
+import TestFacturacion from './pages/pruebas/TestFacturacion.jsx';
+import PuntosDeVentas from './pages/puntosDeVentas/puntosDeVentas.jsx';
+import CreateFacturas from './pages/facturas/facturas.jsx';
+import FacturacionPage from './pages/facturas/FacturacionPage.jsx';
+import CrearTicket from './pages/tickets/CrearTicket.jsx';
+import Despachador from './pages/ventas/Despachador.jsx';
+import Proveedores from './pages/proveedores/Proveedores.jsx';
+import CuentasPorPagar from './pages/cuentas/CuentasPorPagar.jsx';
+import GestionClientes from './pages/crm/GestionClientes.jsx';
+
+
 function App() {
   return (
-    <AppContent />
+    <Routes>
+      {/* --- RUTAS PÚBLICAS (Sin Sidebar/Layout) --- */}
+      <Route path="/" element={<Door />} />
+      <Route path="/login-usuarios" element={<IniciarSesion />} />
+      <Route path="/register-empresa" element={<RegisterEmpresa />} />
+      <Route path="/register-usuarios" element={<LoginUsuarios />} />
+
+      {/* --- RUTAS PRIVADAS (Protegidas) --- */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Layout />}>
+          {/* Facturación */}
+          <Route path="/prueba-numeracion" element={<TestFacturacion />} />
+          <Route path="/puntos-de-ventas" element={<PuntosDeVentas />} />
+          <Route path="/crear-factura" element={<CreateFacturas />} />
+          <Route path="/despachador" element={<Despachador />} />
+          <Route path="/crear-ticket-interno" element={<CrearTicket />} />
+          <Route path="/buscador-facturas" element={<FacturacionPage />} />
+
+          {/* Inventario */}
+          <Route path="/buscadorProductos" element={<BuscadorProductos />} />
+          <Route path="/categorias-marcas" element={<CategoriasYMarcas />} />
+          <Route path="/importacion-masiva" element={<ImportacionMasiva />} />
+
+          {/* Cajas */}
+          <Route path="/gestion-cajas" element={<GestionCajas />} />
+          <Route path="/proveedores" element={<Proveedores />} />
+          <Route path="/clientes" element={<GestionClientes />} />
+          <Route path="/cuentas-por-pagar" element={<CuentasPorPagar />} />
+          {/* Vendedores */}
+          <Route path="/gestion-vendedores" element={<GestionVendedores />} />
+
+          {/* Reportes */}
+          <Route path="/reportes" element={<Reportes />} />
+
+          {/* Configuración */}
+          <Route path="/datosUsuario" element={<DatosUsuarios />} />
+          <Route path="/DatosEmpresa" element={<DatosEmpresa />} />
+        </Route>
+      </Route>
+
+      {/* 404 */}
+      <Route path="*" element={<h1>404 Not Found</h1>} />
+    </Routes>
   );
 }
 
