@@ -64,13 +64,14 @@ const Despachador = () => {
 
   useEffect(() => {
     const cargarPuntosVenta = async () => {
-      if (!user?.empresa) {
+      const idEmpresa = empresa?._id || empresa?.id || user?.empresa || user?.empresaId;
+      if (!idEmpresa) {
         setLoadingPv(false);
         return;
       }
 
       try {
-        const config = await FacturacionRequerimentos.obtenerConfiguracionPuntosVenta(user.empresa);
+        const config = await FacturacionRequerimentos.obtenerConfiguracionPuntosVenta(idEmpresa);
         setPuntosVenta(config.todos);
         setPvSeleccionado(config.principal);
       } catch (error) {
@@ -82,14 +83,40 @@ const Despachador = () => {
 
     cargarPuntosVenta();
     verificarCaja();
-  }, [user?.empresa]);
+  }, [user?.empresa, empresa?._id]);
+
+  useEffect(() => {
+    verificarCaja();
+  }, [pvSeleccionado]);
 
   const verificarCaja = async () => {
-    if (!user?.empresa) return;
+    const idEmpresa = empresa?._id || empresa?.id || user?.empresa || user?.empresaId;
+    if (!idEmpresa) {
+      setLoadingCaja(false);
+      return;
+    }
+    
     setLoadingCaja(true);
     try {
-      const response = await CajasService.obtenerCajasEmpresa(user.empresa);
-      const activa = response.data?.cajas?.find(c => c.estado === 'Abierta');
+      const response = await CajasService.obtenerCajasEmpresa(idEmpresa, { estado: 'abierta', limit: 100 });
+      const cajas = response.data?.cajas || (Array.isArray(response.data) ? response.data : []);
+      
+      // Intentar encontrar la caja abierta para el punto de venta seleccionado
+      let activa = null;
+      if (pvSeleccionado) {
+        activa = cajas.find(c => 
+          c.estado && c.estado.toLowerCase() === 'abierta' && 
+          String(c.puntoDeVenta?._id || c.puntoDeVenta) === String(pvSeleccionado._id)
+        );
+      }
+      
+      // Si no hay para ese PV, buscar cualquier caja abierta del usuario/vendedor
+      if (!activa) {
+        activa = cajas.find(c => 
+          c.estado && c.estado.toLowerCase() === 'abierta'
+        );
+      }
+      
       setCajaActiva(activa || null);
     } catch (error) {
       console.error('Error verificando caja:', error);
@@ -376,6 +403,7 @@ const Despachador = () => {
       id: user.idDbAfip,
       cuit: empresa?.cuit,
       servicio: 'wsfe',
+      cajaId: cajaActiva?._id || null,
       factura: {
         puntoVenta: Number(pvSeleccionado?.numero),
         tipoComprobante: Number(tipoCbte),
@@ -417,6 +445,7 @@ const Despachador = () => {
       ventaId,
       fechaHora: new Date().toISOString(),
       puntoDeVenta: pvSeleccionado?._id || '',
+      cajaId: cajaActiva?._id || null,
       tipoComprobante: 'Ticket',
       numeroComprobante: '',
       items: items.map((item) => ({

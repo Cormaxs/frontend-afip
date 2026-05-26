@@ -6,8 +6,8 @@ import Swal from 'sweetalert2';
 import { puntosVentaService } from '../../services/puntosVenta/puntosVenta.js';
 
 const PuntosDeVentas = () => {
-    const { user, empresa } = useAuth();
-    const companyId = empresa?._id || empresa?.id || user?.empresa || user?.empresaId || user?.companyId;
+    const { user } = useAuth();
+    const companyId = user?.empresa || user?.empresaId || user?.companyId;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState(null);
     

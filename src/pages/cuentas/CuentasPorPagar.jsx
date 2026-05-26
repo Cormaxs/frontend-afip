@@ -8,13 +8,29 @@ import { CuentasPagarService } from '../../services/cuentasPagar/cuentasPagar.js
 
 const CuentasPorPagar = () => {
   const { user } = useAuth();
-  const companyId = user?.empresa?._id || user?.empresa;
+  const companyId = user?.empresa || user?.empresaId || user?.companyId;
   const [proveedores, setProveedores] = useState([]);
   const [cuentas, setCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedCuenta, setSelectedCuenta] = useState(null);
+  const [searchParams, setSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    sortBy: 'fechaEmision',
+    order: 'desc',
+    estado: '', // Add estado filter
+  });
+  const [pagination, setPagination] = useState({
+    totalDocs: 0,
+    totalPages: 0,
+    page: 1,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const {
     register,
@@ -42,27 +58,35 @@ const CuentasPorPagar = () => {
 
   useEffect(() => {
     if (companyId) {
-      cargarProveedores();
-      cargarCuentas();
+      cargarProveedores({ activo: true, limit: 1000 }); // Fetch all active providers
+      cargarCuentas(searchParams);
     }
-  }, [companyId]);
+  }, [companyId, searchParams]);
 
-  const cargarProveedores = async () => {
+  const cargarProveedores = async (params) => {
     if (!companyId) return;
     try {
-      const response = await ProveedoresService.obtenerProveedores(companyId);
-      setProveedores(response.data?.proveedores || response.data || []);
+      const response = await ProveedoresService.obtenerProveedores(companyId, params);
+      setProveedores(response.data?.docs || response.data || []);
     } catch (error) {
       console.error('Error cargando proveedores:', error);
     }
   };
 
-  const cargarCuentas = async () => {
+  const cargarCuentas = async (params) => {
     if (!companyId) return;
     setLoading(true);
     try {
-      const response = await CuentasPagarService.obtenerCuentasPorEmpresa(companyId);
-      setCuentas(response.data?.cuentas || response.data || []);
+      const response = await CuentasPagarService.obtenerCuentasPorEmpresa(companyId, params);
+      setCuentas(response.data?.docs || response.data || []);
+      setPagination({
+        totalDocs: response.data?.totalDocs || 0,
+        totalPages: response.data?.totalPages || 0,
+        page: response.data?.page || 1,
+        limit: response.data?.limit || 10,
+        hasNextPage: response.data?.hasNextPage || false,
+        hasPrevPage: response.data?.hasPrevPage || false,
+      });
     } catch (error) {
       console.error('Error cargando cuentas por pagar:', error);
       Swal.fire('Error', 'No se pudieron cargar las cuentas por pagar.', 'error');
@@ -167,6 +191,18 @@ const CuentasPorPagar = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchParams(prev => ({ ...prev, search: e.target.value, page: 1 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setSearchParams(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleEstadoChange = (e) => {
+    setSearchParams(prev => ({ ...prev, estado: e.target.value, page: 1 }));
+  };
+
   const eliminarCuenta = async (cuenta) => {
     const confirm = await Swal.fire({
       title: '¿Eliminar cuenta por pagar?',
@@ -198,8 +234,27 @@ const CuentasPorPagar = () => {
         <p style={{ margin: 0, color: '#666' }}>Registra deudas y pagos de proveedores.</p>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div />
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', gap: '16px', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Buscar por descripción..."
+          className="input-field"
+          style={{ maxWidth: '300px' }}
+          value={searchParams.search}
+          onChange={handleSearchChange}
+        />
+        <select
+          className="input-field"
+          style={{ maxWidth: '200px' }}
+          value={searchParams.estado}
+          onChange={handleEstadoChange}
+        >
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="parcial">Parcial</option>
+          <option value="pagado">Pagado</option>
+          <option value="vencido">Vencido</option>
+        </select>
         <button className="btn btn-primary" onClick={() => abrirModalCuenta(null)}>
           + Nueva Cuenta por Pagar
         </button>
@@ -247,6 +302,27 @@ const CuentasPorPagar = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span>Página {pagination.page} de {pagination.totalPages}</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
 
       <ModalGenerico
         isOpen={modalOpen}

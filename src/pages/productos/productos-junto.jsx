@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { apiContext } from "../../context/api_context.jsx";
 import Swal from 'sweetalert2';
+import { ProveedoresService } from '../../services/proveedores/proveedores.js';
 
 // --- Iconos y Spinners (Reutilizables) ---
 const SpinnerIcon = ({ className = "h-5 w-5" }) => (
@@ -29,26 +30,57 @@ const IVA_OPTIONS = [
 // ###################################################################################
 const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => {
     const { createProduct, getPointsByCompany, userData, companyData } = useContext(apiContext);
-    const createInitialState = useCallback(() => ({ empresa: userData?.empresa || '', cName: companyData?.nombreEmpresa || '', puntoVenta: '', codigoInterno: '', codigoBarra: '', producto: '', descripcion: '', marca: '', categoria: '', unidadMedida: '94', ancho_cm: '', alto_cm: '', profundidad_cm: '', peso_kg: '', precioCosto: '', precioLista: '', alic_IVA: 21, markupPorcentaje: '', stock_disponible: '', stockMinimo: '', ubicacionAlmacen: '', activo: true, precioListaManual: false }), [userData, companyData]);
+    const createInitialState = useCallback(() => ({ 
+        empresa: userData?.empresa || companyData?._id || '', 
+        cName: companyData?.nombreEmpresa || companyData?.razonSocial || '', 
+        puntoVenta: '', 
+        codigoInterno: '', 
+        codigoBarra: '', 
+        producto: '', 
+        descripcion: '', 
+        marca: '', 
+        categoria: '', 
+        proveedor: '',
+        unidadMedida: '94', 
+        ancho_cm: '', 
+        alto_cm: '', 
+        profundidad_cm: '', 
+        peso_kg: '', 
+        precioCosto: '', 
+        precioLista: '', 
+        alic_IVA: 21, 
+        markupPorcentaje: '', 
+        stock_disponible: '', 
+        stockMinimo: '', 
+        ubicacionAlmacen: '', 
+        activo: true, 
+        precioListaManual: false 
+    }), [userData, companyData]);
     const [formData, setFormData] = useState(createInitialState);
     const [puntosVenta, setPuntosVenta] = useState([]);
+    const [proveedores, setProveedores] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     
     useEffect(() => {
         if (isOpen) {
-            const fetchPoints = async () => {
-                if (!userData?.empresa) return;
+            const fetchData = async () => {
+                const companyId = userData?.empresa || companyData?._id;
+                if (!companyId) return;
                 try {
-                    const response = await getPointsByCompany(userData.empresa, 1, 100);
-                    setPuntosVenta(response?.puntosDeVenta || []);
+                    const [pointsRes, providersRes] = await Promise.all([
+                        getPointsByCompany(companyId, 1, 100),
+                        ProveedoresService.obtenerProveedores(companyId, { limit: 1000 })
+                    ]);
+                    setPuntosVenta(pointsRes?.puntosDeVenta || []);
+                    setProveedores(providersRes.data?.docs || providersRes.data || []);
                 } catch (err) {
-                    console.error("Error al obtener puntos de venta en modal:", err);
+                    console.error("Error al obtener datos en modal:", err);
                 }
             };
-            fetchPoints();
+            fetchData();
             setFormData(createInitialState());
         }
-    }, [isOpen, userData?.empresa, getPointsByCompany, createInitialState]);
+    }, [isOpen, userData?.empresa, companyData?._id, getPointsByCompany, createInitialState]);
 
     const handleChange = useCallback((e) => {
         const { name, value, type, checked } = e.target;
@@ -117,6 +149,17 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
             delete dataToSend.cName;
             delete dataToSend.precioListaManual; // No enviar este campo al backend
             
+            // Asegurarnos de que el ID de la empresa esté presente
+            if (!dataToSend.empresa) {
+                dataToSend.empresa = userData?.empresa || companyData?._id;
+            }
+
+            if (!dataToSend.empresa) {
+                Swal.fire('Error', 'No se pudo identificar la empresa asociada.', 'error');
+                setIsLoading(false);
+                return;
+            }
+
             const numericFields = ['ancho_cm', 'alto_cm', 'profundidad_cm', 'peso_kg', 'precioCosto', 'alic_IVA', 'markupPorcentaje', 'stock_disponible', 'stockMinimo'];
             numericFields.forEach(field => {
                 const numValue = parseFloat(dataToSend[field]);
@@ -126,7 +169,21 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
             dataToSend.codigoBarra = dataToSend.codigoBarra ? parseFloat(dataToSend.codigoBarra) : null;
             dataToSend.puntoVenta = dataToSend.puntoVenta || null;
             dataToSend.precioLista = parseFloat(dataToSend.precioLista) || 0;
+
+            // Limpiar campos vacíos para evitar conflictos con índices únicos en el backend
+            if (!dataToSend.codigoInterno || dataToSend.codigoInterno.trim() === "") {
+                delete dataToSend.codigoInterno;
+            }
+            if (!dataToSend.codigoBarra || dataToSend.codigoBarra === 0) {
+                delete dataToSend.codigoBarra;
+            }
             
+            // Si marca o categoria están vacíos, enviamos null para que el backend no falle al intentar convertirlos a ObjectId
+            dataToSend.marca = dataToSend.marca && dataToSend.marca.trim() !== '' ? dataToSend.marca : null;
+            dataToSend.categoria = dataToSend.categoria && dataToSend.categoria.trim() !== '' ? dataToSend.categoria : null;
+            dataToSend.proveedor = dataToSend.proveedor && dataToSend.proveedor.trim() !== '' ? dataToSend.proveedor : null;
+            dataToSend.puntoVenta = dataToSend.puntoVenta && dataToSend.puntoVenta.trim() !== '' ? dataToSend.puntoVenta : null;
+
             await createProduct(dataToSend);
             Swal.fire('¡Éxito!', 'Producto registrado correctamente.', 'success');
             onProductAdded();
@@ -197,6 +254,13 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded, filterOptions }) => 
                                 <label htmlFor="categoria" className={labelClasses}>Categoría</label>
                                 <input list="categorias-list" type="text" id="categoria" name="categoria" value={formData.categoria} onChange={handleChange} className={commonInputClasses} />
                                 <datalist id="categorias-list">{filterOptions.categories.map(cat => <option key={cat} value={cat} />)}</datalist>
+                            </div>
+                            <div>
+                                <label htmlFor="proveedor" className={labelClasses}>Proveedor</label>
+                                <select id="proveedor" name="proveedor" value={formData.proveedor} onChange={handleChange} className={commonInputClasses}>
+                                    <option value="">Seleccionar Proveedor</option>
+                                    {proveedores.map(p => <option key={p._id} value={p._id}>{p.nombre}</option>)}
+                                </select>
                             </div>
                             <div className="md:col-span-3">
                                 <label htmlFor="descripcion" className={labelClasses}>Descripción</label>
@@ -753,7 +817,34 @@ export default function GestionProductos() {
         if (!editableProduct) return;
         setIsUpdating(true);
         try {
-            const dataToUpdate = { ...editableProduct, precioLista: parseFloat(editableProduct.precioLista) || 0, };
+            const dataToUpdate = { 
+                ...editableProduct, 
+                precioLista: parseFloat(editableProduct.precioLista) || 0, 
+            };
+
+            // Limpiar campos vacíos para evitar conflictos con índices únicos en el backend
+            if (!dataToUpdate.codigoInterno || dataToUpdate.codigoInterno.trim() === "") {
+                delete dataToUpdate.codigoInterno;
+            }
+            if (!dataToUpdate.codigoBarra || dataToUpdate.codigoBarra === 0) {
+                delete dataToUpdate.codigoBarra;
+            }
+
+            // Asegurar que marca, categoria y proveedor se envíen como null si están vacíos
+            dataToUpdate.marca = dataToUpdate.marca && dataToUpdate.marca.trim() !== '' ? dataToUpdate.marca : null;
+            dataToUpdate.categoria = dataToUpdate.categoria && dataToUpdate.categoria.trim() !== '' ? dataToUpdate.categoria : null;
+            dataToUpdate.proveedor = dataToUpdate.proveedor && dataToUpdate.proveedor.trim() !== '' ? dataToUpdate.proveedor : null;
+            dataToUpdate.puntoVenta = dataToUpdate.puntoVenta && dataToUpdate.puntoVenta.trim() !== '' ? dataToUpdate.puntoVenta : null;
+
+            // Convertir campos numéricos
+            const numericFields = ['ancho_cm', 'alto_cm', 'profundidad_cm', 'peso_kg', 'precioCosto', 'alic_IVA', 'markupPorcentaje', 'stock_disponible', 'stockMinimo'];
+            numericFields.forEach(field => {
+                if (dataToUpdate[field] !== undefined) {
+                    const numValue = parseFloat(dataToUpdate[field]);
+                    dataToUpdate[field] = isNaN(numValue) ? 0 : numValue;
+                }
+            });
+
             await update_product(editableProduct._id, dataToUpdate);
             Swal.fire('¡Actualizado!', 'El producto se ha guardado correctamente.', 'success');
             setSelectedProduct(null);
@@ -941,6 +1032,20 @@ export default function GestionProductos() {
                                     <input list="edit-categorias-list" type="text" id="edit-categoria" name="categoria" value={editableProduct.categoria || ''} onChange={handleEditInputChange} className={commonInputClassesModal} />
                                     <datalist id="edit-categorias-list">{filterOptions.categories.map(cat => <option key={cat} value={cat} />)}</datalist>
                                 </div>
+                                <div>
+                                    <label htmlFor="edit-proveedor" className={labelClassesModal}>Proveedor</label>
+                                    <select id="edit-proveedor" name="proveedor" value={editableProduct.proveedor || ''} onChange={handleEditInputChange} className={commonInputClassesModal}>
+                                        <option value="">Seleccionar Proveedor</option>
+                                        {proveedores.map(p => <option key={p._id} value={p._id}>{p.nombre}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-puntoVenta" className={labelClassesModal}>Punto de Venta</label>
+                                    <select id="edit-puntoVenta" name="puntoVenta" value={editableProduct.puntoVenta || ''} onChange={handleEditInputChange} className={commonInputClassesModal}>
+                                        <option value="">General (ninguno)</option>
+                                        {filterOptions.puntosDeVenta.map(pv => <option key={pv._id} value={pv._id}>{pv.nombre}</option>)}
+                                    </select>
+                                </div>
                                 <div className="md:col-span-3">
                                     <label htmlFor="edit-descripcion" className={labelClassesModal}>Descripción</label>
                                     <textarea id="edit-descripcion" name="descripcion" value={editableProduct.descripcion || ''} onChange={handleEditInputChange} rows="2" className={commonInputClassesModal}></textarea>
@@ -961,7 +1066,29 @@ export default function GestionProductos() {
                                     <label htmlFor="edit-ubicacionAlmacen" className={labelClassesModal}>Ubicación Almacén</label>
                                     <input type="text" id="edit-ubicacionAlmacen" name="ubicacionAlmacen" value={editableProduct.ubicacionAlmacen || ''} onChange={handleEditInputChange} className={commonInputClassesModal} />
                                 </div>
-                                <div className="md:col-span-2 flex items-center pt-2">
+                                <div>
+                                    <label htmlFor="edit-unidadMedida" className={labelClassesModal}>Unidad Medida</label>
+                                    <select id="edit-unidadMedida" name="unidadMedida" value={editableProduct.unidadMedida || '94'} onChange={handleEditInputChange} className={commonInputClassesModal}>
+                                        <option value="94">Unidad</option><option value="7">Kilogramo (Kg)</option><option value="1">Metro (Mtr)</option><option value="21">Hora (Hr)</option><option value="31">Litro (Lt)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-ancho_cm" className={labelClassesModal}>Ancho (cm)</label>
+                                    <input type="number" id="edit-ancho_cm" name="ancho_cm" value={editableProduct.ancho_cm || ''} onChange={handleEditInputChange} min="0" step="0.01" className={commonInputClassesModal} />
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-alto_cm" className={labelClassesModal}>Alto (cm)</label>
+                                    <input type="number" id="edit-alto_cm" name="alto_cm" value={editableProduct.alto_cm || ''} onChange={handleEditInputChange} min="0" step="0.01" className={commonInputClassesModal} />
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-profundidad_cm" className={labelClassesModal}>Profundidad (cm)</label>
+                                    <input type="number" id="edit-profundidad_cm" name="profundidad_cm" value={editableProduct.profundidad_cm || ''} onChange={handleEditInputChange} min="0" step="0.01" className={commonInputClassesModal} />
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-peso_kg" className={labelClassesModal}>Peso (kg)</label>
+                                    <input type="number" id="edit-peso_kg" name="peso_kg" value={editableProduct.peso_kg || ''} onChange={handleEditInputChange} min="0" step="0.01" className={commonInputClassesModal} />
+                                </div>
+                                <div className="md:col-span-3 flex items-center pt-2">
                                     <input type="checkbox" id="edit-activo" name="activo" checked={!!editableProduct.activo} onChange={handleEditInputChange} className="h-4 w-4 rounded border-gray-300 text-[var(--principal)]" />
                                     <label htmlFor="edit-activo" className="ml-2 block text-sm font-bold">Producto Activo</label>
                                 </div>

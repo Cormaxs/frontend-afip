@@ -2,8 +2,8 @@ import api from '../../api/api.js';
 
 export const CategoriasYMarcasService = {
   // CATEGORÍAS
-  obtenerCategorias: (idEmpresa) =>
-    api.get(`/api/v1/products/get/all/category/${idEmpresa}`),
+  obtenerCategorias: (idEmpresa, params = {}) =>
+    api.get(`/api/v1/products/get/all/category/${idEmpresa}`, { params }),
 
   crearCategoria: ({ nombre, empresa }) =>
     api.post('/api/v1/products/categorias/', {
@@ -22,8 +22,8 @@ export const CategoriasYMarcasService = {
     api.delete(`/api/v1/products/delete/categoria/${encodeURIComponent(nombreCategoria)}/${idEmpresa}`),
 
   // MARCAS
-  obtenerMarcas: (idEmpresa) =>
-    api.get(`/api/v1/products/get/all/marca/${idEmpresa}`),
+  obtenerMarcas: (idEmpresa, params = {}) =>
+    api.get(`/api/v1/products/get/all/marca/${idEmpresa}`, { params }),
 
   crearMarca: ({ nombre, empresa }) =>
     api.post('/api/v1/products/marcas/', {

@@ -22,6 +22,6 @@ export const CajasService = {
     api.get(`/api/v1/cajas/${idCaja}/resumen`),
   
   // Obtener cajas de una empresa
-  obtenerCajasEmpresa: (idEmpresa) => 
-    api.get(`/api/v1/cajas/empresa/${idEmpresa}`),
+  obtenerCajasEmpresa: (idEmpresa, params = {}) => 
+    api.get(`/api/v1/cajas/empresa/${idEmpresa}`, { params }),
 };

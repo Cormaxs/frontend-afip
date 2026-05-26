@@ -15,30 +15,54 @@ const GestionCajas = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPuntoVenta, setSelectedPuntoVenta] = useState(null);
   const [resumenCaja, setResumenCaja] = useState(null);
+  const [loadingResumen, setLoadingResumen] = useState(false);
+  const [pagination, setPagination] = useState({});
+
+  // Estado para la paginación y búsqueda
+  const [searchParams, setSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    sortBy: 'fechaApertura',
+    order: 'desc',
+    search: '', // Campo de búsqueda general
+    estado: '', // Filtro por estado (Abierta/Cerrada)
+    puntoVenta: '', // Filtro por punto de venta
+    vendedor: '', // Filtro por vendedor
+    fechaDesde: '',
+    fechaHasta: ''
+  });
 
   useEffect(() => {
     if (companyId) {
       cargarCajas();
       cargarPuntosVenta();
     }
-  }, [companyId]);
+  }, [companyId, searchParams]); // Dependencia de searchParams para recargar al cambiar filtros/paginación
 
   useEffect(() => {
-    const cajaActiva = cajas.find(c => c.estado === 'Abierta');
+    const cajaActiva = cajas.find(c => c.estado && c.estado.toLowerCase() === 'abierta');
     if (cajaActiva) {
       cargarResumenCaja(cajaActiva._id);
+      
+      // Auto-refresco del resumen de caja cada 30 segundos si hay una caja activa
+      const interval = setInterval(() => {
+        cargarResumenCaja(cajaActiva._id);
+      }, 30000);
+
+      return () => clearInterval(interval);
     } else {
       setResumenCaja(null);
     }
   }, [cajas]);
 
   const cargarCajas = async () => {
-    const idEmpresa = companyId || user?.empresa;
-    if (!idEmpresa) return;
+    if (!companyId) return;
     setLoading(true);
     try {
-      const response = await CajasService.obtenerCajasEmpresa(idEmpresa);
-      setCajas(response.data?.cajas || []);
+      const response = await CajasService.obtenerCajasEmpresa(companyId, searchParams);
+      const dataCajas = response.data?.cajas || (Array.isArray(response.data) ? response.data : []);
+      setCajas(dataCajas);
+      setPagination(response.data?.pagination || {});
     } catch (error) {
       console.error('Error cargando cajas:', error);
     } finally {
@@ -47,32 +71,93 @@ const GestionCajas = () => {
   };
 
   const cargarResumenCaja = async (idCaja) => {
+    if (!idCaja) return;
+    setLoadingResumen(true);
     try {
       const response = await CajasService.obtenerResumenCaja(idCaja);
       setResumenCaja(response.data);
     } catch (error) {
       console.error('Error cargando resumen de caja:', error);
+    } finally {
+      setLoadingResumen(false);
+    }
+  };
+
+  const handleTransaccionManual = async (tipo) => {
+    const { value: formValues } = await Swal.fire({
+      title: tipo === 'ingreso' ? 'Registrar Ingreso de Efectivo' : 'Registrar Gasto / Salida',
+      html: `
+        <div style="text-align: left; font-family: sans-serif;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">Monto ($):</label>
+          <input type="number" id="montoTrans" step="0.01" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.2rem; font-weight: bold; text-align: center;" placeholder="0.00" />
+          
+          <label style="display: block; margin-top: 15px; margin-bottom: 8px; font-weight: 600; color: #334155;">Descripción / Motivo:</label>
+          <textarea id="descTrans" placeholder="Ej: Pago de flete, retiro para cambio, etc." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; height: 60px; font-family: sans-serif;"></textarea>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Registrar',
+      confirmButtonColor: tipo === 'ingreso' ? '#28a745' : '#d9534f',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const monto = parseFloat(document.getElementById('montoTrans').value);
+        const descripcion = document.getElementById('descTrans').value;
+        if (isNaN(monto) || monto <= 0) {
+          Swal.showValidationMessage('Por favor ingresa un monto válido mayor a 0');
+          return false;
+        }
+        if (!descripcion.trim()) {
+          Swal.showValidationMessage('Por favor ingresa una descripción');
+          return false;
+        }
+        return { tipo, monto, descripcion };
+      }
+    });
+
+    if (formValues && cajaActiva) {
+      try {
+        await CajasService.agregarTransaccion(cajaActiva._id, formValues);
+        Swal.fire('¡Éxito!', 'Movimiento registrado correctamente', 'success');
+        cargarCajas(); // Recargar para actualizar el resumen
+      } catch (error) {
+        Swal.fire('Error', error.response?.data?.message || 'Error al registrar movimiento', 'error');
+      }
     }
   };
 
   const cargarPuntosVenta = async () => {
-    const idEmpresa = companyId || user?.empresa;
-    if (!idEmpresa) return;
+    if (!companyId) return;
     try {
-      const response = await puntosVentaService.obtenerPuntosVenta(idEmpresa);
-      const puntos = response.data?.puntosDeVenta || [];
+      // No necesitamos paginación para la lista de puntos de venta en el filtro
+      const response = await puntosVentaService.obtenerPuntosVenta(companyId, { limit: 1000 }); 
+      const puntos = response.data?.puntosDeVenta || response.data || [];
       setPuntosVenta(puntos);
-      if (!selectedPuntoVenta && puntos.length > 0) {
-        setSelectedPuntoVenta(puntos[0]);
-      }
     } catch (error) {
       console.error('Error cargando puntos de venta:', error);
     }
   };
 
+  const handleSearchChange = (e) => {
+    const { name, value } = e.target;
+    setSearchParams(prev => ({ ...prev, [name]: value, page: 1 })); // Resetear a la primera página en cada búsqueda
+  };
+
+  const handlePageChange = (newPage) => {
+    setSearchParams(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleSortChange = (newSortBy) => {
+    setSearchParams(prev => ({
+      ...prev,
+      sortBy: newSortBy,
+      order: prev.sortBy === newSortBy && prev.order === 'asc' ? 'desc' : 'asc',
+      page: 1
+    }));
+  };
+
   const handleSuccess = () => {
     setModalOpen(false);
-    setSelectedPuntoVenta(null);
+    setSearchParams(prev => ({ ...prev, page: 1 })); // Recargar la primera página
     cargarCajas();
     cargarPuntosVenta();
     Swal.fire({
@@ -84,7 +169,7 @@ const GestionCajas = () => {
     });
   };
 
-  const cajaActiva = cajas.find(c => c.estado === 'Abierta');
+  const cajaActiva = cajas.find(c => c.estado && c.estado.toLowerCase() === 'abierta');
 
   return (
     <div style={{ padding: '20px' }}>
@@ -110,16 +195,37 @@ const GestionCajas = () => {
                 Abierta por {cajaActiva.vendedorAsignado?.nombre || 'Usuario'} el {new Date(cajaActiva.fechaApertura || cajaActiva.horaApertura).toLocaleString('es-AR')}
               </p>
             </div>
-            <span style={{ 
-              backgroundColor: '#def7ec', 
-              color: '#03543f', 
-              padding: '6px 12px', 
-              borderRadius: '20px', 
-              fontSize: '0.875rem', 
-              fontWeight: '600' 
-            }}>
-              ● ABIERTA
-            </span>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button 
+                onClick={() => cargarResumenCaja(cajaActiva._id)}
+                disabled={loadingResumen}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.8rem',
+                  backgroundColor: '#fff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '20px',
+                  cursor: loadingResumen ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  color: '#475569',
+                  fontWeight: '600'
+                }}
+              >
+                {loadingResumen ? '⌛ Cargando...' : '🔄 Actualizar'}
+              </button>
+              <span style={{ 
+                backgroundColor: '#def7ec', 
+                color: '#03543f', 
+                padding: '6px 12px', 
+                borderRadius: '20px', 
+                fontSize: '0.875rem', 
+                fontWeight: '600' 
+              }}>
+                ● ABIERTA
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
@@ -147,12 +253,18 @@ const GestionCajas = () => {
                 ${resumenCaja?.totales?.saldoEfectivoEsperado?.toLocaleString() || '0'}
               </div>
             </div>
+            <div style={{ padding: '16px', backgroundColor: '#fdf4ff', borderRadius: '8px', border: '1px solid #f5d0fe' }}>
+              <span style={{ color: '#701a75', fontSize: '0.875rem' }}>Total General</span>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#86198f' }}>
+                ${resumenCaja?.totales?.montoFinalEsperado?.toLocaleString() || '0'}
+              </div>
+            </div>
           </div>
 
           {resumenCaja && (
             <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fff', border: '1px solid #edf2f7', borderRadius: '8px' }}>
               <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Desglose por Forma de Pago</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                 {Object.entries(resumenCaja.ventas.detallePorMetodo).map(([metodo, info]) => (
                   <div key={metodo} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', border: '1px solid #f1f5f9', borderRadius: '6px' }}>
                     <div style={{ 
@@ -168,6 +280,94 @@ const GestionCajas = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* LISTA DE MOVIMIENTOS MANUALES */}
+              <h4 style={{ margin: '20px 0 12px 0', fontSize: '0.9rem', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Movimientos Manuales (Ingresos/Egresos)</h4>
+              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '6px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead style={{ backgroundColor: '#f8fafc', position: 'sticky', top: 0 }}>
+                    <tr>
+                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Tipo</th>
+                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Descripción</th>
+                      <th style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cajaActiva.transacciones && cajaActiva.transacciones.length > 0 ? (
+                      cajaActiva.transacciones.map((t, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px', color: t.tipo === 'ingreso' ? '#166534' : '#b91c1c', fontWeight: '600' }}>
+                            {t.tipo.toUpperCase()}
+                          </td>
+                          <td style={{ padding: '8px', color: '#475569' }}>{t.descripcion}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600' }}>
+                            ${t.monto.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" style={{ padding: '12px', textAlign: 'center', color: '#94a3b8' }}>No hay movimientos manuales registrados</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* HISTORIAL DE VENTAS (TICKETS/FACTURAS) */}
+              <h4 style={{ margin: '20px 0 12px 0', fontSize: '0.9rem', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Historial de Ventas (Detalle de Productos)</h4>
+              <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '6px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead style={{ backgroundColor: '#f8fafc', position: 'sticky', top: 0 }}>
+                    <tr>
+                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Hora/ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Productos</th>
+                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Pago</th>
+                      <th style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumenCaja.ventas.historial && resumenCaja.ventas.historial.length > 0 ? (
+                      resumenCaja.ventas.historial.map((venta, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                            <div style={{ fontWeight: '600' }}>{new Date(venta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{venta.ventaId}</div>
+                          </td>
+                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {venta.items.map((item, iIdx) => (
+                                <div key={iIdx} style={{ fontSize: '0.8rem' }}>
+                                  <span style={{ fontWeight: '600', color: '#475569' }}>{item.cantidad}x</span> {item.descripcion}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                            <span style={{ 
+                              padding: '2px 6px', 
+                              borderRadius: '4px', 
+                              backgroundColor: venta.pago?.metodo === 'Contado' ? '#dcfce7' : '#dbeafe',
+                              color: venta.pago?.metodo === 'Contado' ? '#166534' : '#1e40af',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              {venta.pago?.metodo || 'S/D'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1e293b', verticalAlign: 'top' }}>
+                            ${venta.totales?.totalPagar?.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No se registran ventas en este turno de caja</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -262,40 +462,24 @@ const GestionCajas = () => {
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
-              onClick={() => {
-                Swal.fire({
-                  title: 'Registrar Gasto / Salida',
-                  html: `
-                    <div style="text-align: left;">
-                      <label style="display: block; margin-bottom: 8px;">Monto ($):</label>
-                      <input type="number" id="montoGasto" step="0.01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-                      <label style="display: block; margin-top: 15px; margin-bottom: 8px;">Descripción / Concepto:</label>
-                      <input type="text" id="descGasto" placeholder="Ej: Pago de flete, limpieza, etc." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-                    </div>
-                  `,
-                  showCancelButton: true,
-                  confirmButtonText: 'Registrar Salida',
-                  preConfirm: () => {
-                    const monto = parseFloat(document.getElementById('montoGasto').value);
-                    const desc = document.getElementById('descGasto').value;
-                    if (!monto || isNaN(monto)) Swal.showValidationMessage('Monto requerido');
-                    if (!desc) Swal.showValidationMessage('Descripción requerida');
-                    return { tipo: 'egreso', monto, descripcion: desc };
-                  }
-                }).then(async (result) => {
-                  if (result.isConfirmed) {
-                    try {
-                      await CajasService.agregarTransaccion(cajaActiva._id, result.value);
-                      Swal.fire('¡Registrado!', 'El movimiento se descontó de la caja', 'success');
-                      cargarCajas();
-                    } catch (error) {
-                      Swal.fire('Error', 'No se pudo registrar el movimiento', 'error');
-                    }
-                  }
-                });
-              }}
+              onClick={() => handleTransaccionManual('egreso')}
             >
               💸 Registrar Gasto
+            </button>
+            <button
+              className="btn"
+              style={{
+                backgroundColor: '#fff',
+                color: '#166534',
+                border: '1px solid #bcf0da',
+                padding: '12px 24px',
+                borderRadius: '6px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              onClick={() => handleTransaccionManual('ingreso')}
+            >
+              💰 Registrar Ingreso
             </button>
           </div>
         </div>
@@ -311,7 +495,7 @@ const GestionCajas = () => {
                 Swal.fire('Error', 'No hay puntos de venta configurados', 'error');
                 return;
               }
-              setSelectedPuntoVenta(puntosVenta[0]);
+              // setSelectedPuntoVenta(puntosVenta[0]); // No longer needed
               setModalOpen(true);
             }}
           >

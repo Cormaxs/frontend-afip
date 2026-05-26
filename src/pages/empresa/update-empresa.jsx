@@ -1,6 +1,7 @@
 import React, { useContext, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { apiContext } from '../../context/api_context.jsx';
+import { useAuth } from '../../contexts/auth/authContext.jsx';
 import Swal from 'sweetalert2';
 
 // --- Icono de Spinner (reutilizable) ---
@@ -13,6 +14,7 @@ const SpinnerIcon = ({ className = "h-5 w-5" }) => (
 
 export default function UpdateEmpresa() {
     const { updateEmpresa, companyData } = useContext(apiContext);
+    const { empresaAuth } = useAuth();
 
     const { register, handleSubmit, formState: { errors, isSubmitting, isDirty }, reset } = useForm();
 
@@ -39,8 +41,13 @@ export default function UpdateEmpresa() {
         }
 
         try {
-            await updateEmpresa(companyData._id, data);
+            const res = await updateEmpresa(companyData._id, data);
             
+            // Sincronizar con authContext si es necesario
+            if (res && res.empresa) {
+                empresaAuth(res.empresa);
+            }
+
             // Actualiza el estado del formulario para que isDirty sea false
             reset(data);
 

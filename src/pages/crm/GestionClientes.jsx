@@ -21,12 +21,26 @@ const TIPOS_DOC = [
 
 const GestionClientes = () => {
   const { user } = useAuth();
-  const companyId = user?.empresa?._id || user?.empresa;
+  const companyId = user?.empresa || user?.empresaId || user?.companyId;
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    sortBy: 'razonSocial',
+    order: 'asc',
+  });
+  const [pagination, setPagination] = useState({
+    totalDocs: 0,
+    totalPages: 0,
+    page: 1,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const {
     register,
@@ -63,14 +77,29 @@ const GestionClientes = () => {
   }, [selectedCondicionIVA, setValue]);
 
   useEffect(() => {
-    if (companyId) cargarClientes();
-  }, [companyId, searchTerm]);
+    if (companyId) cargarClientes(searchParams);
+  }, [companyId, searchParams]);
 
-  const cargarClientes = async () => {
+  const cargarClientes = async (params) => {
     setLoading(true);
     try {
-      const response = await ClientesService.obtenerClientesEmpresa(companyId, { search: searchTerm });
-      setClientes(response.data?.data || response.data || []);
+      const response = await ClientesService.obtenerClientesEmpresa(companyId, params);
+      
+      // Aseguramos que clientes sea siempre un array
+      const dataArray = Array.isArray(response.data?.docs) 
+        ? response.data.docs 
+        : (Array.isArray(response.data) ? response.data : []);
+        
+      setClientes(dataArray);
+      
+      setPagination({
+        totalDocs: response.data?.totalDocs || 0,
+        totalPages: response.data?.totalPages || 0,
+        page: response.data?.page || 1,
+        limit: response.data?.limit || 10,
+        hasNextPage: response.data?.hasNextPage || false,
+        hasPrevPage: response.data?.hasPrevPage || false,
+      });
     } catch (error) {
       console.error('Error al cargar clientes:', error);
       Swal.fire('Error', 'No se pudieron cargar los clientes.', 'error');
@@ -150,6 +179,14 @@ const GestionClientes = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchParams(prev => ({ ...prev, search: e.target.value, page: 1 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setSearchParams(prev => ({ ...prev, page: newPage }));
+  };
+
   const eliminarCliente = async (cliente) => {
     const confirm = await Swal.fire({
       title: '¿Desactivar cliente?',
@@ -182,13 +219,13 @@ const GestionClientes = () => {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', gap: '16px', alignItems: 'center' }}>
-        <input 
-          type="text" 
-          placeholder="Buscar por nombre, documento o email..." 
+        <input
+          type="text"
+          placeholder="Buscar por nombre, documento o email..."
           className="input-field"
           style={{ maxWidth: '400px' }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchParams.search}
+          onChange={handleSearchChange}
         />
         <button className="btn btn-primary" onClick={() => abrirModalCliente(null)}>
           + Nuevo Cliente
@@ -210,7 +247,7 @@ const GestionClientes = () => {
           <tbody>
             {loading ? (
               <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>Cargando...</td></tr>
-            ) : clientes.length === 0 ? (
+            ) : !Array.isArray(clientes) || clientes.length === 0 ? (
               <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>No se encontraron clientes.</td></tr>
             ) : clientes.map((cliente) => (
               <tr key={cliente._id} style={{ borderBottom: '1px solid #eee' }}>
@@ -247,6 +284,27 @@ const GestionClientes = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span>Página {pagination.page} de {pagination.totalPages}</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
 
       <ModalGenerico
         isOpen={modalOpen}

@@ -29,6 +29,8 @@ export const afipService = {
     //sincronizo db local con afip
     sincronizarComprobantes : (datos) => api.post(`/api/v1/afip/comprobantes/sincronizar`, datos),
 
+    actualizarNumero : (datos) => api.post(`/api/v1/afip/comprobantes/actualizar`, datos),
+
     //proximo numero de comprobante segun db local
    // proximoComprobantes : (datos) => api.post(`/api/v1/afip/comprobantes/proximo`, datos),
     //reservo un numero de comprobante como ocupado para facturas pendientes o rechazadas

@@ -490,7 +490,9 @@ export const ApiProvider = ({ children }) => {
             getFacturasPdf,
             isAuthenticated,
             userData,
+            setUserData,
             companyData,
+            setCompanyData,
             cajasActivas
         }}>
             {children}

@@ -128,7 +128,7 @@ export async function Ingreso_Egreso_Caja_api(data, idCaja) {
 
 export async function getPointSales(idEmpresa, page, limit, filters) {
     const { nombre, provincia, numero } = filters || {};
-    const response = await axiosInstance.get(`/point-sales/${idEmpresa}`, { params: { page, limit,nombre, provincia, numero  } });
+    const response = await axiosInstance.get(`/point-sales/company/${idEmpresa}`, { params: { page, limit, nombre, provincia, numero } });
     return response.data;
 }
 

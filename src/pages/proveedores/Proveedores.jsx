@@ -7,11 +7,26 @@ import { ProveedoresService } from '../../services/proveedores/proveedores.js';
 
 const Proveedores = () => {
   const { user } = useAuth();
-  const companyId = user?.empresa?._id || user?.empresa;
+  const companyId = user?.empresa || user?.empresaId || user?.companyId;
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProveedor, setSelectedProveedor] = useState(null);
+  const [searchParams, setSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    sortBy: 'nombre',
+    order: 'asc',
+  });
+  const [pagination, setPagination] = useState({
+    totalDocs: 0,
+    totalPages: 0,
+    page: 1,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const {
     register,
@@ -32,15 +47,23 @@ const Proveedores = () => {
   });
 
   useEffect(() => {
-    if (companyId) cargarProveedores();
-  }, [companyId]);
+    if (companyId) cargarProveedores(searchParams);
+  }, [companyId, searchParams]);
 
-  const cargarProveedores = async () => {
+  const cargarProveedores = async (params) => {
     if (!companyId) return;
     setLoading(true);
     try {
-      const response = await ProveedoresService.obtenerProveedores(companyId);
-      setProveedores(response.data?.proveedores || response.data || []);
+      const response = await ProveedoresService.obtenerProveedores(companyId, params);
+      setProveedores(response.data?.docs || response.data || []);
+      setPagination({
+        totalDocs: response.data?.totalDocs || 0,
+        totalPages: response.data?.totalPages || 0,
+        page: response.data?.page || 1,
+        limit: response.data?.limit || 10,
+        hasNextPage: response.data?.hasNextPage || false,
+        hasPrevPage: response.data?.hasPrevPage || false,
+      });
     } catch (error) {
       console.error('Error al cargar proveedores:', error);
       Swal.fire('Error', 'No se pudieron cargar los proveedores.', 'error');
@@ -119,6 +142,14 @@ const Proveedores = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchParams(prev => ({ ...prev, search: e.target.value, page: 1 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setSearchParams(prev => ({ ...prev, page: newPage }));
+  };
+
   const eliminarProveedor = async (proveedor) => {
     const confirm = await Swal.fire({
       title: '¿Eliminar proveedor?',
@@ -150,8 +181,15 @@ const Proveedores = () => {
         <p style={{ margin: 0, color: '#666' }}>Administra los proveedores y su cuenta corriente.</p>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div />
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', gap: '16px', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Buscar por nombre, CUIT, email o teléfono..."
+          className="input-field"
+          style={{ maxWidth: '400px' }}
+          value={searchParams.search}
+          onChange={handleSearchChange}
+        />
         <button className="btn btn-primary" onClick={() => abrirModalProveedor(null)}>
           + Nuevo Proveedor
         </button>
@@ -198,6 +236,27 @@ const Proveedores = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span>Página {pagination.page} de {pagination.totalPages}</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
 
       <ModalGenerico
         isOpen={modalOpen}
