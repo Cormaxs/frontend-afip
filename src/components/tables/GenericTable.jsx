@@ -3,7 +3,7 @@ import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-tabl
 import { COLUMN_DEFS } from './columnDefinitions';
 import './tablas.css';
 
-const GenericTable = ({ data, type, pagination, onPageChange, onRowClick, onReintentar, onAnular, onEdit, onDelete }) => {
+const GenericTable = ({ data, type, pagination, onPageChange, onRowClick, onReintentar, onAnular, onEdit, onDelete, onUpdateStatus, onCargarPedido }) => {
   const columns = useMemo(() => COLUMN_DEFS[type] || [], [type]);
   const tableData = useMemo(() => data || [], [data]);
 
@@ -15,7 +15,9 @@ const GenericTable = ({ data, type, pagination, onPageChange, onRowClick, onRein
       onReintentar,
       onAnular,
       onEdit,
-      onDelete
+      onDelete,
+      onUpdateStatus,
+      onCargarPedido
     }
   });
 

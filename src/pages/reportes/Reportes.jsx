@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import api from '../../api/api.js';
 import { countSales } from '../../utils/offlineQueue.js';
 import { syncOfflineQueue } from '../../services/offline/offline.js';
+import { BarChart3, TrendingUp, TrendingDown, AlertTriangle, Package, DollarSign } from 'lucide-react';
 
 const Reportes = () => {
   const { user } = useAuth();
@@ -102,12 +103,12 @@ const Reportes = () => {
   }
 
   const tabs = [
-    { id: 'resumen', label: 'Resumen Ventas', shortcut: 'F1', icon: '📊' },
-    { id: 'masVendidos', label: 'Más Vendidos', shortcut: 'F2', icon: '🔝' },
-    { id: 'menosVendidos', label: 'Menos Vendidos', shortcut: 'F3', icon: '🔻' },
-    { id: 'stock', label: 'Alertas Stock', shortcut: 'F4', icon: '⚠️' },
-    { id: 'productos', label: 'Productos', shortcut: 'F5', icon: '📦' },
-    { id: 'finanzas', label: 'Finanzas', shortcut: 'F6', icon: '💰' }
+    { id: 'resumen', label: 'Resumen Ventas', shortcut: 'F1', icon: <BarChart3 size={16} /> },
+    { id: 'masVendidos', label: 'Más Vendidos', shortcut: 'F2', icon: <TrendingUp size={16} /> },
+    { id: 'menosVendidos', label: 'Menos Vendidos', shortcut: 'F3', icon: <TrendingDown size={16} /> },
+    { id: 'stock', label: 'Alertas Stock', shortcut: 'F4', icon: <AlertTriangle size={16} /> },
+    { id: 'productos', label: 'Productos', shortcut: 'F5', icon: <Package size={16} /> },
+    { id: 'finanzas', label: 'Finanzas', shortcut: 'F6', icon: <DollarSign size={16} /> }
   ];
 
   useEffect(() => {
@@ -203,7 +204,7 @@ const Reportes = () => {
             }}
             title={`${tab.label} (${tab.shortcut})`}
           >
-            <span>{tab.icon}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{tab.icon}</span>
             <span>{tab.label}</span>
             <span style={{ fontSize: '0.82rem', opacity: 0.8, color: activeTab === tab.id ? '#e2f2ff' : '#999' }}>{tab.shortcut}</span>
           </button>
@@ -224,7 +225,7 @@ const Reportes = () => {
                   backgroundColor: '#f0f9ff',
                   borderLeft: '4px solid #28a4d5',
                   padding: '20px',
-                  borderRadius: '8px'
+                  borderRadius: '4px'
                 }}>
                   <p style={{ color: '#666', margin: '0 0 10px 0', fontSize: '0.9rem' }}>Ingresos Totales</p>
                   <h2 style={{ margin: 0, color: '#28a4d5', fontSize: '2rem' }}>
@@ -235,7 +236,7 @@ const Reportes = () => {
                   backgroundColor: '#f0fdf4',
                   borderLeft: '4px solid #28a745',
                   padding: '20px',
-                  borderRadius: '8px'
+                  borderRadius: '4px'
                 }}>
                   <p style={{ color: '#666', margin: '0 0 10px 0', fontSize: '0.9rem' }}>Total Ventas</p>
                   <h2 style={{ margin: 0, color: '#28a745', fontSize: '2rem' }}>
@@ -246,7 +247,7 @@ const Reportes = () => {
                   backgroundColor: '#fef3c7',
                   borderLeft: '4px solid #ff9800',
                   padding: '20px',
-                  borderRadius: '8px'
+                  borderRadius: '4px'
                 }}>
                   <p style={{ color: '#666', margin: '0 0 10px 0', fontSize: '0.9rem' }}>Ticket Promedio</p>
                   <h2 style={{ margin: 0, color: '#ff9800', fontSize: '2rem' }}>

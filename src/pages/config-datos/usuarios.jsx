@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
+import { apiContext } from '../../context/api_context.jsx';
 import UsuarioForm from '../../components/usuario/UsuarioForm.jsx';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx'; // Asegura la ruta correcta
 import { authService } from '../../services/auth/auth-general.js';
@@ -8,7 +9,8 @@ import { useNavigate } from "react-router-dom";
 import '../auth/entrada.css';
 
 const DatosUsuarios = () => {
-  const { user, login } = useAuth();
+  const { user, updateUserData } = useAuth();
+  const { setUserData } = useContext(apiContext);
   const [modalAbierto, setModalAbierto] = useState(false);
   const navigate = useNavigate();
 
@@ -27,8 +29,13 @@ const DatosUsuarios = () => {
 
       const respuesta = await authService.actualizarUsuario(user._id, dataAEnviar);
       
-      if (respuesta.status === 200) {
-        login(respuesta.data); 
+      if (respuesta.status === 200 || respuesta.data?.user) {
+        const updatedUser = respuesta.data.user || respuesta.data;
+        
+        // Actualizamos ambos contextos para mantener sincronización
+        updateUserData(updatedUser);
+        if (setUserData) setUserData(updatedUser);
+        
         setModalAbierto(false); // Cerramos el modal tras el éxito
         Swal.fire('¡Éxito!', 'Perfil actualizado correctamente', 'success');
       }

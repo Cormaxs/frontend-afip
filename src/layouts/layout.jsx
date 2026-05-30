@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/auth/authContext.jsx';
 import { 
-  FiPackage, FiSettings, FiUser, FiMapPin, 
-  FiFilePlus, FiList, FiLogOut, FiMenu, FiX 
-} from 'react-icons/fi';
+  FilePlus, List, Package, User, MapPin, 
+  Settings, Menu, LogOut 
+} from 'lucide-react';
 // Importamos el CSS principal (que a su vez importa todo)
 import '../styles/main.css';
 
@@ -16,41 +16,39 @@ const Layout = () => {
     {
       title: 'Ventas',
       items: [
-        { path: '/despachador', label: 'Despachador', icon: <FiFilePlus /> },
-        { path: '/crear-factura', label: 'Emitir Comprobante', icon: <FiFilePlus /> },
-        { path: '/buscador-facturas', label: 'Gestión de Ventas', icon: <FiList /> },
-        { path: '/crear-ticket-interno', label: 'Tickets Internos', icon: <FiFilePlus /> },
+        { path: '/despachador', label: 'Despachador', icon: <FilePlus /> },
+        { path: '/buscador-facturas', label: 'Gestión de Ventas', icon: <List /> },
       ]
     },
     {
       title: 'Inventario',
       items: [
-        { path: '/buscadorProductos', label: 'Productos y Precios', icon: <FiPackage /> },
-        { path: '/categorias-marcas', label: 'Categorías y Marcas', icon: <FiPackage /> },
-        { path: '/clientes', label: 'Clientes (CRM)', icon: <FiUser /> },
+        { path: '/buscadorProductos', label: 'Productos y Precios', icon: <Package /> },
+        { path: '/categorias-marcas', label: 'Categorías y Marcas', icon: <Package /> },
+        { path: '/clientes', label: 'Clientes (CRM)', icon: <User /> },
       ]
     },
     {
       title: 'Operaciones',
       items: [
-        { path: '/gestion-cajas', label: 'Gestión de Cajas', icon: <FiPackage /> },
-        { path: '/proveedores', label: 'Proveedores', icon: <FiPackage /> },
-        { path: '/cuentas-por-pagar', label: 'Cuentas por Pagar', icon: <FiPackage /> },
-        { path: '/gestion-vendedores', label: 'Vendedores', icon: <FiUser /> },
+        { path: '/gestion-cajas', label: 'Gestión de Cajas', icon: <Package /> },
+        { path: '/proveedores', label: 'Proveedores', icon: <Package /> },
+        { path: '/cuentas-por-pagar', label: 'Cuentas por Pagar', icon: <Package /> },
+        { path: '/gestion-vendedores', label: 'Vendedores', icon: <User /> },
       ]
     },
     {
       title: 'Reportes & Analytics',
       items: [
-        { path: '/reportes', label: 'Reportes', icon: <FiList /> },
+        { path: '/reportes', label: 'Reportes', icon: <List /> },
       ]
     },
     {
       title: 'Configuración',
       items: [
-        { path: '/puntos-de-ventas', label: 'Puntos de Venta', icon: <FiMapPin /> },
-        { path: '/datosEmpresa', label: 'Datos de Empresa', icon: <FiSettings /> },
-        { path: '/datosUsuario', label: 'Mi Perfil', icon: <FiUser /> },
+        { path: '/puntos-de-ventas', label: 'Puntos de Venta', icon: <MapPin /> },
+        { path: '/datosEmpresa', label: 'Datos de Empresa', icon: <Settings /> },
+        { path: '/datosUsuario', label: 'Mi Perfil', icon: <User /> },
       ]
     }
   ];
@@ -99,7 +97,7 @@ const Layout = () => {
             className="mobile-menu-btn"
             onClick={() => setSidebarOpen(true)}
           >
-            <FiMenu size={24} />
+            <Menu size={24} />
           </button>
 
           <div className="user-area">
@@ -117,7 +115,7 @@ const Layout = () => {
             <div className="divider-vertical"></div>
 
             <button onClick={logout} className="btn-logout" title="Cerrar sesión">
-              <FiLogOut />
+              <LogOut />
               <span>Cerrar sesión</span>
             </button>
           </div>

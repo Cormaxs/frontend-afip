@@ -4,32 +4,64 @@ import { VendedoresService } from '../../services/vendedores/vendedores.js';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import VendedorForm from '../../components/vendedores/VendedorForm.jsx';
+import { Edit3, Trash2 } from 'lucide-react';
 
 const GestionVendedores = () => {
-  const { user, empresa } = useAuth();
-  const companyId = empresa?._id || empresa?.id || user?.empresa;
+  const { user } = useAuth();
+  const companyId = user?.empresa || user?.empresaId || user?.companyId;
   const [vendedores, setVendedores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVendedor, setSelectedVendedor] = useState(null);
+  const [searchParams, setSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    sortBy: 'username',
+    order: 'asc',
+  });
+  const [pagination, setPagination] = useState({
+    totalDocs: 0,
+    totalPages: 0,
+    page: 1,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   useEffect(() => {
     if (companyId) {
-      cargarVendedores();
+      cargarVendedores(searchParams);
     }
-  }, [companyId]);
+  }, [companyId, searchParams]);
 
-  const cargarVendedores = async () => {
+  const cargarVendedores = async (params) => {
     if (!companyId) return;
     setLoading(true);
     try {
-      const response = await VendedoresService.obtenerVendedoresEmpresa(companyId);
-      setVendedores(response.data?.vendors || response.data?.vendedores || []);
+      const response = await VendedoresService.obtenerVendedoresEmpresa(companyId, params);
+      setVendedores(response.data?.docs || response.data?.vendedores || []);
+      setPagination({
+        totalDocs: response.data?.totalDocs || 0,
+        totalPages: response.data?.totalPages || 0,
+        page: response.data?.page || 1,
+        limit: response.data?.limit || 10,
+        hasNextPage: response.data?.hasNextPage || false,
+        hasPrevPage: response.data?.hasPrevPage || false,
+      });
     } catch (error) {
       console.error('Error cargando vendedores:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchParams(prev => ({ ...prev, search: e.target.value, page: 1 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setSearchParams(prev => ({ ...prev, page: newPage }));
   };
 
   const handleEliminar = async (vendedor) => {
@@ -75,15 +107,25 @@ const GestionVendedores = () => {
           <h1 style={{ margin: '0 0 5px 0', fontWeight: '700' }}>Gestión de Vendedores</h1>
           <p style={{ color: '#666', margin: 0 }}>Administra el equipo de ventas de tu empresa</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setSelectedVendedor(null);
-            setModalOpen(true);
-          }}
-        >
-          + Nuevo Vendedor
-        </button>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Buscar vendedor..."
+            className="input-field"
+            style={{ maxWidth: '300px' }}
+            value={searchParams.search}
+            onChange={handleSearchChange}
+          />
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setSelectedVendedor(null);
+              setModalOpen(true);
+            }}
+          >
+            + Nuevo Vendedor
+          </button>
+        </div>
       </div>
 
       {vendedores.length > 0 ? (
@@ -107,17 +149,17 @@ const GestionVendedores = () => {
                   </td>
                   <td style={{ padding: '12px', color: '#666', fontSize: '0.95rem' }}>{vendedor.email}</td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <span
-                      style={{
-                        backgroundColor: vendedor.activo ? '#28a745' : '#dc3545',
-                        color: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      {vendedor.activo ? '✓ Activo' : '○ Inactivo'}
-                    </span>
+                      <span
+                        style={{
+                          backgroundColor: vendedor.activo ? '#28a745' : '#dc3545',
+                          color: '#fff',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        {vendedor.activo ? 'Activo' : 'Inactivo'}
+                      </span>
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
                     <button
@@ -137,7 +179,7 @@ const GestionVendedores = () => {
                         fontSize: '0.85rem'
                       }}
                     >
-                      ✏️ Editar
+                      <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                     </button>
                     <button
                       className="btn btn-sm"
@@ -152,7 +194,7 @@ const GestionVendedores = () => {
                         fontSize: '0.85rem'
                       }}
                     >
-                      🗑️
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
@@ -171,6 +213,27 @@ const GestionVendedores = () => {
             }}
           >
             + Crear Vendedor
+          </button>
+        </div>
+      )}
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span>Página {pagination.page} de {pagination.totalPages}</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+          >
+            Siguiente
           </button>
         </div>
       )}

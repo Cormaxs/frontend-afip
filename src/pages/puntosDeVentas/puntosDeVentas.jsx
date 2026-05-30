@@ -4,10 +4,11 @@ import PuntoVentaForm from '../../components/puntoDeVenta/PuntoVentaForm.jsx';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import Swal from 'sweetalert2';
 import { puntosVentaService } from '../../services/puntosVenta/puntosVenta.js';
+import { Edit3, Trash2 } from 'lucide-react';
 
 const PuntosDeVentas = () => {
-    const { user, empresa } = useAuth();
-    const companyId = empresa?._id || empresa?.id || user?.empresa || user?.empresaId || user?.companyId;
+    const { user } = useAuth();
+    const companyId = user?.empresa || user?.empresaId || user?.companyId;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState(null);
     
@@ -181,7 +182,7 @@ const PuntosDeVentas = () => {
                                                 }}
                                                 onClick={() => handleEditarPunto(pv)}
                                             >
-                                                ✏️ Editar
+                                                <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                                             </button>
                                             <button
                                                 type="button"
@@ -197,7 +198,7 @@ const PuntosDeVentas = () => {
                                                 }}
                                                 onClick={() => handleEliminarPunto(pv)}
                                             >
-                                                🗑️ Eliminar
+                                                <Trash2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Eliminar
                                             </button>
                                         </td>
                                     </tr>

@@ -14,8 +14,8 @@ export const VendedoresService = {
     api.get(`/api/v1/vendors/get/${idVendedor}`),
   
   // Obtener vendedores por empresa
-  obtenerVendedoresEmpresa: (idEmpresa) => 
-    api.get(`/api/v1/vendors/company/${idEmpresa}`),
+  obtenerVendedoresEmpresa: (idEmpresa, params) =>
+    api.get(`/api/v1/vendors/company/${idEmpresa}`, { params }),
   
   // Actualizar vendedor
   actualizarVendedor: (idVendedor, datos) => 

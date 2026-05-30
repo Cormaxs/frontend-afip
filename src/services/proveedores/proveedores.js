@@ -5,8 +5,8 @@ export const ProveedoresService = {
   crearProveedor: (datos) => 
     api.post('/api/v1/providers/create', datos),
   
-  obtenerProveedores: (idEmpresa) => 
-    api.get(`/api/v1/providers/get/all/${idEmpresa}`),
+  obtenerProveedores: (idEmpresa, params) =>
+    api.get(`/api/v1/providers/get/all/${idEmpresa}`, { params }),
   
   obtenerProveedor: (idProveedor) => 
     api.get(`/api/v1/providers/get/${idProveedor}`),

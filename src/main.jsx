@@ -4,18 +4,22 @@ import './styles/main.css';
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router'
 import { AuthProvider } from './contexts/auth/authContext.jsx'
+import { ApiProvider } from './context/api_context.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-    <AuthProvider>
-    <App />
-    </AuthProvider>
+      <AuthProvider>
+        <ApiProvider>
+          <App />
+        </ApiProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )
 
 // Register service worker (if available)
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then(() => {
@@ -23,3 +27,4 @@ if ('serviceWorker' in navigator) {
     }).catch(err => console.warn('SW register failed', err));
   });
 }
+*/

@@ -93,17 +93,17 @@ export const COLUMN_DEFS = {
       {
         header: 'Estado',
         accessorKey: 'activo',
-        cell: info => (
-          <span style={{
-            backgroundColor: info.getValue() ? '#28a745' : '#dc3545',
-            color: '#fff',
-            padding: '4px 12px',
-            borderRadius: '20px',
-            fontSize: '0.85rem'
-          }}>
-            {info.getValue() ? '✓ Activo' : '○ Inactivo'}
-          </span>
-        )
+                cell: info => (
+                    <span style={{
+                        backgroundColor: info.getValue() ? '#28a745' : '#dc3545',
+                        color: '#fff',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '0.85rem'
+                    }}>
+                        {info.getValue() ? 'Activo' : 'Inactivo'}
+                    </span>
+                )
       }
     ],
 
@@ -282,5 +282,156 @@ export const COLUMN_DEFS = {
             );
         }
     }
+],
+tickets: [
+  { 
+      header: 'Fecha', 
+      accessorKey: 'fechaHora',
+      cell: info => {
+          const val = info.getValue();
+          if (!val) return '-';
+          const date = new Date(val);
+          if (isNaN(date.getTime())) return 'Fecha Inválida';
+          return date.toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+      }
+  },
+  { 
+      header: 'ID Venta', 
+      accessorKey: 'ventaId',
+      cell: info => <span className="fw-bold">{info.getValue() || '-'}</span>
+  },
+  { 
+      header: 'Número', 
+      accessorKey: 'numeroComprobante',
+      cell: info => <code className="text-dark">{info.getValue() || '-'}</code>
+  },
+  { 
+      header: 'Cliente', 
+      accessorFn: row => row.cliente?.nombre || row.cliente?.dniCuit || 'Consumidor Final',
+      id: 'cliente'
+  },
+  { 
+      header: 'Total', 
+      accessorKey: 'totales.totalPagar',
+      cell: info => <span className="fw-bold" style={{color: '#17a2b8'}}>${(info.getValue() || 0).toLocaleString('es-AR')}</span>
+  },
+  { 
+      header: 'Estado', 
+      accessorKey: 'estadoFactura',
+      cell: info => {
+          const estado = info.getValue() || 'Aprobada';
+          const color = estado === 'Aprobada' ? '#2ecc71' : (estado === 'Pendiente' ? '#f0ad4e' : '#e74c3c');
+          return (
+              <span className="badge" style={{ backgroundColor: color, fontSize: '0.65rem' }}>
+                  {estado.toUpperCase()}
+              </span>
+           );
+       }
+   }
+],
+notasPedido: [
+  { 
+      header: 'Fecha', 
+      accessorKey: 'createdAt',
+      cell: info => {
+          const date = new Date(info.getValue());
+          return date.toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+      }
+  },
+  { 
+      header: 'ID Pedido', 
+      accessorKey: 'pedidoId',
+      cell: info => <span className="fw-bold">{info.getValue()}</span>
+  },
+  { 
+      header: 'Tipo', 
+      accessorKey: 'tipoComprobante',
+      cell: info => <span className="badge bg-light text-dark border">{info.getValue() || 'Nota de Pedido'}</span>
+  },
+  { 
+      header: 'Cliente', 
+      accessorFn: row => row.cliente?.nombre || row.cliente?.dniCuit || 'Consumidor Final',
+      id: 'cliente'
+  },
+  { 
+      header: 'Total', 
+      accessorKey: 'totales.totalPagar',
+      cell: info => <span className="fw-bold" style={{color: '#17a2b8'}}>${info.getValue()?.toLocaleString('es-AR')}</span>
+  },
+  { 
+      header: 'Estado', 
+      accessorKey: 'estado',
+      cell: info => {
+          const estado = info.getValue();
+          const colors = {
+              'PENDIENTE': '#f0ad4e',
+              'PREPARADO': '#5bc0de',
+              'ENTREGADO': '#5cb85c',
+              'FACTURADO': '#2ecc71',
+              'CANCELADO': '#d9534f'
+          };
+          return (
+              <span className="badge" style={{ backgroundColor: colors[estado] || '#6c757d', fontSize: '0.65rem' }}>
+                  {estado}
+              </span>
+          );
+      }
+  },
+  {
+      header: 'Acciones',
+      id: 'acciones',
+      cell: ({ row, table }) => {
+          const nota = row.original;
+          const { onUpdateStatus } = table.options.meta || {};
+          
+          return (
+              <div className="d-flex gap-1" onClick={e => e.stopPropagation()}>
+                  {nota.estado === 'PENDIENTE' && (
+                      <button 
+                          className="btn btn-sm btn-info" 
+                          onClick={() => onUpdateStatus && onUpdateStatus(nota._id, 'ENTREGADO')}
+                          style={{ fontSize: '10px', padding: '2px 5px' }}
+                      >
+                          Aprobar
+                      </button>
+                  )}
+                  {nota.estado === 'PENDIENTE' && (
+                    <button 
+                        className="btn btn-sm btn-danger" 
+                        onClick={() => onUpdateStatus && onUpdateStatus(nota._id, 'CANCELADO')}
+                        style={{ fontSize: '10px', padding: '2px 5px' }}
+                    >
+                        Anular
+                    </button>
+                  )}
+                  {['ENTREGADO', 'FACTURADO'].includes(nota.estado) && (
+                      <button 
+                          className="btn btn-sm btn-success" 
+                          onClick={() => {
+                              const { onCargarPedido } = table.options.meta || {};
+                              onCargarPedido && onCargarPedido(nota);
+                          }}
+                          style={{ fontSize: '10px', padding: '2px 5px' }}
+                          disabled={nota.estado === 'FACTURADO'}
+                      >
+                          {nota.estado === 'FACTURADO' ? 'Facturado' : 'Facturar'}
+                      </button>
+                  )}
+              </div>
+          );
+      }
+  }
 ]
 };

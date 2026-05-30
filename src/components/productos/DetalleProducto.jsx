@@ -1,5 +1,5 @@
 import React from 'react';
-
+import { ClipboardList, Package } from 'lucide-react';
 
 const DetalleProducto = ({ producto, onEdit, onDelete, onClose, onShowHistory, onIngresoMercaderia }) => {
   if (!producto) return null;
@@ -113,7 +113,8 @@ const DetalleProducto = ({ producto, onEdit, onDelete, onClose, onShowHistory, o
           onClick={onShowHistory}
           style={{ backgroundColor: '#f0f9ff', border: '1px solid #28a4d5', padding: '10px', borderRadius: '4px', color: '#28a4d5', fontWeight: 'bold', cursor: 'pointer' }}
         >
-          📋 Ver Historial de Movimientos
+          <ClipboardList size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+          Ver Historial de Movimientos
         </button>
 
         <button 
@@ -121,7 +122,8 @@ const DetalleProducto = ({ producto, onEdit, onDelete, onClose, onShowHistory, o
           onClick={onIngresoMercaderia}
           style={{ backgroundColor: '#f0fdf4', border: '1px solid #28a745', padding: '10px', borderRadius: '4px', color: '#28a745', fontWeight: 'bold', cursor: 'pointer' }}
         >
-          📦 Ingresar Mercadería (Stock)
+          <Package size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+          Ingresar Mercadería (Stock)
         </button>
         
         <div style={{ display: 'flex', gap: '10px' }}>

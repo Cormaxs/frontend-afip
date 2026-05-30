@@ -193,11 +193,76 @@ const EmptyState = () => (
 // --- Componente Principal Unificado ---
 export default function GestionPuntosDeVenta() {
     const { getPointsByCompany, userData, companyData } = useContext(apiContext);
-    const navigate = useNavigate(); // <--- 2. Inicializar useNavigate
+    const navigate = useNavigate();
     const [data, setData] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    // Estado para la paginación y búsqueda
+    const [searchParams, setSearchParams] = useState({
+        page: 1,
+        limit: 10,
+        sortBy: 'nombre',
+        order: 'asc',
+        nombre: '',
+        provincia: '',
+        numero: ''
+    });
+
+    const fetchPoints = useCallback(async () => {
+        const idEmpresa = userData?.empresa || companyData?._id;
+        if (!idEmpresa) {
+            setError('No se pudo obtener el ID de la empresa.');
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await getPointsByCompany(idEmpresa, searchParams);
+            setData(response.data);
+        } catch (err) {
+            console.error("Error al cargar puntos de venta:", err);
+            setError('Error al cargar los puntos de venta.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [userData, companyData, getPointsByCompany, searchParams]);
+
+    useEffect(() => {
+        fetchPoints();
+    }, [fetchPoints]);
+
+    const handleSearchChange = (e) => {
+        const { name, value } = e.target;
+        setSearchParams(prev => ({ ...prev, [name]: value, page: 1 })); // Resetear a la primera página en cada búsqueda
+    };
+
+    const handlePageChange = (newPage) => {
+        setSearchParams(prev => ({ ...prev, page: newPage }));
+    };
+
+    const handleSortChange = (newSortBy) => {
+        setSearchParams(prev => ({
+            ...prev,
+            sortBy: newSortBy,
+            order: prev.sortBy === newSortBy && prev.order === 'asc' ? 'desc' : 'asc',
+            page: 1
+        }));
+    };
+
+    const handlePointAdded = () => {
+        setIsAddModalOpen(false);
+        fetchPoints(); // Recargar la lista después de agregar
+        Swal.fire('¡Éxito!', 'Punto de venta agregado correctamente.', 'success');
+    };
+
+    const totalPages = data?.pagination?.totalPages || 1;
+    const currentPage = data?.pagination?.currentPage || 1;
+    const hasNextPage = data?.pagination?.hasNextPage || false;
+    const hasPrevPage = data?.pagination?.hasPrevPage || false;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchParams, setSearchParams] = useState({ nombre: '', provincia: '', numero: '' });
 
@@ -264,67 +329,90 @@ export default function GestionPuntosDeVenta() {
     }
 
     return (
-        <>
-            <div className="bg-gray-50 min-h-screen">
-                <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Botón de regreso añadido aquí */}
-                    <div className="mb-4">
-                        <Button onClick={handleGoBack} variant="ghost" className="text-sm">
-                            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                            Volver a Ventas
-                        </Button>
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900">Gestión de Puntos de Venta</h1>
+                    <Button onClick={() => setIsAddModalOpen(true)} variant="primary">
+                        <PlusIcon className="w-5 h-5 mr-2" />
+                        Agregar Punto de Venta
+                    </Button>
+                </div>
+
+                {/* Filtros de Búsqueda */}
+                <Card className="p-6 mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">Buscar Puntos de Venta</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Input
+                            id="searchNombre"
+                            label="Nombre"
+                            type="text"
+                            name="nombre"
+                            value={searchParams.nombre}
+                            onChange={handleSearchChange}
+                            placeholder="Buscar por nombre"
+                        />
+                        <Input
+                            id="searchProvincia"
+                            label="Provincia"
+                            type="text"
+                            name="provincia"
+                            value={searchParams.provincia}
+                            onChange={handleSearchChange}
+                            placeholder="Buscar por provincia"
+                        />
+                        <Input
+                            id="searchNumero"
+                            label="Número"
+                            type="number"
+                            name="numero"
+                            value={searchParams.numero}
+                            onChange={handleSearchChange}
+                            placeholder="Buscar por número"
+                        />
                     </div>
+                </Card>
 
-                    <header className="md:flex md:justify-between md:items-center mb-8">
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">Puntos de Venta</h1>
-                            <p className="mt-1 sm:mt-2 text-lg text-gray-500">Administrá las sucursales de <span className="font-semibold">{companyData?.nombreEmpresa || 'tu empresa'}</span></p>
-                        </div>
-                        <Button onClick={() => setIsModalOpen(true)} className="mt-4 md:mt-0 w-full md:w-auto">
-                            <PlusIcon className="w-5 h-5 mr-2" />
-                            Agregar Nuevo
-                        </Button>
-                    </header>
-
-                    <Card className="p-5 mb-6">
-                        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                            <Input id="search-nombre" label="Nombre" name="nombre" value={searchParams.nombre} onChange={handleSearchChange} placeholder="Nombre del punto..." />
-                            <Input id="search-numero" label="Número" name="numero" type="number" value={searchParams.numero} onChange={handleSearchChange} placeholder="N° de punto..." />
-                            <div>
-                               <label htmlFor="search-provincia" className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
-                               <select id="search-provincia" name="provincia" value={searchParams.provincia} onChange={handleSearchChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--principal)] focus:ring-[var(--principal)] sm:text-sm">
-                                    <option value="">Todas</option>
-                                    {['Buenos Aires', 'CABA', 'Córdoba', 'Santa Fe', 'Mendoza', 'Tucumán'].map(p => <option key={p} value={p}>{p}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
-                                <Button type="submit" className="w-full">Buscar</Button>
-                                <Button type="button" onClick={handleClearSearch} variant="secondary" className="w-full">Limpiar</Button>
-                            </div>
-                        </form>
-                    </Card>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {isLoading ? (
-                            [...Array(4)].map((_, i) => <SkeletonCard key={i} />)
-                        ) : data?.puntosDeVenta?.length > 0 ? (
-                            data.puntosDeVenta.map(point => <PointOfSaleCard key={point._id} point={point} />)
-                        ) : (
-                            <EmptyState />
-                        )}
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <strong className="font-bold">Error:</strong>
+                        <span className="block sm:inline"> {error}</span>
                     </div>
+                )}
 
-                    {data?.pagination && data.pagination.totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-8">
-                            <Button onClick={() => setCurrentPage(p => p - 1)} disabled={!data.pagination.hasPrevPage} variant="secondary">Anterior</Button>
-                            <span className="text-sm text-gray-700">Página <b>{data.pagination.currentPage}</b> de <b>{data.pagination.totalPages}</b></span>
-                            <Button onClick={() => setCurrentPage(p => p + 1)} disabled={!data.pagination.hasNextPage} variant="secondary">Siguiente</Button>
+                {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(searchParams.limit)].map((_, i) => <SkeletonCard key={i} />)}
+                    </div>
+                ) : data?.puntosDeVenta?.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {data.puntosDeVenta.map(point => (
+                                <PointOfSaleCard key={point._id} point={point} />
+                            ))}
                         </div>
-                    )}
-                </main>
+
+                        {/* Paginación */}
+                        <div className="flex justify-between items-center mt-8">
+                            <Button onClick={() => handlePageChange(currentPage - 1)} disabled={!hasPrevPage} variant="secondary">
+                                <ArrowLeftIcon className="w-4 h-4 mr-2" /> Anterior
+                            </Button>
+                            <span className="text-gray-700">Página {currentPage} de {totalPages}</span>
+                            <Button onClick={() => handlePageChange(currentPage + 1)} disabled={!hasNextPage} variant="secondary">
+                                Siguiente <ArrowLeftIcon className="w-4 h-4 ml-2 rotate-180" />
+                            </Button>
+                        </div>
+                    </>
+                ) : (
+                    <EmptyState />
+                )}
             </div>
-            <AddPointSaleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPointAdded={handlePointAdded} />
-        </>
+
+            <AddPointSaleModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onPointAdded={handlePointAdded}
+            />
+        </div>
     );
 }

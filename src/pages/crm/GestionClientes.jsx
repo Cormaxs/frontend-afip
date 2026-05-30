@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import { ClientesService } from '../../services/crm/clientes.js';
+import { Edit3, Trash2, Phone, Mail } from 'lucide-react';
 
 const CONDICIONES_IVA = [
   { label: 'Consumidor Final', value: 'Consumidor Final', code: 5 },
@@ -20,13 +21,27 @@ const TIPOS_DOC = [
 ];
 
 const GestionClientes = () => {
-  const { user } = useAuth();
-  const companyId = user?.empresa?._id || user?.empresa;
+  const { user, empresa } = useAuth();
+  const companyId = user?.empresa || user?.empresaId || user?.companyId || empresa?._id || empresa?.id;
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    sortBy: 'razonSocial',
+    order: 'asc',
+  });
+  const [pagination, setPagination] = useState({
+    totalDocs: 0,
+    totalPages: 0,
+    page: 1,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const {
     register,
@@ -63,14 +78,28 @@ const GestionClientes = () => {
   }, [selectedCondicionIVA, setValue]);
 
   useEffect(() => {
-    if (companyId) cargarClientes();
-  }, [companyId, searchTerm]);
+    if (companyId) cargarClientes(searchParams);
+  }, [companyId, searchParams]);
 
-  const cargarClientes = async () => {
+  const cargarClientes = async (params) => {
     setLoading(true);
     try {
-      const response = await ClientesService.obtenerClientesEmpresa(companyId, { search: searchTerm });
-      setClientes(response.data?.data || response.data || []);
+      const response = await ClientesService.obtenerClientesEmpresa(companyId, params);
+      const resultData = response.data?.data || {};
+      const dataArray = Array.isArray(resultData?.clients)
+        ? resultData.clients
+        : (Array.isArray(resultData) ? resultData : []);
+
+      setClientes(dataArray);
+
+      setPagination({
+        totalDocs: resultData?.pagination?.totalItems || 0,
+        totalPages: resultData?.pagination?.totalPages || 0,
+        page: resultData?.pagination?.currentPage || 1,
+        limit: resultData?.pagination?.limit || 10,
+        hasNextPage: resultData?.pagination?.hasNextPage || false,
+        hasPrevPage: resultData?.pagination?.hasPrevPage || false,
+      });
     } catch (error) {
       console.error('Error al cargar clientes:', error);
       Swal.fire('Error', 'No se pudieron cargar los clientes.', 'error');
@@ -150,6 +179,14 @@ const GestionClientes = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchParams(prev => ({ ...prev, search: e.target.value, page: 1 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setSearchParams(prev => ({ ...prev, page: newPage }));
+  };
+
   const eliminarCliente = async (cliente) => {
     const confirm = await Swal.fire({
       title: '¿Desactivar cliente?',
@@ -182,13 +219,13 @@ const GestionClientes = () => {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', gap: '16px', alignItems: 'center' }}>
-        <input 
-          type="text" 
-          placeholder="Buscar por nombre, documento o email..." 
+        <input
+          type="text"
+          placeholder="Buscar por nombre, documento o email..."
           className="input-field"
           style={{ maxWidth: '400px' }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchParams.search}
+          onChange={handleSearchChange}
         />
         <button className="btn btn-primary" onClick={() => abrirModalCliente(null)}>
           + Nuevo Cliente
@@ -210,7 +247,7 @@ const GestionClientes = () => {
           <tbody>
             {loading ? (
               <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>Cargando...</td></tr>
-            ) : clientes.length === 0 ? (
+            ) : !Array.isArray(clientes) || clientes.length === 0 ? (
               <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>No se encontraron clientes.</td></tr>
             ) : clientes.map((cliente) => (
               <tr key={cliente._id} style={{ borderBottom: '1px solid #eee' }}>
@@ -226,8 +263,18 @@ const GestionClientes = () => {
                 </td>
                 <td style={{ padding: '12px' }}>{cliente.condicionIVA}</td>
                 <td style={{ padding: '12px' }}>
-                  {cliente.telefono && <div style={{ fontSize: '0.85rem' }}>📞 {cliente.telefono}</div>}
-                  {cliente.email && <div style={{ fontSize: '0.85rem' }}>📧 {cliente.email}</div>}
+                  {cliente.telefono && (
+                    <div style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={14} />
+                      {cliente.telefono}
+                    </div>
+                  )}
+                  {cliente.email && (
+                    <div style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Mail size={14} />
+                      {cliente.email}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '12px' }}>
                   <span style={{ color: cliente.saldoCuentaCorriente > 0 ? '#d9534f' : '#28a745', fontWeight: 'bold' }}>
@@ -236,10 +283,10 @@ const GestionClientes = () => {
                 </td>
                 <td style={{ padding: '12px', textAlign: 'center' }}>
                   <button className="btn btn-sm" style={{ marginRight: '8px' }} onClick={() => abrirModalCliente(cliente)}>
-                    ✏️
+                    <Edit3 size={16} />
                   </button>
                   <button className="btn btn-sm" style={{ backgroundColor: '#f8f9fa', color: '#d9534f', border: '1px solid #ddd' }} onClick={() => eliminarCliente(cliente)}>
-                    🗑️
+                    <Trash2 size={16} />
                   </button>
                 </td>
               </tr>
@@ -247,6 +294,27 @@ const GestionClientes = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span>Página {pagination.page} de {pagination.totalPages}</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
 
       <ModalGenerico
         isOpen={modalOpen}

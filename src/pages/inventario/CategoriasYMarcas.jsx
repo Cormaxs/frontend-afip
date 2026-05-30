@@ -5,9 +5,12 @@ import CategoriaForm from '../../components/inventario/CategoriaForm.jsx';
 import MarcaForm from '../../components/inventario/MarcaForm.jsx';
 import { CategoriasYMarcasService } from '../../services/inventario/categoriasYMarcas.js';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
+import { Edit3, Trash2 } from 'lucide-react';
 
 const CategoriasYMarcas = () => {
   const { user } = useAuth();
+  const companyId = user?.empresa || user?.empresaId || user?.companyId;
+
   const [activeTab, setActiveTab] = useState('categorias'); // 'categorias' o 'marcas'
   
   const [categorias, setCategorias] = useState([]);
@@ -17,13 +20,37 @@ const CategoriasYMarcas = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
+  // Estados para paginación y búsqueda
+  const [categoriaSearchParams, setCategoriaSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    sortBy: 'nombre',
+    order: 'asc',
+    search: ''
+  });
+  const [marcaSearchParams, setMarcaSearchParams] = useState({
+    page: 1,
+    limit: 10,
+    sortBy: 'nombre',
+    order: 'asc',
+    search: ''
+  });
+
+  const [categoriaPagination, setCategoriaPagination] = useState({});
+  const [marcaPagination, setMarcaPagination] = useState({});
+
   // Cargar datos
   useEffect(() => {
-    if (user?.empresa) {
+    if (companyId) {
       cargarCategorias();
+    }
+  }, [companyId, categoriaSearchParams]);
+
+  useEffect(() => {
+    if (companyId) {
       cargarMarcas();
     }
-  }, [user?.empresa]);
+  }, [companyId, marcaSearchParams]);
 
   const normalizeItems = (rawItems) =>
     (Array.isArray(rawItems)
@@ -31,11 +58,14 @@ const CategoriasYMarcas = () => {
       : []);
 
   const cargarCategorias = async () => {
-    if (!user?.empresa) return;
+    if (!companyId) return;
     setLoading(true);
     try {
-      const response = await CategoriasYMarcasService.obtenerCategorias(user.empresa);
-      setCategorias(normalizeItems(response.data || []));
+      const response = await CategoriasYMarcasService.obtenerCategorias(companyId, categoriaSearchParams);
+      // Extraemos de response.data ya que axios envuelve la respuesta
+      const data = response.data || {};
+      setCategorias(normalizeItems(data.categories || []));
+      setCategoriaPagination(data.pagination || {});
     } catch (error) {
       console.error('Error cargando categorías:', error);
     } finally {
@@ -44,15 +74,35 @@ const CategoriasYMarcas = () => {
   };
 
   const cargarMarcas = async () => {
-    if (!user?.empresa) return;
+    if (!companyId) return;
     setLoading(true);
     try {
-      const response = await CategoriasYMarcasService.obtenerMarcas(user.empresa);
-      setMarcas(normalizeItems(response.data || []));
+      const response = await CategoriasYMarcasService.obtenerMarcas(companyId, marcaSearchParams);
+      // Extraemos de response.data ya que axios envuelve la respuesta
+      const data = response.data || {};
+      setMarcas(normalizeItems(data.marcas || []));
+      setMarcaPagination(data.pagination || {});
     } catch (error) {
       console.error('Error cargando marcas:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    const { value } = e.target;
+    if (activeTab === 'categorias') {
+      setCategoriaSearchParams(prev => ({ ...prev, search: value, page: 1 }));
+    } else {
+      setMarcaSearchParams(prev => ({ ...prev, search: value, page: 1 }));
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (activeTab === 'categorias') {
+      setCategoriaSearchParams(prev => ({ ...prev, page: newPage }));
+    } else {
+      setMarcaSearchParams(prev => ({ ...prev, page: newPage }));
     }
   };
 
@@ -74,9 +124,9 @@ const CategoriasYMarcas = () => {
         const itemName = item?.nombre || item;
 
         if (activeTab === 'categorias') {
-          await CategoriasYMarcasService.eliminarCategoria(itemName, user.empresa);
+          await CategoriasYMarcasService.eliminarCategoria(itemName, companyId);
         } else {
-          await CategoriasYMarcasService.eliminarMarca(itemName, user.empresa);
+          await CategoriasYMarcasService.eliminarMarca(itemName, companyId);
         }
         
         Swal.fire('Eliminado', 'Item borrado correctamente.', 'success');
@@ -85,7 +135,7 @@ const CategoriasYMarcas = () => {
         if (activeTab === 'categorias') cargarCategorias();
         else cargarMarcas();
       } catch (error) {
-        Swal.fire('Error', 'No se pudo eliminar', 'error');
+        Swal.fire('Error', error.response?.data?.message || 'No se pudo eliminar', 'error');
       }
     }
   };
@@ -93,8 +143,13 @@ const CategoriasYMarcas = () => {
   const handleSuccess = () => {
     setModalOpen(false);
     setSelectedItem(null);
-    if (activeTab === 'categorias') cargarCategorias();
-    else cargarMarcas();
+    if (activeTab === 'categorias') {
+      setCategoriaSearchParams(prev => ({ ...prev, page: 1 })); // Recargar la primera página
+      cargarCategorias();
+    } else {
+      setMarcaSearchParams(prev => ({ ...prev, page: 1 })); // Recargar la primera página
+      cargarMarcas();
+    }
     Swal.fire({
       title: '¡Guardado!',
       text: 'Los cambios se realizaron correctamente',
@@ -105,6 +160,8 @@ const CategoriasYMarcas = () => {
   };
 
   const datos = activeTab === 'categorias' ? categorias : marcas;
+  const pagination = activeTab === 'categorias' ? categoriaPagination : marcaPagination;
+  const currentSearchParams = activeTab === 'categorias' ? categoriaSearchParams : marcaSearchParams;
 
   return (
     <div style={{ padding: '20px' }}>
@@ -128,7 +185,7 @@ const CategoriasYMarcas = () => {
             marginBottom: '-2px'
           }}
         >
-          📂 Categorías
+          Categorías
         </button>
         <button
           onClick={() => setActiveTab('marcas')}
@@ -147,6 +204,17 @@ const CategoriasYMarcas = () => {
         </button>
       </div>
 
+      {/* Búsqueda */}
+      <div style={{ marginBottom: '20px' }}>
+        <input
+          type="text"
+          placeholder={`Buscar ${activeTab === 'categorias' ? 'categoría' : 'marca'}...`}
+          value={currentSearchParams.search}
+          onChange={handleSearchChange}
+          style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+        />
+      </div>
+
       {/* BOTÓN NUEVO */}
       <div style={{ marginBottom: '20px' }}>
         <button
@@ -162,7 +230,9 @@ const CategoriasYMarcas = () => {
 
       {/* TABLA */}
       <div style={{ marginBottom: '20px' }}>
-        {datos.length > 0 ? (
+        {loading ? (
+          <p>Cargando {activeTab === 'categorias' ? 'categorías' : 'marcas'}...</p>
+        ) : datos.length > 0 ? (
           <div className="table-container" style={{ border: '1px solid #eee' }}>
             <table className="office-table" style={{ width: '100%' }}>
               <thead>
@@ -199,7 +269,7 @@ const CategoriasYMarcas = () => {
                           fontSize: '0.85rem'
                         }}
                       >
-                        ✏️ Editar
+                        <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                       </button>
                       <button
                         className="btn btn-sm"
@@ -214,7 +284,7 @@ const CategoriasYMarcas = () => {
                           fontSize: '0.85rem'
                         }}
                       >
-                        🗑️ Eliminar
+                        <Trash2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Eliminar
                       </button>
                     </td>
                   </tr>
@@ -239,6 +309,47 @@ const CategoriasYMarcas = () => {
           </div>
         )}
       </div>
+
+      {/* Paginación */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px' }}>
+          <button
+            onClick={() => handlePageChange(pagination.currentPage - 1)}
+            disabled={!pagination.hasPrevPage}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: '#f0f4f8',
+              border: '1px solid #cbd5e0',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              color: '#4a5568',
+              opacity: pagination.hasPrevPage ? 1 : 0.5
+            }}
+          >
+            Anterior
+          </button>
+          <span style={{ fontSize: '0.9rem', color: '#4a5568' }}>
+            Página {pagination.currentPage} de {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(pagination.currentPage + 1)}
+            disabled={!pagination.hasNextPage}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: '#f0f4f8',
+              border: '1px solid #cbd5e0',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              color: '#4a5568',
+              opacity: pagination.hasNextPage ? 1 : 0.5
+            }}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
 
       {/* MODAL */}
       <ModalGenerico

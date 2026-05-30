@@ -1,65 +1,63 @@
 import React, { useState, useEffect, useCallback, useContext, memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { apiContext } from '../context/api_context';
+import { Columns, Home, ShoppingCart, CreditCard, Shop, Receipt, Package, ClipboardList, Shield, Archive, Settings, UserPlus, BarChart3, List, CheckSquare2, Briefcase, ChevronDown, LogOut, Menu as MenuIcon } from 'lucide-react';
 
 // --- ESTRUCTURA DE MENÚ LÓGICA Y ACTUALIZADA ---
 const menuGroups = {
     dashboard: {
         title: "Dashboard",
-        icon: <i className="bi bi-columns-gap"></i>,
+        icon: <Columns className="w-5 h-5" />,
         isDirectLink: true, // <-- ¡NUEVA PROPIEDAD!
         path: "/dashboard",  // <-- La ruta directa
         items: [
-            { path: "/dashboard", label: "Inicio", icon: <i className="bi bi-house-door-fill"></i> },
-          
-           
-            
+            { path: "/dashboard", label: "Inicio", icon: <Home className="w-5 h-5" /> },
         ]
     },
     ventas: {
         title: "Ventas",
-        icon: <i className="bi bi-cart3"></i>,
+        icon: <ShoppingCart className="w-5 h-5" />,
         isDirectLink: true, // <-- ¡NUEVA PROPIEDAD!
         path: "/ventas-junto",  // <-- La ruta directa
         items: [
-            { path: "/tiket/create", label: "Nueva Venta / Cobrar", icon: <i className="bi bi-cash-coin"></i> },
-            { path: "/get-puntoVenta", label: "Puntos de Venta", icon: <i className="bi bi-shop"></i> },
-            { path: "/tiket/get", label: "Historial de tikets", icon: <i className="bi bi-receipt"></i> },
-             { path: "/ver-facturas", label: "Historial de Facturas", icon: <i className="bi bi-receipt"></i> },
+            { path: "/tiket/create", label: "Nueva Venta / Cobrar", icon: <CreditCard className="w-5 h-5" /> },
+            { path: "/get-puntoVenta", label: "Puntos de Venta", icon: <Shop className="w-5 h-5" /> },
+            { path: "/tiket/get", label: "Historial de tikets", icon: <Receipt className="w-5 h-5" /> },
+            { path: "/ver-facturas", label: "Historial de Facturas", icon: <Receipt className="w-5 h-5" /> },
         ]
     },
     inventario: {
         title: "Inventario",
-        icon: <i className="bi bi-box-seam-fill"></i>,
+        icon: <Package className="w-5 h-5" />,
         isDirectLink: true, // <-- ¡NUEVA PROPIEDAD!
         path: "/productos",  // <-- La ruta directa
         items: [
             // El item sigue ahí por si quieres que aparezca como activo
-            { path: "/productos", label: "Productos", icon: <i className="bi bi-card-checklist"></i> },
+            { path: "/productos", label: "Productos", icon: <ClipboardList className="w-5 h-5" /> },
         ]
     },
     caja: {
         title: "Caja",
-        icon: <i className="bi bi-safe2-fill"></i>,
+        icon: <Shield className="w-5 h-5" />,
         isDirectLink: true,
         path: "/get-cajas-empresa",
         items: [
-            { path: "/get-cajas-empresa", label: "Cajas", icon: <i className="bi bi-archive-fill"></i> }
+            { path: "/get-cajas-empresa", label: "Cajas", icon: <Archive className="w-5 h-5" /> }
         ]
     },
     configuracion: {
         title: "Configuración",
-        icon: <i className="bi bi-gear-fill"></i>,
+        icon: <Settings className="w-5 h-5" />,
         items: [
-            { path: "/add-vendedor", label: "Agregar vendedores", icon: <i className="bi bi-person-add"></i> }
+            { path: "/add-vendedor", label: "Agregar vendedores", icon: <UserPlus className="w-5 h-5" /> }
         ]
     },
     Tester: {
         title: "funciones demo",
-        icon: <i className="bi bi-gear-fill"></i>,
+        icon: <Settings className="w-5 h-5" />,
         items: [
-            { path: "/create-factura", label: "crear Facturas 'BETA'", icon: <i className="bi bi-bar-chart-line-fill"></i> },
-            { path: "/metricas", label: "Métricas", icon: <i className="bi bi-bar-chart-line-fill"></i> },
+            { path: "/create-factura", label: "crear Facturas 'BETA'", icon: <BarChart3 className="w-5 h-5" /> },
+            { path: "/metricas", label: "Métricas", icon: <BarChart3 className="w-5 h-5" /> },
         ]
     },
 
@@ -108,7 +106,7 @@ const UserProfile = memo(({ user }) => {
             </div>
             
             {/* Icono de Ajustes */}
-            <i className="bi bi-gear-fill text-lg text-white/80 shrink-0 group-hover:rotate-45 transition-transform duration-300"></i>
+            <Settings className="w-5 h-5 text-white/80 shrink-0 group-hover:rotate-45 transition-transform duration-300" />
         </Link>
     );
 });
@@ -130,7 +128,7 @@ const SubMenu = memo(({ group, open, isActivePath, toggleSubmenu }) => {
                     <span className="mr-3 text-xl">{group.icon}</span>
                     <span className="font-semibold text-base">{group.title}</span>
                 </div>
-                <i className={`bi bi-chevron-down transform transition-transform duration-300 ${open ? 'rotate-180' : ''}`}></i>
+                <ChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
             </button>
             <div className={`ml-4 pl-4 border-l-2 border-white/10 mt-2 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-96' : 'max-h-0'}`}>
                 {group.items.map((item) => <MenuItem key={item.path} item={item} isActive={isActivePath(item.path)} />)}
@@ -171,7 +169,7 @@ export default function SidePanel() {
                 
                 <header className="p-4 border-b border-white/10 text-center">
                     <Link to="/" className="text-2xl font-bold flex items-center justify-center text-white mb-4">
-                        <i className="bi bi-check2-all text-3xl text-indigo-200 mr-2"></i>
+                        <CheckSquare2 className="text-3xl text-indigo-200 mr-2" />
                         <span>FACSTOCK</span>
                     </Link>
                     
@@ -182,10 +180,10 @@ export default function SidePanel() {
                             title="Editar datos de la empresa"
                         >
                             <div className="flex items-center gap-2 overflow-hidden">
-                                <i className="bi bi-briefcase-fill shrink-0"></i>
+                                <Briefcase className="w-4 h-4 shrink-0" />
                                 <span className="truncate">{companyData.nombreEmpresa || 'Empresa'}</span>
                             </div>
-                            <i className="bi bi-gear-fill text-white/80 ml-2 group-hover:rotate-45 transition-transform duration-300"></i>
+                            <Settings className="w-4 h-4 text-white/80 ml-2 group-hover:rotate-45 transition-transform duration-300" />
                         </Link>
                     )}
                 </header>
@@ -229,7 +227,7 @@ export default function SidePanel() {
                 <footer className="mt-auto p-4 border-t border-white/10 space-y-2">
                     <UserProfile user={userData} />
                     <button onClick={logout} className="flex items-center w-full p-2.5 rounded-lg text-gray-200 hover:bg-red-500/80 hover:text-white transition-colors duration-200 ease-in-out group">
-                        <i className="bi bi-box-arrow-left text-lg mr-3"></i>
+                        <LogOut className="w-5 h-5 mr-3" />
                         <span className="font-semibold">Cerrar Sesión</span>
                     </button>
                 </footer>
@@ -239,7 +237,7 @@ export default function SidePanel() {
             
             {!isOpen && (
                 <button onClick={togglePanel} className="fixed bottom-4 left-4 z-30 md:hidden bg-[var(--principal)] text-white w-14 h-14 flex items-center justify-center rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--principal-shadow)]" aria-label="Abrir panel">
-                    <i className="bi bi-list text-2xl"></i>
+                    <MenuIcon className="w-6 h-6" />
                 </button>
             )}
         </>

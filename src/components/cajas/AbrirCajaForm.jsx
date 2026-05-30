@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/auth/authContext.jsx';
 
 const AbrirCajaForm = ({ puntoVenta, puntosVenta: propPuntosVenta = [], onSuccess }) => {
   const { user, empresa } = useAuth();
-  const companyId = empresa?._id || empresa?.id || user?.empresa;
+  const companyId = empresa?._id || empresa?.id || user?.empresa || user?.empresaId;
   
   const [puntosVenta, setPuntosVenta] = useState(propPuntosVenta);
   const [selectedPuntoVentaId, setSelectedPuntoVentaId] = useState(puntoVenta?._id || '');

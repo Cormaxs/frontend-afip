@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { apiContext } from '../../context/api_context.jsx';
+import { useAuth } from '../../contexts/auth/authContext.jsx';
 import Swal from 'sweetalert2';
 
 // --- Icono de Spinner para el botón de carga ---
@@ -13,6 +14,7 @@ const SpinnerIcon = ({ className = "h-5 w-5" }) => (
 
 export default function UpdateUser() {
     const { updateUser, userData } = useContext(apiContext);
+    const { updateUserData } = useAuth();
     const [showPassword, setShowPassword] = useState(false); // ✨ Estado para controlar la visibilidad
 
     const { register, handleSubmit, formState: { errors, isSubmitting, isDirty }, watch, reset } = useForm({
@@ -45,7 +47,13 @@ export default function UpdateUser() {
         delete dataToSend.confirmPassword;
 
         try {
-            await updateUser(userData._id, dataToSend);
+            const res = await updateUser(userData._id, dataToSend);
+            
+            // Si la API devuelve el usuario actualizado, sincronizamos el authContext
+            if (res && res.user) {
+                updateUserData(res.user);
+            }
+
             Swal.fire({
                 icon: 'success',
                 title: '¡Éxito!',
