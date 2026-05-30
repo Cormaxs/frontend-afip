@@ -89,10 +89,25 @@ export async function createEmpresaApi(data) {
 }
 
 export async function createTiket(ticketDetails, idUserParam, idEmpresaParam) {
-    const response = await axiosInstance.post(`/tikets/create/${idUserParam}`, {
+    const response = await axiosInstance.post(`/tickets/create/${idUserParam}`, {
         datos: ticketDetails,
         idEmpresa: idEmpresaParam
     });
+    return response.data;
+}
+
+export async function createNotaPedidoApi(data) {
+    const response = await axiosInstance.post('/tickets/nota-pedido', data);
+    return response.data;
+}
+
+export async function getNotasPedidoApi(idEmpresa, params = {}) {
+    const response = await axiosInstance.get(`/tickets/nota-pedido/${idEmpresa}`, { params });
+    return response.data;
+}
+
+export async function updateNotaPedidoStatusApi(idNota, estado) {
+    const response = await axiosInstance.put(`/tickets/nota-pedido/${idNota}/status`, { estado });
     return response.data;
 }
 

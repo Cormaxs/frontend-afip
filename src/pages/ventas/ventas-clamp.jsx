@@ -25,6 +25,7 @@ export default function VentasClampCompact() {
         createTiketContext, getPointsByCompany, getProductCodBarra, getTiketsPdf,
         userData, companyData, 
         get_caja_company, abrirCaja, ingreso_egreso,
+        createNotaPedidoContext
     } = useContext(apiContext);
 
     const [empresaId, setEmpresaId] = useState(null);
@@ -256,6 +257,42 @@ export default function VentasClampCompact() {
             
             // 2. Construcción y Envío de Data (Ticket)
             const puntoVentaInfo = puntosDeVenta.find(p => p._id === puntoSeleccionado);
+            
+            if (invoiceDetails.tipoComprobante === 'Nota de Pedido') {
+                const notaPedidoData = {
+                    idEmpresa: empresaId,
+                    idUsuario: userId,
+                    puntoDeVenta: puntoVentaInfo?.nombre,
+                    items: items.map(item => ({
+                        idProduct: item.idProduct,
+                        codigo: item.codigoBarra,
+                        descripcion: item.producto,
+                        cantidad: item.cantidad,
+                        precioUnitario: item.precio,
+                        totalItem: (item.cantidad * item.precio)
+                    })),
+                    totales: { subtotal: totalPagar, totalPagar: totalPagar },
+                    cliente: (invoiceDetails.nombreCliente || invoiceDetails.dniCuitCliente) ? { 
+                        nombre: invoiceDetails.nombreCliente, 
+                        dniCuit: invoiceDetails.dniCuitCliente, 
+                        condicionIVA: invoiceDetails.condicionIVACliente 
+                    } : undefined,
+                    observaciones: invoiceDetails.observaciones,
+                    vendedor: userData.username
+                };
+
+                const response = await createNotaPedidoContext(notaPedidoData);
+                Swal.fire('¡Nota de Pedido Creada!', `Se ha reservado el stock para el pedido #${response.pedidoId}`, 'success');
+                
+                // Limpieza
+                setItems([]); setCodBarra('');
+                setInvoiceDetails(prev => ({ 
+                    ...prev, montoRecibido: 0.00, nombreCliente: "", dniCuitCliente: "", condicionIVACliente: "Consumidor Final", observaciones: "" 
+                })); 
+                setLoading(false);
+                return;
+            }
+
             const salesId = `VK${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
             const invoiceNumber = `000${puntoVentaInfo?.numero || '0'}`;
             

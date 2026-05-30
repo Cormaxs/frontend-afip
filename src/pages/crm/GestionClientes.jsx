@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import { ClientesService } from '../../services/crm/clientes.js';
+import { Edit3, Trash2, Phone, Mail } from 'lucide-react';
 
 const CONDICIONES_IVA = [
   { label: 'Consumidor Final', value: 'Consumidor Final', code: 5 },
@@ -20,8 +21,8 @@ const TIPOS_DOC = [
 ];
 
 const GestionClientes = () => {
-  const { user } = useAuth();
-  const companyId = user?.empresa || user?.empresaId || user?.companyId;
+  const { user, empresa } = useAuth();
+  const companyId = user?.empresa || user?.empresaId || user?.companyId || empresa?._id || empresa?.id;
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -84,21 +85,20 @@ const GestionClientes = () => {
     setLoading(true);
     try {
       const response = await ClientesService.obtenerClientesEmpresa(companyId, params);
-      
-      // Aseguramos que clientes sea siempre un array
-      const dataArray = Array.isArray(response.data?.docs) 
-        ? response.data.docs 
-        : (Array.isArray(response.data) ? response.data : []);
-        
+      const resultData = response.data?.data || {};
+      const dataArray = Array.isArray(resultData?.clients)
+        ? resultData.clients
+        : (Array.isArray(resultData) ? resultData : []);
+
       setClientes(dataArray);
-      
+
       setPagination({
-        totalDocs: response.data?.totalDocs || 0,
-        totalPages: response.data?.totalPages || 0,
-        page: response.data?.page || 1,
-        limit: response.data?.limit || 10,
-        hasNextPage: response.data?.hasNextPage || false,
-        hasPrevPage: response.data?.hasPrevPage || false,
+        totalDocs: resultData?.pagination?.totalItems || 0,
+        totalPages: resultData?.pagination?.totalPages || 0,
+        page: resultData?.pagination?.currentPage || 1,
+        limit: resultData?.pagination?.limit || 10,
+        hasNextPage: resultData?.pagination?.hasNextPage || false,
+        hasPrevPage: resultData?.pagination?.hasPrevPage || false,
       });
     } catch (error) {
       console.error('Error al cargar clientes:', error);
@@ -263,8 +263,18 @@ const GestionClientes = () => {
                 </td>
                 <td style={{ padding: '12px' }}>{cliente.condicionIVA}</td>
                 <td style={{ padding: '12px' }}>
-                  {cliente.telefono && <div style={{ fontSize: '0.85rem' }}>📞 {cliente.telefono}</div>}
-                  {cliente.email && <div style={{ fontSize: '0.85rem' }}>📧 {cliente.email}</div>}
+                  {cliente.telefono && (
+                    <div style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={14} />
+                      {cliente.telefono}
+                    </div>
+                  )}
+                  {cliente.email && (
+                    <div style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Mail size={14} />
+                      {cliente.email}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '12px' }}>
                   <span style={{ color: cliente.saldoCuentaCorriente > 0 ? '#d9534f' : '#28a745', fontWeight: 'bold' }}>
@@ -273,10 +283,10 @@ const GestionClientes = () => {
                 </td>
                 <td style={{ padding: '12px', textAlign: 'center' }}>
                   <button className="btn btn-sm" style={{ marginRight: '8px' }} onClick={() => abrirModalCliente(cliente)}>
-                    ✏️
+                    <Edit3 size={16} />
                   </button>
                   <button className="btn btn-sm" style={{ backgroundColor: '#f8f9fa', color: '#d9534f', border: '1px solid #ddd' }} onClick={() => eliminarCliente(cliente)}>
-                    🗑️
+                    <Trash2 size={16} />
                   </button>
                 </td>
               </tr>

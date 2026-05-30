@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TIPO_COMPROBANTE = ["Ticket", "Factura A", "Factura B", "Factura C", "Recibo"];
+const TIPO_COMPROBANTE = ["Ticket", "Factura A", "Factura B", "Factura C", "Recibo", "Nota de Pedido"];
 
 const PanelComprobante = ({ invoiceDetails, handleInvoiceDetailsChange }) => {
     return (

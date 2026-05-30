@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/auth/authContext.jsx';
 import { ProductosService } from '../../services/inventario/productos.js';
 import { ticketsService } from '../../services/tickets/tickets.js';
 import { facturasService } from '../../services/afip/facturas/facturacion.js';
+import { ClientesService } from '../../services/crm/clientes.js';
 import { FacturacionRequerimentos } from '../../utils/facturacionHelper.js';
 import ModalBuscadorProductos from '../../components/facturas/ModalBuscadorProductos.jsx';
 import {
@@ -30,7 +31,8 @@ const generarVentaId = () => `DESPACHO-${Date.now()}`;
 
 const Despachador = () => {
   const { user, empresa } = useAuth();
-  const [mode, setMode] = useState('ticket');
+  const companyId = empresa?._id || empresa?.id || user?.empresa || user?.empresaId;
+  const [mode, setMode] = useState('ticket'); // 'ticket', 'factura', 'notaPedido'
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,10 @@ const Despachador = () => {
   const [serverErrors, setServerErrors] = useState([]);
   const [serverWarnings, setServerWarnings] = useState([]);
   const [montoRecibido, setMontoRecibido] = useState('');
+  const [nombreCliente, setNombreCliente] = useState('');
+  const [clienteSuggestions, setClienteSuggestions] = useState([]);
+  const [clienteLoading, setClienteLoading] = useState(false);
+  const [selectedCliente, setSelectedCliente] = useState(null);
   const [cajaActiva, setCajaActiva] = useState(null);
   const [showAbrirCaja, setShowAbrirCaja] = useState(false);
   const [loadingCaja, setLoadingCaja] = useState(true);
@@ -157,6 +163,37 @@ const Despachador = () => {
       setDocTipo(defaultDocTipoByTipoCbte);
     }
   }, [mode, allowedCondiciones, allowedDocTipos, condicionIVA, docTipo, defaultDocTipoByTipoCbte]);
+
+  useEffect(() => {
+    if (!['factura', 'notaPedido'].includes(mode)) {
+      setClienteSuggestions([]);
+      return;
+    }
+
+    if (!companyId || !nombreCliente || nombreCliente.length < 2) {
+      setClienteSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setClienteLoading(true);
+      try {
+        const response = await ClientesService.obtenerClientesEmpresa(companyId, {
+          search: nombreCliente,
+          limit: 5
+        });
+        const data = response.data?.data?.clients || [];
+        setClienteSuggestions(data);
+      } catch (error) {
+        console.error('Error buscando clientes frecuentes:', error);
+        setClienteSuggestions([]);
+      } finally {
+        setClienteLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [companyId, mode, nombreCliente]);
 
   useEffect(() => {
     if (mode !== 'factura' || !pvSeleccionado || !user?.idDbAfip || !empresa?.cuit) {
@@ -424,6 +461,12 @@ const Despachador = () => {
         fecha: fechaYmd,
         fechaHora: now.toISOString(),
         items: itemsParaAfip,
+        receptor: {
+          nombre: nombreCliente || 'Consumidor Final',
+          tipoDocumento: Number(docTipo),
+          numeroDocumento: Number(docNro || 0),
+          condicionIVA: CONDICIONES_IVA_RECEPTOR.find(c => c.id === condicionIVA)?.desc || 'Consumidor Final'
+        },
         iva: itemsParaAfip.reduce((list, item) => {
           const existing = list.find(i => i.id === Number(item.alicuotaIVA));
           const subtotal = Number(item.subtotal || 0);
@@ -527,6 +570,41 @@ const Despachador = () => {
     return parsed;
   };
 
+  const getNotaPedidoPayload = () => ({
+    idEmpresa: empresa?._id || empresa?.id || user?.empresa,
+    idUsuario: user._id || user.id,
+    puntoDeVenta: pvSeleccionado?.nombre || '',
+    items: items.map((item) => ({
+      idProduct: item.idProduct || item._id,
+      codigo: item.codigo || item.idProduct || '',
+      descripcion: item.descripcion || '',
+      cantidad: Number(item.cantidad) || 0,
+      precioUnitario: Number(item.precioUnitario) || 0,
+      totalItem: Number(((Number(item.cantidad) || 0) * (Number(item.precioUnitario) || 0)).toFixed(2)),
+      alicuotaIVA: 21,
+      importeIVA: 0
+    })),
+    totales: {
+      subtotal: Number(subtotal.toFixed(2)),
+      descuento: 0,
+      totalPagar: Number(total.toFixed(2))
+    },
+    pago: {
+      metodo: formaPago,
+      montoRecibido: formaPago === 'Contado' ? (Number(montoRecibido) || total) : total,
+      cambio: formaPago === 'Contado' ? cambio : 0
+    },
+    cliente: {
+      nombre: nombreCliente || 'Consumidor Final',
+      dniCuit: docNro !== '0' ? docNro : '',
+      tipoDocumento: Number(docTipo),
+      condicionIVA: CONDICIONES_IVA_RECEPTOR.find(c => c.id === condicionIVA)?.desc || 'Consumidor Final'
+    },
+    observaciones: '',
+    vendedor: user.username,
+    tipoComprobante: 'Nota de Pedido'
+  });
+
   const handleSubmit = async () => {
     setServerErrors([]);
     setServerWarnings([]);
@@ -573,6 +651,11 @@ const Despachador = () => {
           return;
         }
         setStatusMessage('Ticket interno creado correctamente.');
+        setItems([]);
+      } else if (mode === 'notaPedido') {
+        const response = await ticketsService.createNotaPedido(getNotaPedidoPayload());
+        Swal.fire('¡Éxito!', `Nota de pedido #${response.data.pedidoId} creada. Stock reservado.`, 'success');
+        setStatusMessage(`Nota de pedido #${response.data.pedidoId} creada.`);
         setItems([]);
       } else {
         if (!numeroFactura) {
@@ -674,6 +757,14 @@ const Despachador = () => {
               onClick={() => setMode('factura')}
             >
               Factura AFIP
+            </button>
+            <button
+              type="button"
+              className={`btn ${mode === 'notaPedido' ? 'btn-cian-primary shadow-sm' : 'btn-ghost'}`}
+              style={{ borderRadius: '6px', transition: 'all 0.2s' }}
+              onClick={() => setMode('notaPedido')}
+            >
+              Nota de Pedido
             </button>
           </div>
 
@@ -796,19 +887,39 @@ const Despachador = () => {
           </div>
           
           {mode === 'factura' && (
-            <div className="form-field" style={{ width: '200px' }}>
-              <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Comprobante</label>
-              <select
-                className="form-select-cian"
-                style={{ height: '48px', borderRadius: '8px' }}
-                value={tipoCbte}
-                onChange={(e) => setTipoCbte(Number(e.target.value))}
-              >
-                {AFIP_TIPOS_COMPROBANTE.filter((t) => [11, 12, 13, 1, 6].includes(t.id)).map((t) => (
-                  <option key={t.id} value={t.id}>{t.desc}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="form-field" style={{ width: '200px' }}>
+                <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Comprobante</label>
+                <select
+                  className="form-select-cian"
+                  style={{ height: '48px', borderRadius: '8px' }}
+                  value={tipoCbte}
+                  onChange={(e) => setTipoCbte(Number(e.target.value))}
+                >
+                  {AFIP_TIPOS_COMPROBANTE.filter((t) => [11, 12, 13, 1, 6].includes(t.id)).map((t) => (
+                    <option key={t.id} value={t.id}>{t.desc}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field" style={{ width: '220px' }}>
+                <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Número de Comprobante</label>
+                <div
+                  className="p-2 rounded"
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    minHeight: '48px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#0f172a',
+                    fontWeight: 700,
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  {loadingNumero ? 'Cargando...' : (numeroFactura ? FacturacionRequerimentos.formatearComprobante(pvSeleccionado?.numero, numeroFactura) : 'No disponible')}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -935,7 +1046,7 @@ const Despachador = () => {
               {isSubmitting ? (
                 <><span className="spinner-border spinner-border-sm me-2"></span> Procesando...</>
               ) : (
-                <>{mode === 'ticket' ? 'CONFIRMAR TICKET' : 'EMITIR FACTURA'} <small style={{ opacity: 0.7, fontSize: '0.8rem' }}>(ENTER)</small></>
+                <>{mode === 'ticket' ? 'CONFIRMAR TICKET' : mode === 'notaPedido' ? 'CREAR PEDIDO' : 'EMITIR FACTURA'} <small style={{ opacity: 0.7, fontSize: '0.8rem' }}>(ENTER)</small></>
               )}
             </button>
           </div>
@@ -948,12 +1059,75 @@ const Despachador = () => {
         </div>
       </div>
 
-      {mode === 'factura' && (
+      {['factura', 'notaPedido'].includes(mode) && (
         <div className="section-card shadow-sm mb-4" style={{ border: 'none', borderRadius: '12px' }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '15px' }}>Datos del Cliente</h4>
+          <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '15px' }}>Datos del Cliente {mode === 'notaPedido' && '(Requerido para Facturación)'}</h4>
           <div className="form-row">
+            <div className="form-field" style={{ flex: 1, position: 'relative' }}>
+              <label>Nombre / Razón Social {mode === 'notaPedido' && '*'}</label>
+              <input
+                value={nombreCliente}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (selectedCliente && selectedCliente.razonSocial !== value) {
+                    setSelectedCliente(null);
+                  }
+                  setNombreCliente(value);
+                }}
+                className="form-control-cian"
+                placeholder="Buscar cliente frecuente o Consumidor Final"
+                required={mode === 'notaPedido'}
+                autoComplete="off"
+              />
+              {clienteSuggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: '#fff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  boxShadow: '0 15px 30px rgba(15, 23, 42, 0.08)',
+                  zIndex: 20,
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}>
+                  {clienteLoading ? (
+                    <div style={{ padding: '12px', color: '#64748b' }}>Buscando clientes...</div>
+                  ) : clienteSuggestions.map((cliente) => (
+                    <button
+                      key={cliente._id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCliente(cliente);
+                        setNombreCliente(cliente.razonSocial || cliente.nombreContacto || '');
+                        setDocTipo(allowedDocTipos.includes(cliente.tipoDocumento) ? cliente.tipoDocumento : defaultDocTipoByTipoCbte);
+                        setDocNro(cliente.numeroDocumento || '');
+                        setCondicionIVA(cliente.condicionIVACodigo || 5);
+                        setClienteSuggestions([]);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: '#0f172a'
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{cliente.razonSocial || cliente.nombreContacto || 'Cliente'}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#475569' }}>{cliente.numeroDocumento || 'Sin documento'}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="form-row mt-3">
             <div className="form-field" style={{ width: '170px' }}>
-              <label>Tipo Doc.</label>
+              <label>Tipo Doc. {mode === 'notaPedido' && '*'}</label>
               <select className="form-select-cian" value={docTipo} onChange={(e) => setDocTipo(Number(e.target.value))}>
                 {AFIP_DOC_TIPOS.filter((d) => allowedDocTipos.includes(d.id)).map((d) => (
                   <option key={d.id} value={d.id}>{d.desc}</option>
@@ -961,12 +1135,14 @@ const Despachador = () => {
               </select>
             </div>
             <div className="form-field" style={{ flex: 1 }}>
-              <label>Número de documento</label>
+              <label>Número de Documento / CUIT {mode === 'notaPedido' && '*'}</label>
               <input
+                type="number"
                 value={docNro}
                 onChange={(e) => setDocNro(e.target.value)}
                 className="form-control-cian"
-                placeholder="00000000"
+                placeholder="DNI o CUIT"
+                required={mode === 'notaPedido'}
               />
             </div>
             <div className="form-field" style={{ width: '180px' }}>
@@ -978,7 +1154,7 @@ const Despachador = () => {
               </select>
             </div>
             <div className="form-field" style={{ width: '220px' }}>
-              <label>Condición IVA</label>
+              <label>Condición IVA {mode === 'notaPedido' && '*'}</label>
               <select className="form-select-cian" value={condicionIVA} onChange={(e) => setCondicionIVA(Number(e.target.value))}>
                 {CONDICIONES_IVA_RECEPTOR.filter((c) => allowedCondiciones.includes(c.id)).map((c) => (
                   <option key={c.id} value={c.id}>{c.desc}</option>

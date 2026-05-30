@@ -4,6 +4,7 @@ import { VendedoresService } from '../../services/vendedores/vendedores.js';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import VendedorForm from '../../components/vendedores/VendedorForm.jsx';
+import { Edit3, Trash2 } from 'lucide-react';
 
 const GestionVendedores = () => {
   const { user } = useAuth();
@@ -148,17 +149,17 @@ const GestionVendedores = () => {
                   </td>
                   <td style={{ padding: '12px', color: '#666', fontSize: '0.95rem' }}>{vendedor.email}</td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <span
-                      style={{
-                        backgroundColor: vendedor.activo ? '#28a745' : '#dc3545',
-                        color: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      {vendedor.activo ? '✓ Activo' : '○ Inactivo'}
-                    </span>
+                      <span
+                        style={{
+                          backgroundColor: vendedor.activo ? '#28a745' : '#dc3545',
+                          color: '#fff',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        {vendedor.activo ? 'Activo' : 'Inactivo'}
+                      </span>
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
                     <button
@@ -178,7 +179,7 @@ const GestionVendedores = () => {
                         fontSize: '0.85rem'
                       }}
                     >
-                      ✏️ Editar
+                      <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                     </button>
                     <button
                       className="btn btn-sm"
@@ -193,7 +194,7 @@ const GestionVendedores = () => {
                         fontSize: '0.85rem'
                       }}
                     >
-                      🗑️
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>

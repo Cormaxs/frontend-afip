@@ -5,6 +5,7 @@ import CategoriaForm from '../../components/inventario/CategoriaForm.jsx';
 import MarcaForm from '../../components/inventario/MarcaForm.jsx';
 import { CategoriasYMarcasService } from '../../services/inventario/categoriasYMarcas.js';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
+import { Edit3, Trash2 } from 'lucide-react';
 
 const CategoriasYMarcas = () => {
   const { user } = useAuth();
@@ -184,7 +185,7 @@ const CategoriasYMarcas = () => {
             marginBottom: '-2px'
           }}
         >
-          📂 Categorías
+          Categorías
         </button>
         <button
           onClick={() => setActiveTab('marcas')}
@@ -268,7 +269,7 @@ const CategoriasYMarcas = () => {
                           fontSize: '0.85rem'
                         }}
                       >
-                        ✏️ Editar
+                        <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                       </button>
                       <button
                         className="btn btn-sm"
@@ -283,7 +284,7 @@ const CategoriasYMarcas = () => {
                           fontSize: '0.85rem'
                         }}
                       >
-                        🗑️ Eliminar
+                        <Trash2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Eliminar
                       </button>
                     </td>
                   </tr>

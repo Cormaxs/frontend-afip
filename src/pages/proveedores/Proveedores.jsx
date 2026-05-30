@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import { ProveedoresService } from '../../services/proveedores/proveedores.js';
+import { Edit3, Trash2 } from 'lucide-react';
 
 const Proveedores = () => {
   const { user } = useAuth();
@@ -225,10 +226,10 @@ const Proveedores = () => {
                 <td style={{ padding: '12px' }}>{proveedor.activo ? 'Sí' : 'No'}</td>
                 <td style={{ padding: '12px', textAlign: 'center' }}>
                   <button className="btn btn-sm" style={{ marginRight: '8px' }} onClick={() => abrirModalProveedor(proveedor)}>
-                    ✏️ Editar
+                    <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                   </button>
                   <button className="btn btn-sm" style={{ backgroundColor: '#d9534f', color: '#fff' }} onClick={() => eliminarProveedor(proveedor)}>
-                    🗑️ Eliminar
+                    <Trash2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Eliminar
                   </button>
                 </td>
               </tr>

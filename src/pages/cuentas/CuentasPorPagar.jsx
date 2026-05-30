@@ -5,6 +5,7 @@ import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import { useAuth } from '../../contexts/auth/authContext.jsx';
 import { ProveedoresService } from '../../services/proveedores/proveedores.js';
 import { CuentasPagarService } from '../../services/cuentasPagar/cuentasPagar.js';
+import { DollarSign, Edit3, Trash2 } from 'lucide-react';
 
 const CuentasPorPagar = () => {
   const { user } = useAuth();
@@ -288,13 +289,13 @@ const CuentasPorPagar = () => {
                 <td style={{ padding: '12px' }}>{cuenta.estado || 'pendiente'}</td>
                 <td style={{ padding: '12px', textAlign: 'center' }}>
                   <button className="btn btn-sm" style={{ marginRight: '8px' }} onClick={() => abrirModalPago(cuenta)}>
-                    💰 Pago
+                    <DollarSign size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Pago
                   </button>
                   <button className="btn btn-sm" style={{ marginRight: '8px' }} onClick={() => abrirModalCuenta(cuenta)}>
-                    ✏️ Editar
+                    <Edit3 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Editar
                   </button>
                   <button className="btn btn-sm" style={{ backgroundColor: '#d9534f', color: '#fff' }} onClick={() => eliminarCuenta(cuenta)}>
-                    🗑️ Eliminar
+                    <Trash2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Eliminar
                   </button>
                 </td>
               </tr>

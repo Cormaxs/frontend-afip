@@ -6,8 +6,8 @@ import {
     CargarMasiva_api, AbrirCaja_api, CerrarCaja_api, Ingreso_Egreso_Caja_api, get_caja_id_api,
     get_caja_company_api, getCategoryCompany, getMarcaCompany, getProductsAgotados, getPriceInventario,
     update_product_inventario, deleted_product_coneccion, UpdateUser, UpdateEmpresa, updateOrCreateMarcas_coneccion, updateOrCreateCategorias_coneccion,
-    deleteCategoria_coneccion, deleteMarca_coneccion, GenerateFacturas_coneccion, getFacturas_coneccion, getFacturasPdfDescargar
-
+    deleteCategoria_coneccion, deleteMarca_coneccion, GenerateFacturas_coneccion, getFacturas_coneccion, getFacturasPdfDescargar,
+    createNotaPedidoApi, getNotasPedidoApi, updateNotaPedidoStatusApi
 } from "../api/coneccion";
 
 // --- Helper para leer de localStorage de forma segura y sin repetición ---
@@ -296,6 +296,33 @@ export const ApiProvider = ({ children }) => {
         }
     }, []);
 
+    const createNotaPedidoContext = useCallback(async (data) => {
+        try {
+            return await createNotaPedidoApi(data);
+        } catch (error) {
+            console.error("Error en createNotaPedidoContext (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const getNotasPedidoContext = useCallback(async (idEmpresa, params) => {
+        try {
+            return await getNotasPedidoApi(idEmpresa, params);
+        } catch (error) {
+            console.error("Error en getNotasPedidoContext (Context):", error);
+            throw error;
+        }
+    }, []);
+
+    const updateNotaPedidoStatusContext = useCallback(async (idNota, estado) => {
+        try {
+            return await updateNotaPedidoStatusApi(idNota, estado);
+        } catch (error) {
+            console.error("Error en updateNotaPedidoStatusContext (Context):", error);
+            throw error;
+        }
+    }, []);
+
 
     const get_price_inventario = useCallback(async (idEmpresa, idPuntoVenta) => {
         try {
@@ -488,6 +515,9 @@ export const ApiProvider = ({ children }) => {
             generateFacturas,
             getFacturas,
             getFacturasPdf,
+            createNotaPedidoContext,
+            getNotasPedidoContext,
+            updateNotaPedidoStatusContext,
             isAuthenticated,
             userData,
             setUserData,

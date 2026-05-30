@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/auth/authContext.jsx';
 import { puntosVentaService } from '../../services/puntosVenta/puntosVenta.js';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import AbrirCajaForm from '../../components/cajas/AbrirCajaForm.jsx';
+import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 const GestionCajas = () => {
   const { user, empresa } = useAuth();
@@ -17,6 +18,7 @@ const GestionCajas = () => {
   const [resumenCaja, setResumenCaja] = useState(null);
   const [loadingResumen, setLoadingResumen] = useState(false);
   const [pagination, setPagination] = useState({});
+  const [cajaDetalleModal, setCajaDetalleModal] = useState({ open: false, id: null, data: null, loading: false });
 
   // Estado para la paginación y búsqueda
   const [searchParams, setSearchParams] = useState({
@@ -80,6 +82,18 @@ const GestionCajas = () => {
       console.error('Error cargando resumen de caja:', error);
     } finally {
       setLoadingResumen(false);
+    }
+  };
+
+  const handleVerDetalleCaja = async (idCaja) => {
+    setCajaDetalleModal({ open: true, id: idCaja, data: null, loading: true });
+    try {
+      const response = await CajasService.obtenerResumenCaja(idCaja);
+      setCajaDetalleModal(prev => ({ ...prev, data: response.data, loading: false }));
+    } catch (error) {
+      console.error('Error cargando detalle de caja:', error);
+      Swal.fire('Error', 'No se pudo cargar el detalle de la caja', 'error');
+      setCajaDetalleModal({ open: false, id: null, data: null, loading: false });
     }
   };
 
@@ -458,13 +472,13 @@ const GestionCajas = () => {
                 color: '#4a5568',
                 border: '1px solid #cbd5e1',
                 padding: '12px 24px',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
               onClick={() => handleTransaccionManual('egreso')}
             >
-              💸 Registrar Gasto
+              <ArrowDownCircle size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Registrar Gasto
             </button>
             <button
               className="btn"
@@ -473,13 +487,13 @@ const GestionCajas = () => {
                 color: '#166534',
                 border: '1px solid #bcf0da',
                 padding: '12px 24px',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
               onClick={() => handleTransaccionManual('ingreso')}
             >
-              💰 Registrar Ingreso
+              <ArrowUpCircle size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Registrar Ingreso
             </button>
           </div>
         </div>
@@ -507,54 +521,177 @@ const GestionCajas = () => {
       {/* HISTORIAL DE CAJAS */}
       <div>
         <h2 style={{ fontSize: '1.2rem', marginBottom: '15px', fontWeight: '600' }}>Historial de Cajas</h2>
-        {cajas.length > 0 ? (
-          <div className="table-container" style={{ border: '1px solid #eee' }}>
-            <table className="office-table" style={{ width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>Fecha Apertura</th>
-                  <th style={{ textAlign: 'center', padding: '12px' }}>Monto Apertura</th>
-                  <th style={{ textAlign: 'center', padding: '12px' }}>Monto Cierre</th>
-                  <th style={{ textAlign: 'center', padding: '12px' }}>Diferencia</th>
-                  <th style={{ textAlign: 'center', padding: '12px' }}>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cajas.map((caja) => (
-                  <tr key={caja._id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '12px' }}>
-                      {caja.horaApertura ? new Date(caja.horaApertura).toLocaleString('es-AR') : '---'}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      ${caja.montoApertura?.toLocaleString()}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      ${caja.montoFinalReal ? caja.montoFinalReal.toLocaleString() : '---'}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{
-                        color: caja.diferencia === 0 ? '#28a745' : '#d9534f',
-                        fontWeight: '600'
-                      }}>
-                        ${caja.diferencia?.toLocaleString() || 0}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{
-                        backgroundColor: caja.estado === 'Abierta' ? '#ffc107' : '#28a745',
-                        color: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '0.85rem'
-                      }}>
-                        {caja.estado === 'Abierta' ? '📂 Abierta' : '✓ Cerrada'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        
+        {/* FILTROS DE BÚSQUEDA */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+          gap: '10px', 
+          marginBottom: '20px',
+          backgroundColor: '#f8fafc',
+          padding: '15px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', marginBottom: '4px' }}>Búsqueda</label>
+            <input 
+              type="text" 
+              name="search" 
+              value={searchParams.search} 
+              onChange={handleSearchChange} 
+              placeholder="Buscar por nombre..." 
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+            />
           </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', marginBottom: '4px' }}>Estado</label>
+            <select 
+              name="estado" 
+              value={searchParams.estado} 
+              onChange={handleSearchChange}
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+            >
+              <option value="">Todos</option>
+              <option value="abierta">Abierta</option>
+              <option value="cerrada">Cerrada</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', marginBottom: '4px' }}>Fecha Desde</label>
+            <input 
+              type="date" 
+              name="fechaDesde" 
+              value={searchParams.fechaDesde} 
+              onChange={handleSearchChange}
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', marginBottom: '4px' }}>Fecha Hasta</label>
+            <input 
+              type="date" 
+              name="fechaHasta" 
+              value={searchParams.fechaHasta} 
+              onChange={handleSearchChange}
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+            />
+          </div>
+        </div>
+
+        {cajas.length > 0 ? (
+          <>
+            <div className="table-container" style={{ border: '1px solid #eee' }}>
+              <table className="office-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '12px' }}>Fecha Apertura</th>
+                    <th style={{ textAlign: 'center', padding: '12px' }}>Monto Apertura</th>
+                    <th style={{ textAlign: 'center', padding: '12px' }}>Monto Cierre</th>
+                    <th style={{ textAlign: 'center', padding: '12px' }}>Diferencia</th>
+                    <th style={{ textAlign: 'center', padding: '12px' }}>Estado</th>
+                    <th style={{ textAlign: 'center', padding: '12px' }}>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cajas.map((caja) => (
+                    <tr 
+                      key={caja._id} 
+                      style={{ 
+                        borderBottom: '1px solid #eee', 
+                        cursor: caja.estado === 'Cerrada' ? 'pointer' : 'default',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseOver={(e) => caja.estado === 'Cerrada' && (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+                      onMouseOut={(e) => caja.estado === 'Cerrada' && (e.currentTarget.style.backgroundColor = 'transparent')}
+                      onClick={() => caja.estado === 'Cerrada' && handleVerDetalleCaja(caja._id)}
+                    >
+                      <td style={{ padding: '12px' }}>
+                        {caja.horaApertura || caja.fechaApertura ? new Date(caja.horaApertura || caja.fechaApertura).toLocaleString('es-AR') : '---'}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        ${(caja.montoApertura || caja.montoInicial)?.toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        ${caja.montoFinalReal ? caja.montoFinalReal.toLocaleString() : '---'}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <span style={{
+                          color: (caja.diferencia || 0) === 0 ? '#28a745' : '#d9534f',
+                          fontWeight: '600'
+                        }}>
+                          ${caja.diferencia?.toLocaleString() || 0}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <span style={{
+                          backgroundColor: caja.estado === 'Abierta' ? '#ffc107' : '#28a745',
+                          color: '#fff',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem'
+                        }}>
+                          {caja.estado === 'Abierta' ? 'Abierta' : 'Cerrada'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        {caja.estado === 'Cerrada' && (
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👁️ Ver Detalle
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PAGINACIÓN */}
+            {pagination.totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '20px' }}>
+                <button 
+                  disabled={pagination.currentPage === 1}
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer' }}
+                >
+                  Anterior
+                </button>
+                {[...Array(pagination.totalPages)].map((_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => handlePageChange(i + 1)}
+                    style={{ 
+                      padding: '5px 10px', 
+                      borderRadius: '4px', 
+                      border: '1px solid #cbd5e1', 
+                      backgroundColor: pagination.currentPage === i + 1 ? '#3b82f6' : '#fff',
+                      color: pagination.currentPage === i + 1 ? '#fff' : '#000',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button 
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer' }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
             <p style={{ color: '#999' }}>No hay registros de cajas aún</p>
@@ -577,6 +714,111 @@ const GestionCajas = () => {
           puntosVenta={puntosVenta}
           onSuccess={handleSuccess}
         />
+      </ModalGenerico>
+
+      {/* MODAL DETALLE DE CAJA CERRADA */}
+      <ModalGenerico
+        isOpen={cajaDetalleModal.open}
+        onClose={() => setCajaDetalleModal({ open: false, id: null, data: null, loading: false })}
+        title={`Detalle de Caja - ${cajaDetalleModal.data ? new Date(cajaDetalleModal.data.montoInicial ? cajaDetalleModal.id : Date.now()).toLocaleDateString() : ''}`}
+        width="900px"
+      >
+        {cajaDetalleModal.loading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <div className="spinner"></div>
+            <p>Cargando información detallada...</p>
+          </div>
+        ) : cajaDetalleModal.data ? (
+          <div style={{ padding: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '25px' }}>
+              <div style={{ padding: '15px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>MONTO INICIAL</span>
+                <div style={{ fontSize: '1.2rem', fontWeight: '700' }}>${cajaDetalleModal.data.montoInicial?.toLocaleString()}</div>
+              </div>
+              <div style={{ padding: '15px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #dcfce7' }}>
+                <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: '600' }}>VENTAS TOTALES</span>
+                <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#15803d' }}>${cajaDetalleModal.data.ventas?.total?.toLocaleString()}</div>
+              </div>
+              <div style={{ padding: '15px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+                <span style={{ fontSize: '0.75rem', color: '#991b1b', fontWeight: '600' }}>EGRESOS/GASTOS</span>
+                <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#b91c1c' }}>${cajaDetalleModal.data.movimientosManuales?.egresos?.toLocaleString()}</div>
+              </div>
+              <div style={{ padding: '15px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #dbeafe' }}>
+                <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: '600' }}>SALDO FINAL</span>
+                <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1d4ed8' }}>${cajaDetalleModal.data.totales?.montoFinalEsperado?.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* DESGLOSE PAGOS */}
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px' }}>
+                <h3 style={{ fontSize: '0.9rem', marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>DESGLOSE POR FORMA DE PAGO</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  {Object.entries(cajaDetalleModal.data.ventas.detallePorMetodo).map(([metodo, info]) => (
+                    <div key={metodo} style={{ flex: '1 1 140px', padding: '10px', backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{metodo}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '600' }}>${info.total.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{info.cantidad} tickets</div>
+                    </div>
+                  ))}
+                </div>
+
+                <h3 style={{ fontSize: '0.9rem', margin: '20px 0 15px 0', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>MOVIMIENTOS MANUALES</h3>
+                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '0.8rem' }}>
+                    <thead style={{ backgroundColor: '#f8fafc' }}>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: '5px' }}>Tipo</th>
+                        <th style={{ textAlign: 'left', padding: '5px' }}>Descripción</th>
+                        <th style={{ textAlign: 'right', padding: '5px' }}>Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cajaDetalleModal.data.movimientosManuales.detalle && cajaDetalleModal.data.movimientosManuales.detalle.length > 0 ? (
+                        cajaDetalleModal.data.movimientosManuales.detalle.map((t, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '5px', color: t.tipo === 'ingreso' ? '#166534' : '#b91c1c', fontWeight: '600' }}>
+                              {t.tipo.toUpperCase()}
+                            </td>
+                            <td style={{ padding: '5px', color: '#475569' }}>{t.descripcion}</td>
+                            <td style={{ padding: '5px', textAlign: 'right', fontWeight: '600' }}>
+                              ${t.monto.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan="3" style={{ padding: '10px', textAlign: 'center' }}>Sin movimientos</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* HISTORIAL VENTAS */}
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px' }}>
+                <h3 style={{ fontSize: '0.9rem', marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>HISTORIAL DE VENTAS (PRODUCTOS)</h3>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {cajaDetalleModal.data.ventas.historial.map((venta, idx) => (
+                    <div key={idx} style={{ padding: '10px', borderBottom: '1px solid #f1f5f9', marginBottom: '5px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                        <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{new Date(venta.fechaHora).toLocaleTimeString()}</span>
+                        <span style={{ fontWeight: '700' }}>${venta.totales.totalPagar.toLocaleString()}</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {venta.items.map(item => `${item.cantidad}x ${item.descripcion}`).join(', ')}
+                      </div>
+                      <div style={{ marginTop: '3px' }}>
+                        <span style={{ fontSize: '0.65rem', padding: '2px 5px', backgroundColor: '#e2e8f0', borderRadius: '3px' }}>{venta.pago.metodo}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: '20px', textAlign: 'center' }}>No se pudo cargar la información.</div>
+        )}
       </ModalGenerico>
     </div>
   );

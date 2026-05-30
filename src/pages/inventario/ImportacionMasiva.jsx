@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/auth/authContext.jsx';
 import ModalGenerico from '../../components/modal/ModalGenerico.jsx';
 import UploadForm from '../../components/inventario/UploadForm.jsx';
 import { puntosVentaService } from '../../services/puntosVenta/puntosVenta.js';
+import { FileText, BookOpen } from 'lucide-react';
 
 const ImportacionMasiva = () => {
   const { user } = useAuth();
@@ -45,7 +46,10 @@ const ImportacionMasiva = () => {
         marginBottom: '30px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <h3 style={{ margin: 0, color: '#333' }}>📋 Formato Esperado</h3>
+          <h3 style={{ margin: 0, color: '#333', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
+            <FileText size={18} color="#28a4d5" />
+            Formato Esperado
+          </h3>
           <a 
             href="https://tutorial.facstock.com/importacion-masiva" 
             target="_blank" 
@@ -54,7 +58,7 @@ const ImportacionMasiva = () => {
               backgroundColor: '#28a4d5', 
               color: '#fff', 
               padding: '8px 16px', 
-              borderRadius: '20px', 
+              borderRadius: '6px', 
               textDecoration: 'none',
               fontSize: '0.85rem',
               fontWeight: '600',
@@ -63,7 +67,8 @@ const ImportacionMasiva = () => {
               gap: '6px'
             }}
           >
-            📖 Ver Tutorial Completo
+            <BookOpen size={16} />
+            Ver Tutorial Completo
           </a>
         </div>
         <p style={{ margin: '0 0 10px 0', color: '#666' }}>Tu archivo Excel o CSV debe tener estas columnas (en este orden):</p>

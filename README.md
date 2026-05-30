@@ -134,40 +134,32 @@ front-facstock/
 ## 🚀 Instalación y Setup
 
 ### Prerequisitos
-- **Node.js**: 16 o superior
-- **npm**: 8 o superior
-- **Backend**: Backend inventario corriendo en puerto 3010
+- **Node.js**: 18 o superior
+- **npm**: 9 o superior
+- **Backend**: Gestor de Inventario corriendo (Puerto 3010)
 
 ### Pasos de Instalación
 
 ```bash
 # 1. Descargar proyecto
-cd front-facstock
+cd frontend-afip
 
 # 2. Instalar dependencias
 npm install
 
 # 3. Configurar variables de ambiente
-cp .env.example .env.local
-# Editar .env.local (ver abajo)
+cp .env.example .env
+# Editar .env (VITE_API_URL=http://localhost:3010)
 
 # 4. Levantar servidor de desarrollo
 npm run dev
-# Abierto en http://localhost:5173 (o siguiente puerto disponible)
 ```
 
-### Archivo `.env.local`
+### Archivo `.env` Sugerido
 
 ```bash
-# URL del backend (importante!)
-VITE_API_URL=http://localhost:3010
-
-# Otros (opcionales)
-VITE_API_TIMEOUT=10000
-VITE_APP_NAME=FacStock
-
-# Debugging (en desarrollo)
-VITE_DEBUG=false
+# URL del orquestador central (Backend Inventario)
+VITE_API_URL=http://localhost:3010/api/v1
 ```
 
 ---

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Swal from 'sweetalert2';
 import { ImportacionService } from '../../services/inventario/importacion.js';
+import { Folder, FileText, X, Loader2, Check } from 'lucide-react';
 
 const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
   const [archivo, setArchivo] = useState(null);
@@ -80,13 +81,12 @@ const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
           onDragOver={handleDrag}
           onDrop={handleDrop}
           style={{
-            border: dragActive ? '2px solid #28a4d5' : '2px dashed #ccc',
-            borderRadius: '8px',
+            border: dragActive ? '1px solid #28a4d5' : '1px solid #ccc',
+            borderRadius: '4px',
             padding: '40px',
             textAlign: 'center',
-            backgroundColor: dragActive ? 'rgba(40, 164, 213, 0.05)' : '#f9f9f9',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease'
+            backgroundColor: dragActive ? '#eef8ff' : '#ffffff',
+            cursor: 'pointer'
           }}
         >
           <input
@@ -97,7 +97,9 @@ const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
             style={{ display: 'none' }}
           />
           <label htmlFor="file-input" style={{ cursor: 'pointer', display: 'block' }}>
-            <div style={{ fontSize: '32px', marginBottom: '10px' }}>📁</div>
+            <div style={{ marginBottom: '10px' }}>
+              <Folder size={32} color="#28a4d5" />
+            </div>
             <p style={{ fontWeight: '600', color: '#333', margin: '0 0 5px 0' }}>
               Arrastra aquí tu archivo o haz clic
             </p>
@@ -119,7 +121,10 @@ const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
           }}>
             <div>
               <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>
-                📄 {archivo.name}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={16} color="#28a4d5" />
+                    {archivo.name}
+                  </span>
               </p>
               <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
                 Tamaño: {(archivo.size / 1024).toFixed(2)} KB
@@ -133,15 +138,16 @@ const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
                 border: 'none',
                 color: '#d9534f',
                 cursor: 'pointer',
-                fontSize: '18px'
+                padding: 0
               }}
+              aria-label="Eliminar archivo"
             >
-              ✕
+              <X size={18} />
             </button>
           </div>
         )}
 
-        <div style={{ fontSize: '0.85rem', color: '#666', backgroundColor: '#f9f9f9', padding: '12px', borderRadius: '6px' }}>
+        <div style={{ fontSize: '0.85rem', color: '#666', backgroundColor: '#f9f9f9', padding: '12px', borderRadius: '4px' }}>
           <p style={{ fontWeight: '600', margin: '0 0 8px 0' }}>Formato esperado:</p>
           <p style={{ margin: '0' }}>
             Columnas: <code>codigoInterno | codigoBarras | nombre | precio | iva | stock | categoria</code>
@@ -154,7 +160,7 @@ const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
           disabled={!archivo || uploading}
           style={{ marginTop: '10px' }}
         >
-          {uploading ? '⏳ Importando...' : '✓ Importar Productos'}
+          {uploading ? <><Loader2 size={16} className="animate-spin" style={{ marginRight: 8 }} /> Importando...</> : <><Check size={16} style={{ marginRight: 8 }} /> Importar Productos</>}
         </button>
       </form>
     </div>
