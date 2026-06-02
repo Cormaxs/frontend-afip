@@ -690,415 +690,144 @@ const Despachador = () => {
     handleSubmitRef.current = handleSubmit;
   }, [handleSubmit]);
 
-  const KbdBadge = ({ children, color = '#28a4d5' }) => (
+  const KbdBadge = ({ children, color = '#64748b' }) => (
     <span style={{
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: '#f1f5f9',
       color: color,
-      border: `2px solid ${color}`,
-      borderRadius: '6px',
-      padding: '2px 8px',
-      fontSize: '0.9rem',
-      fontWeight: '800',
-      minWidth: '35px',
-      boxShadow: `0 2px 0 ${color}44`,
-      marginRight: '5px'
+      border: `1px solid #cbd5e1`,
+      borderRadius: '4px',
+      padding: '1px 6px',
+      fontSize: '0.75rem',
+      fontWeight: '700',
+      minWidth: '32px',
+      marginRight: '6px',
+      fontFamily: 'monospace'
     }}>
       {children}
     </span>
   );
 
   return (
-    <div className="factura-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      <div className="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
-        <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>Despachador de Ventas</h1>
-          <div style={{ display: 'flex', gap: '20px', marginTop: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#28a4d5">F1</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>BUSCAR</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#8b5cf6">F2</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>TICKET</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#ec4899">F3</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>FACTURA</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#10b981">F4</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>PAGO</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#f59e0b">F5</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>AVANZADO</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#ef4444">F9</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>LIMPIAR</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <KbdBadge color="#1e293b">ENTER</KbdBadge> <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>CONFIRMAR</span>
-            </div>
-          </div>
-        </div>
+    <div className="factura-container" style={{ 
+      maxWidth: '100%', margin: '0', padding: '20px', display: 'flex', gap: '20px', alignItems: 'flex-start', 
+      backgroundColor: '#f1f5f9', minHeight: '100vh',
+      borderTop: `6px solid ${mode === 'factura' ? '#0f172a' : mode === 'ticket' ? '#2563eb' : '#7c3aed'}`
+    }}>
+      {/* --- COLUMNA IZQUIERDA: CONFIGURACIÓN Y PRODUCTOS --- */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '15px', minWidth: 0 }}>
         
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
-          <div className="btn-group" role="group" style={{ padding: '5px', background: '#f1f5f9', borderRadius: '8px' }}>
-            <button
-              type="button"
-              className={`btn ${mode === 'ticket' ? 'btn-cian-primary shadow-sm' : 'btn-ghost'}`}
-              style={{ borderRadius: '6px', transition: 'all 0.2s' }}
-              onClick={() => setMode('ticket')}
-            >
-              Ticket Rápido
-            </button>
-            <button
-              type="button"
-              className={`btn ${mode === 'factura' ? 'btn-cian-primary shadow-sm' : 'btn-ghost'}`}
-              style={{ borderRadius: '6px', transition: 'all 0.2s' }}
-              onClick={() => setMode('factura')}
-            >
-              Factura AFIP
-            </button>
-            <button
-              type="button"
-              className={`btn ${mode === 'notaPedido' ? 'btn-cian-primary shadow-sm' : 'btn-ghost'}`}
-              style={{ borderRadius: '6px', transition: 'all 0.2s' }}
-              onClick={() => setMode('notaPedido')}
-            >
-              Nota de Pedido
-            </button>
-          </div>
-
-          {!loadingCaja && (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '10px', 
-              padding: '6px 12px', 
-              borderRadius: '20px', 
-              backgroundColor: cajaActiva ? '#f0fdf4' : '#fef2f2',
-              border: `1px solid ${cajaActiva ? '#bbf7d0' : '#fecaca'}`
-            }}>
-              <div style={{ 
-                width: '8px', 
-                height: '8px', 
-                borderRadius: '50%', 
-                backgroundColor: cajaActiva ? '#22c55e' : '#ef4444' 
-              }}></div>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: cajaActiva ? '#166534' : '#991b1b' }}>
-                {cajaActiva ? `Caja Abierta: ${cajaActiva.vendedorAsignado?.nombre || 'OK'}` : 'Caja Cerrada'}
-              </span>
-              {!cajaActiva && (
-                <button 
-                  onClick={() => setShowAbrirCaja(true)}
-                  style={{ 
-                    padding: '2px 8px', 
-                    fontSize: '0.75rem', 
-                    borderRadius: '4px', 
-                    border: 'none', 
-                    backgroundColor: '#ef4444', 
-                    color: '#fff',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ABRIR CAJA
-                </button>
-              )}
+        {/* ENCABEZADO Y ATAJOS - ESTILO EMPRESARIAL */}
+        <div className="bg-white p-3 border rounded shadow-sm">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.025em' }}>
+                {mode === 'ticket' ? 'DESPACHADOR: TICKET' : mode === 'notaPedido' ? 'DESPACHADOR: PEDIDO' : 'DESPACHADOR: FACTURA AFIP'}
+              </h1>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>{(user?.username || 'USUARIO').toUpperCase()} @ {(empresa?.razonSocial || 'EMPRESA').toUpperCase()}</p>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* MODAL DE APERTURA DE CAJA */}
-      <ModalGenerico
-        isOpen={showAbrirCaja}
-        onClose={() => setShowAbrirCaja(false)}
-        title="Apertura de Caja"
-        width="500px"
-      >
-        <AbrirCajaForm 
-          puntosVenta={puntosVenta}
-          puntoVenta={pvSeleccionado}
-          onSuccess={() => {
-            setShowAbrirCaja(false);
-            verificarCaja();
-            Swal.fire('¡Éxito!', 'Caja abierta correctamente. Ya puedes vender.', 'success');
-          }}
-        />
-      </ModalGenerico>
-
-      <div className="section-card mb-4 shadow-sm" style={{ border: 'none', borderRadius: '12px' }}>
-        <div className="form-row" style={{ gap: '20px', alignItems: 'flex-end' }}>
-          <div className="form-field" style={{ flex: 1 }}>
-            <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>
-              🔍 Buscar producto / Escanear código <small className="text-muted">(F1)</small>
-            </label>
-            <input
-              ref={searchInputRef}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchProduct(e)}
-              className="form-control-cian"
-              style={{ height: '48px', fontSize: '1.1rem', borderRadius: '8px' }}
-              placeholder="Escriba código o nombre y presione Enter..."
-            />
-            <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <small className="text-muted">Si no encuentra el código, presione <kbd>F5</kbd> para búsqueda manual.</small>
-              <button 
-                type="button" 
-                className="btn btn-link btn-sm p-0" 
-                style={{ textDecoration: 'none', color: '#28a4d5', fontSize: '0.85rem' }}
-                onClick={() => setIsModalOpen(true)}
+            
+            <div className="btn-group" role="group" style={{ padding: '2px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+              <button
+                type="button"
+                className={`btn btn-sm ${mode === 'ticket' ? 'shadow-sm' : 'btn-link text-decoration-none text-secondary'}`}
+                style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: '800', 
+                  borderRadius: '4px', 
+                  padding: '6px 16px',
+                  backgroundColor: mode === 'ticket' ? '#2563eb' : 'transparent',
+                  color: mode === 'ticket' ? '#fff' : '#64748b',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setMode('ticket')}
               >
-                🖱️ Abrir Buscador Avanzado
+                TICKET
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${mode === 'factura' ? 'shadow-sm' : 'btn-link text-decoration-none text-secondary'}`}
+                style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: '800', 
+                  borderRadius: '4px', 
+                  padding: '6px 16px',
+                  backgroundColor: mode === 'factura' ? '#0f172a' : 'transparent',
+                  color: mode === 'factura' ? '#fff' : '#64748b',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setMode('factura')}
+              >
+                FACTURA
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${mode === 'notaPedido' ? 'shadow-sm' : 'btn-link text-decoration-none text-secondary'}`}
+                style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: '800', 
+                  borderRadius: '4px', 
+                  padding: '6px 16px',
+                  backgroundColor: mode === 'notaPedido' ? '#7c3aed' : 'transparent',
+                  color: mode === 'notaPedido' ? '#fff' : '#64748b',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setMode('notaPedido')}
+              >
+                PEDIDO
               </button>
             </div>
           </div>
-          <div className="form-field" style={{ width: '200px' }}>
-            <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Punto de Venta</label>
-            <select
-              className="form-select-cian"
-              style={{ height: '48px', borderRadius: '8px' }}
-              value={pvSeleccionado?._id || ''}
-              onChange={(e) => setPvSeleccionado(puntosVenta.find((pv) => pv._id === e.target.value))}
-            >
-              {puntosVenta.map((pv) => (
-                <option key={pv._id} value={pv._id}>
-                  {String(pv.numero).padStart(5, '0')} - {pv.nombre}
-                </option>
-              ))}
-            </select>
-            {loadingPv && <small style={{ color: '#6c757d' }}>Cargando PV...</small>}
+
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}><KbdBadge>F1</KbdBadge><span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>BUSCAR</span></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}><KbdBadge>F2</KbdBadge><span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>TICKET</span></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}><KbdBadge>F3</KbdBadge><span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>FACTURA</span></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}><KbdBadge>F4</KbdBadge><span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>PAGO</span></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}><KbdBadge>F5</KbdBadge><span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>AVANZADO</span></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}><KbdBadge>F9</KbdBadge><span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>LIMPIAR</span></div>
           </div>
-          <div className="form-field" style={{ width: '220px' }}>
-            <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>
-              💳 Forma de Pago <small className="text-muted">(F4)</small>
-            </label>
-            <select 
-              ref={formaPagoRef}
-              className="form-select-cian" 
-              style={{ height: '48px', borderRadius: '8px' }}
-              value={formaPago} 
-              onChange={(e) => setFormaPago(e.target.value)}
-            >
-              {AFIP_FORMAS_PAGO.map((fp) => (
-                <option key={fp.id} value={fp.id}>{fp.desc}</option>
-              ))}
-            </select>
+        </div>
+
+        {/* DATOS DEL CLIENTE - SIEMPRE VISIBLES PARA MANTENER DATOS */}
+        <div className="bg-white border shadow-sm" style={{ borderRadius: '8px', padding: '16px', opacity: mode === 'ticket' ? 0.7 : 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ width: '3px', height: '14px', backgroundColor: mode === 'factura' ? '#0f172a' : mode === 'ticket' ? '#2563eb' : '#7c3aed', borderRadius: '2px' }}></div>
+            <h4 style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Datos del Cliente {mode === 'ticket' && '(OPCIONAL)'}
+            </h4>
           </div>
           
-          {mode === 'factura' && (
-            <>
-              <div className="form-field" style={{ width: '200px' }}>
-                <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Comprobante</label>
-                <select
-                  className="form-select-cian"
-                  style={{ height: '48px', borderRadius: '8px' }}
-                  value={tipoCbte}
-                  onChange={(e) => setTipoCbte(Number(e.target.value))}
-                >
-                  {AFIP_TIPOS_COMPROBANTE.filter((t) => [11, 12, 13, 1, 6].includes(t.id)).map((t) => (
-                    <option key={t.id} value={t.id}>{t.desc}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-field" style={{ width: '220px' }}>
-                <label style={{ fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Número de Comprobante</label>
-                <div
-                  className="p-2 rounded"
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    minHeight: '48px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: '#0f172a',
-                    fontWeight: 700,
-                    fontSize: '0.95rem'
+          <div className="form-row" style={{ gap: '12px' }}>
+            <div className="form-field" style={{ flex: 2, position: 'relative' }}>
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>RAZÓN SOCIAL / NOMBRE</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={nombreCliente}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (selectedCliente && selectedCliente.razonSocial !== value) setSelectedCliente(null);
+                    setNombreCliente(value);
                   }}
-                >
-                  {loadingNumero ? 'Cargando...' : (numeroFactura ? FacturacionRequerimentos.formatearComprobante(pvSeleccionado?.numero, numeroFactura) : 'No disponible')}
-                </div>
+                  className="form-control"
+                  style={{ height: '40px', fontSize: '0.9rem', border: '1px solid #e2e8f0', borderRadius: '6px', paddingLeft: '32px' }}
+                  placeholder="Buscar por nombre o CUIT..."
+                  autoComplete="off"
+                />
+                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>👤</span>
               </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="row g-4 mb-4">
-        <div className="col-lg-8">
-          <div className="section-card shadow-sm h-100" style={{ border: 'none', borderRadius: '12px' }}>
-            <div className="table-responsive">
-              <table className="table-items w-100">
-                <thead>
-                  <tr style={{ background: '#f8fafc' }}>
-                    <th style={{ padding: '15px' }}>Descripción</th>
-                    <th width="80" style={{ padding: '15px' }}>Cant.</th>
-                    <th width="120" style={{ padding: '15px' }}>Precio</th>
-                    <th width="120" style={{ padding: '15px' }} className="text-end">Total</th>
-                    <th width="50" style={{ padding: '15px' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, index) => {
-                    const subtotalItem = (Number(item.cantidad) || 0) * (Number(item.precioUnitario) || 0);
-                    return (
-                      <tr key={`${item.idProduct}-${index}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: '600', color: '#334155' }}>{item.descripcion}</div>
-                          <small style={{ color: '#64748b' }}>{item.codigo}</small>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <input
-                            type="number"
-                            min="1"
-                            className="input-table text-center"
-                            style={{ background: '#f8fafc', borderRadius: '4px' }}
-                            value={item.cantidad}
-                            onChange={(e) => handleItemChange(index, 'cantidad', Number(e.target.value) || 0)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="input-table text-end"
-                            style={{ background: '#f8fafc', borderRadius: '4px' }}
-                            value={item.precioUnitario}
-                            onChange={(e) => handleItemChange(index, 'precioUnitario', Number(e.target.value) || 0)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px' }} className="text-end fw-bold text-dark">
-                          ${subtotalItem.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <button 
-                            type="button" 
-                            className="btn-close" 
-                            style={{ fontSize: '0.7rem' }}
-                            onClick={() => handleRemoveItem(index)}
-                            aria-label="Remove"
-                          ></button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="text-center text-muted py-5">
-                        <div style={{ fontSize: '3rem', opacity: 0.2 }}>🛒</div>
-                        <p className="mt-2">No hay productos en la venta.</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-lg-4">
-          <div className="section-card shadow-sm" style={{ border: 'none', borderRadius: '12px', background: '#1e293b', color: '#fff' }}>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', color: '#94a3b8' }}>Resumen de Venta</h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-                <span>IVA</span>
-                <span>${ivaTotal.toFixed(2)}</span>
-              </div>
-              <hr style={{ borderTop: '1px solid #334155', margin: '8px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.8rem', fontWeight: '800' }}>
-                <span>TOTAL</span>
-                <span style={{ color: '#38bdf8' }}>${total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {formaPago === 'Contado' && (
-              <div className="mt-4 p-3 rounded" style={{ background: '#334155' }}>
-                <div className="mb-3">
-                  <label style={{ fontSize: '0.85rem', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Monto Recibido</label>
-                  <input
-                    type="number"
-                    value={montoRecibido}
-                    onChange={(e) => setMontoRecibido(e.target.value)}
-                    className="form-control-cian"
-                    style={{ background: '#1e293b', border: '1px solid #475569', color: '#fff', fontSize: '1.2rem', textAlign: 'right' }}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Vuelto</span>
-                  <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#4ade80' }}>${cambio.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="btn-cian-primary w-100 py-3 mt-4 shadow-lg"
-              style={{ fontSize: '1.2rem', fontWeight: '700', borderRadius: '8px' }}
-              onClick={handleSubmit}
-              disabled={isSubmitting || items.length === 0 || (mode === 'factura' && (!numeroFactura || !empresa?.cuit))}
-            >
-              {isSubmitting ? (
-                <><span className="spinner-border spinner-border-sm me-2"></span> Procesando...</>
-              ) : (
-                <>{mode === 'ticket' ? 'CONFIRMAR TICKET' : mode === 'notaPedido' ? 'CREAR PEDIDO' : 'EMITIR FACTURA'} <small style={{ opacity: 0.7, fontSize: '0.8rem' }}>(ENTER)</small></>
-              )}
-            </button>
-          </div>
-
-          {statusMessage && (
-            <div className={`mt-3 p-2 rounded text-center ${statusMessage.includes('Error') ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`} style={{ fontSize: '0.9rem' }}>
-              {statusMessage}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {['factura', 'notaPedido'].includes(mode) && (
-        <div className="section-card shadow-sm mb-4" style={{ border: 'none', borderRadius: '12px' }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '15px' }}>Datos del Cliente {mode === 'notaPedido' && '(Requerido para Facturación)'}</h4>
-          <div className="form-row">
-            <div className="form-field" style={{ flex: 1, position: 'relative' }}>
-              <label>Nombre / Razón Social {mode === 'notaPedido' && '*'}</label>
-              <input
-                value={nombreCliente}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (selectedCliente && selectedCliente.razonSocial !== value) {
-                    setSelectedCliente(null);
-                  }
-                  setNombreCliente(value);
-                }}
-                className="form-control-cian"
-                placeholder="Buscar cliente frecuente o Consumidor Final"
-                required={mode === 'notaPedido'}
-                autoComplete="off"
-              />
               {clienteSuggestions.length > 0 && (
                 <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#fff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  boxShadow: '0 15px 30px rgba(15, 23, 42, 0.08)',
-                  zIndex: 20,
-                  maxHeight: '240px',
-                  overflowY: 'auto'
+                  position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0',
+                  borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', zIndex: 50, marginTop: '4px', overflow: 'hidden'
                 }}>
                   {clienteLoading ? (
-                    <div style={{ padding: '12px', color: '#64748b' }}>Buscando clientes...</div>
+                    <div style={{ padding: '12px', fontSize: '0.8rem', color: '#64748b' }}>Buscando...</div>
                   ) : clienteSuggestions.map((cliente) => (
                     <button
-                      key={cliente._id}
-                      type="button"
+                      key={cliente._id} type="button"
                       onClick={() => {
                         setSelectedCliente(cliente);
                         setNombreCliente(cliente.razonSocial || cliente.nombreContacto || '');
@@ -1108,54 +837,39 @@ const Despachador = () => {
                         setClienteSuggestions([]);
                       }}
                       style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        textAlign: 'left',
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        color: '#0f172a'
+                        width: '100%', padding: '10px 15px', textAlign: 'left', border: 'none', background: 'transparent',
+                        cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                       }}
                     >
-                      <div style={{ fontWeight: 600 }}>{cliente.razonSocial || cliente.nombreContacto || 'Cliente'}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#475569' }}>{cliente.numeroDocumento || 'Sin documento'}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>{cliente.razonSocial || cliente.nombreContacto}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{cliente.numeroDocumento}</div>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8', background: '#f8fafc', padding: '2px 6px', borderRadius: '4px' }}>SELECCIONAR</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-          <div className="form-row mt-3">
-            <div className="form-field" style={{ width: '170px' }}>
-              <label>Tipo Doc. {mode === 'notaPedido' && '*'}</label>
-              <select className="form-select-cian" value={docTipo} onChange={(e) => setDocTipo(Number(e.target.value))}>
+            <div className="form-field" style={{ width: '130px' }}>
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>TIPO DOC</label>
+              <select className="form-select" style={{ height: '40px', fontSize: '0.85rem', border: '1px solid #e2e8f0', borderRadius: '6px' }} value={docTipo} onChange={(e) => setDocTipo(Number(e.target.value))}>
                 {AFIP_DOC_TIPOS.filter((d) => allowedDocTipos.includes(d.id)).map((d) => (
                   <option key={d.id} value={d.id}>{d.desc}</option>
                 ))}
               </select>
             </div>
             <div className="form-field" style={{ flex: 1 }}>
-              <label>Número de Documento / CUIT {mode === 'notaPedido' && '*'}</label>
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>NRO DOCUMENTO</label>
               <input
-                type="number"
-                value={docNro}
-                onChange={(e) => setDocNro(e.target.value)}
-                className="form-control-cian"
-                placeholder="DNI o CUIT"
-                required={mode === 'notaPedido'}
+                type="number" value={docNro} onChange={(e) => setDocNro(e.target.value)}
+                className="form-control" style={{ height: '40px', fontSize: '0.85rem', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                placeholder="DNI/CUIT"
               />
             </div>
             <div className="form-field" style={{ width: '180px' }}>
-              <label>Moneda</label>
-              <select className="form-select-cian" value={moneda} onChange={(e) => setMoneda(e.target.value)}>
-                {AFIP_MONEDAS.map((m) => (
-                  <option key={m.id} value={m.id}>{m.desc}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field" style={{ width: '220px' }}>
-              <label>Condición IVA {mode === 'notaPedido' && '*'}</label>
-              <select className="form-select-cian" value={condicionIVA} onChange={(e) => setCondicionIVA(Number(e.target.value))}>
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>CONDICIÓN IVA</label>
+              <select className="form-select" style={{ height: '40px', fontSize: '0.85rem', border: '1px solid #e2e8f0', borderRadius: '6px' }} value={condicionIVA} onChange={(e) => setCondicionIVA(Number(e.target.value))}>
                 {CONDICIONES_IVA_RECEPTOR.filter((c) => allowedCondiciones.includes(c.id)).map((c) => (
                   <option key={c.id} value={c.id}>{c.desc}</option>
                 ))}
@@ -1163,14 +877,287 @@ const Despachador = () => {
             </div>
           </div>
         </div>
-      )}
 
-      <ModalBuscadorProductos
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelect={addItem}
-        initialQuery={searchQuery}
-      />
+        {/* BUSCADOR, PV Y FORMA DE PAGO - ESTILO COBRADOR */}
+        <div className="bg-white border shadow-sm" style={{ borderRadius: '8px', padding: '16px' }}>
+          <div className="form-row" style={{ gap: '12px', alignItems: 'flex-end' }}>
+            <div className="form-field" style={{ flex: 1 }}>
+              <label style={{ fontWeight: '800', color: '#0f172a', marginBottom: '8px', display: 'block', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
+                BÚSQUEDA DE PRODUCTOS <KbdBadge>F1</KbdBadge>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  ref={searchInputRef} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchProduct(e)}
+                  className="form-control"
+                  style={{ height: '44px', fontSize: '1rem', borderRadius: '6px', border: '2px solid #0f172a', paddingLeft: '36px', fontWeight: '600' }}
+                  placeholder="Escanear código o escribir nombre..."
+                />
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }}>🔍</span>
+              </div>
+            </div>
+            
+            <div className="form-field" style={{ width: '160px' }}>
+              <label style={{ fontWeight: '700', color: '#64748b', marginBottom: '8px', display: 'block', fontSize: '0.65rem' }}>PUNTO DE VENTA</label>
+              <select
+                className="form-select"
+                style={{ height: '44px', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid #e2e8f0', fontWeight: '600' }}
+                value={pvSeleccionado?._id || ''}
+                onChange={(e) => setPvSeleccionado(puntosVenta.find((pv) => pv._id === e.target.value))}
+              >
+                {puntosVenta.map((pv) => (
+                  <option key={pv._id} value={pv._id}>PV {String(pv.numero).padStart(4, '0')} - {pv.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-field" style={{ width: '160px' }}>
+              <label style={{ fontWeight: '700', color: '#64748b', marginBottom: '8px', display: 'block', fontSize: '0.65rem' }}>
+                FORMA DE PAGO <KbdBadge>F4</KbdBadge>
+              </label>
+              <select 
+                ref={formaPagoRef}
+                className="form-select" 
+                style={{ height: '44px', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid #e2e8f0', fontWeight: '600' }}
+                value={formaPago} 
+                onChange={(e) => setFormaPago(e.target.value)}
+              >
+                {AFIP_FORMAS_PAGO.map((fp) => (
+                  <option key={fp.id} value={fp.id}>{fp.desc.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+
+            {mode === 'factura' && (
+              <>
+                <div className="form-field" style={{ width: '150px' }}>
+                  <label style={{ fontWeight: '700', color: '#64748b', marginBottom: '8px', display: 'block', fontSize: '0.65rem' }}>COMPROBANTE</label>
+                  <select
+                    className="form-select"
+                    style={{ height: '44px', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid #e2e8f0', fontWeight: '600' }}
+                    value={tipoCbte}
+                    onChange={(e) => setTipoCbte(Number(e.target.value))}
+                  >
+                    {AFIP_TIPOS_COMPROBANTE.filter((t) => [11, 12, 13, 1, 6].includes(t.id)).map((t) => (
+                      <option key={t.id} value={t.id}>{t.desc}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field" style={{ width: '180px' }}>
+                  <label style={{ fontWeight: '700', color: '#64748b', marginBottom: '8px', display: 'block', fontSize: '0.65rem' }}>NRO ACTUAL</label>
+                  <div style={{ 
+                    height: '44px', borderRadius: '6px', fontSize: '1rem', border: '1px solid #e2e8f0', 
+                    fontWeight: '800', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a',
+                    fontFamily: 'monospace'
+                  }}>
+                    {loadingNumero ? '...' : (numeroFactura ? FacturacionRequerimentos.formatearComprobante(pvSeleccionado?.numero, numeroFactura) : 'N/A')}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button type="button" className="btn btn-link p-0 text-decoration-none" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }} onClick={() => setIsModalOpen(true)}>
+                [F5] BUSCADOR AVANZADO
+              </button>
+              <button type="button" className="btn btn-link p-0 text-decoration-none" style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '700' }} onClick={() => { setItems([]); setMontoRecibido(''); }}>
+                [F9] LIMPIAR VENTA
+              </button>
+            </div>
+            {!loadingCaja && (
+              <div style={{ 
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 12px', borderRadius: '6px', 
+                backgroundColor: cajaActiva ? '#f0fdf4' : '#fef2f2', border: `1px solid ${cajaActiva ? '#bbf7d0' : '#fecaca'}`
+              }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cajaActiva ? '#22c55e' : '#ef4444' }}></div>
+                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: cajaActiva ? '#166534' : '#991b1b', textTransform: 'uppercase' }}>
+                  {cajaActiva ? `CAJA: ${cajaActiva.vendedorAsignado?.nombre || 'OK'}` : 'CAJA CERRADA'}
+                </span>
+                {!cajaActiva && <button onClick={() => setShowAbrirCaja(true)} style={{ padding: '2px 8px', fontSize: '0.65rem', borderRadius: '4px', border: 'none', backgroundColor: '#ef4444', color: '#fff', fontWeight: '800' }}>ABRIR</button>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* TABLA DE PRODUCTOS - ESTILO POS */}
+        <div className="bg-white border shadow-sm" style={{ borderRadius: '8px', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div className="table-responsive" style={{ maxHeight: 'calc(100vh - 420px)', overflowY: 'auto' }}>
+            <table className="table table-hover mb-0" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc' }}>
+                <tr>
+                  <th style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', borderBottom: '2px solid #e2e8f0' }}>Descripción</th>
+                  <th width="100" style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', borderBottom: '2px solid #e2e8f0', textAlign: 'center' }}>Cant.</th>
+                  <th width="140" style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', borderBottom: '2px solid #e2e8f0', textAlign: 'right' }}>Precio Unit.</th>
+                  <th width="140" style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', borderBottom: '2px solid #e2e8f0', textAlign: 'right' }}>Total</th>
+                  <th width="50" style={{ padding: '12px 16px', borderBottom: '2px solid #e2e8f0' }}></th>
+                </tr>
+              </thead>
+              <tbody style={{ backgroundColor: '#fff' }}>
+                {items.map((item, index) => {
+                  const subtotalItem = (Number(item.cantidad) || 0) * (Number(item.precioUnitario) || 0);
+                  return (
+                    <tr key={`${item.idProduct}-${index}`} style={{ transition: 'background-color 0.1s' }}>
+                      <td style={{ padding: '10px 16px', verticalAlign: 'middle' }}>
+                        <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.9rem' }}>{item.descripcion.toUpperCase()}</div>
+                        <code style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.codigo}</code>
+                      </td>
+                      <td style={{ padding: '10px 16px', verticalAlign: 'middle' }}>
+                        <input
+                          type="number" min="1" className="form-control form-control-sm text-center"
+                          style={{ height: '32px', fontWeight: '700', border: '1px solid #e2e8f0' }}
+                          value={item.cantidad}
+                          onChange={(e) => handleItemChange(index, 'cantidad', Number(e.target.value) || 0)}
+                        />
+                      </td>
+                      <td style={{ padding: '10px 16px', verticalAlign: 'middle' }}>
+                        <input
+                          type="number" step="0.01" className="form-control form-control-sm text-end"
+                          style={{ height: '32px', fontWeight: '700', border: '1px solid #e2e8f0' }}
+                          value={item.precioUnitario}
+                          onChange={(e) => handleItemChange(index, 'precioUnitario', Number(e.target.value) || 0)}
+                        />
+                      </td>
+                      <td style={{ padding: '10px 16px', verticalAlign: 'middle', textAlign: 'right' }}>
+                        <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem', fontFamily: 'monospace' }}>
+                          ${subtotalItem.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                        <button type="button" className="btn btn-sm btn-outline-danger border-0" style={{ padding: '2px 6px' }} onClick={() => handleRemoveItem(index)}>✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {items.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center text-muted py-5" style={{ background: '#fcfcfc' }}>
+                      <div style={{ fontSize: '2.5rem', opacity: 0.1, marginBottom: '10px' }}>�</div>
+                      <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Esperando productos...</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* --- COLUMNA DERECHA: RESUMEN Y ACCIONES --- */}
+      <div style={{ width: '400px', position: 'sticky', top: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        
+        <div className="bg-white border shadow-lg" style={{ borderRadius: '8px', padding: '24px', borderTop: '6px solid #0f172a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: '900', color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Resumen de Operación</h3>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>
+              <span>SUBTOTAL</span>
+              <span style={{ fontFamily: 'monospace' }}>${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>
+              <span>IVA TOTAL</span>
+              <span style={{ fontFamily: 'monospace' }}>${ivaTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            {mode === 'factura' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.75rem', fontWeight: '700', padding: '8px', background: '#f8fafc', borderRadius: '4px' }}>
+                <span>NRO COMPROBANTE:</span>
+                <span style={{ color: '#0f172a' }}>{loadingNumero ? '...' : (numeroFactura ? FacturacionRequerimentos.formatearComprobante(pvSeleccionado?.numero, numeroFactura) : 'N/A')}</span>
+              </div>
+            )}
+            
+            <div style={{ marginTop: '10px', padding: '20px', background: '#0f172a', borderRadius: '8px', color: '#fff' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8', marginBottom: '4px', letterSpacing: '0.1em' }}>TOTAL A PAGAR</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: '400', opacity: 0.6 }}>$</span>
+                <span style={{ fontSize: '2.5rem', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>
+                  {total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {formaPago === 'Contado' && (
+            <div className="mt-4 p-4 border rounded" style={{ backgroundColor: '#f8fafc' }}>
+              <div className="mb-3">
+                <label style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '800', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>EFECTIVO RECIBIDO</label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '700', color: '#94a3b8' }}>$</span>
+                  <input
+                    type="number" value={montoRecibido} onChange={(e) => setMontoRecibido(e.target.value)}
+                    className="form-control"
+                    style={{ height: '54px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1.75rem', fontWeight: '800', textAlign: 'right', paddingRight: '15px', fontFamily: 'monospace' }}
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '800' }}>VUELTO</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#059669', fontFamily: 'monospace' }}>
+                  ${cambio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-dark w-100 mt-4 shadow-sm"
+            style={{ height: '70px', fontSize: '1.1rem', fontWeight: '900', borderRadius: '8px', letterSpacing: '0.05em', transition: 'all 0.2s' }}
+            onClick={handleSubmit}
+            disabled={isSubmitting || items.length === 0 || (mode === 'factura' && (!numeroFactura || !empresa?.cuit))}
+          >
+            {isSubmitting ? (
+              <div className="d-flex align-items-center justify-content-center gap-2">
+                <span className="spinner-border spinner-border-sm"></span>
+                <span>PROCESANDO...</span>
+              </div>
+            ) : (
+              <div style={{ lineHeight: 1.2 }}>
+                {mode === 'ticket' ? 'CONFIRMAR TICKET' : mode === 'notaPedido' ? 'GENERAR PEDIDO' : 'EMITIR FACTURA'}
+                <div style={{ fontSize: '0.65rem', fontWeight: '400', opacity: 0.6, marginTop: '4px' }}>[ENTER] PARA FINALIZAR</div>
+              </div>
+            )}
+          </button>
+
+          {statusMessage && (
+            <div className={`mt-3 p-3 rounded text-center shadow-sm ${statusMessage.includes('Error') ? 'bg-danger text-white' : 'bg-success text-white'}`} style={{ fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase' }}>
+              {statusMessage}
+            </div>
+          )}
+        </div>
+
+        {/* ERRORES Y ADVERTENCIAS - ESTILO COMPACTO */}
+        {(serverErrors.length > 0 || serverWarnings.length > 0) && (
+          <div className="bg-white border rounded p-3 shadow-sm">
+            {serverErrors.length > 0 && (
+              <div className="mb-2">
+                <div style={{ fontSize: '0.65rem', color: '#ef4444', fontWeight: '900', marginBottom: '4px' }}>✕ ERRORES DETECTADOS</div>
+                <ul style={{ paddingLeft: '12px', margin: 0, fontSize: '0.75rem', color: '#b91c1c', fontWeight: '600' }}>
+                  {serverErrors.map((err, i) => <li key={i}>{err}</li>)}
+                </ul>
+              </div>
+            )}
+            {serverWarnings.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: '900', marginBottom: '4px' }}>⚠ ADVERTENCIAS</div>
+                <ul style={{ paddingLeft: '12px', margin: 0, fontSize: '0.75rem', color: '#a16207', fontWeight: '600' }}>
+                  {serverWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* MODAL DE APERTURA DE CAJA */}
+      <ModalGenerico isOpen={showAbrirCaja} onClose={() => setShowAbrirCaja(false)} title="CONTROL DE CAJA" width="500px">
+        <AbrirCajaForm puntosVenta={puntosVenta} puntoVenta={pvSeleccionado} onSuccess={() => { setShowAbrirCaja(false); verificarCaja(); Swal.fire('¡Éxito!', 'Caja abierta correctamente.', 'success'); }} />
+      </ModalGenerico>
+
+      <ModalBuscadorProductos isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelect={addItem} initialQuery={searchQuery} />
     </div>
   );
 };

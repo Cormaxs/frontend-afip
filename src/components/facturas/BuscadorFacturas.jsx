@@ -11,109 +11,186 @@ import Swal from 'sweetalert2';
 const BuscadorFacturas = () => {
   const { user, empresa } = useAuth();
   const [tipoVista, setTipoVista] = useState('facturas');
-  const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pages: 1,
-    total: 0,
-    limit: 10
+
+  // Estados independientes para Facturas
+  const [resultadosFacturas, setResultadosFacturas] = useState([]);
+  const [paginationFacturas, setPaginationFacturas] = useState({ page: 1, pages: 1, total: 0, limit: 10 });
+  const [filtrosFacturas, setFiltrosFacturas] = useState({
+    estado: '', tipoComprobante: '', desde: undefined, hasta: undefined, numero: undefined,
+    puntoVenta: undefined, cuitReceptor: undefined, cae: undefined, limit: 10
   });
+
+  // Estados independientes para Tickets
+  const [resultadosTickets, setResultadosTickets] = useState([]);
+  const [paginationTickets, setPaginationTickets] = useState({ page: 1, pages: 1, total: 0, limit: 10 });
+  const [filtrosTickets, setFiltrosTickets] = useState({ search: '', limit: 10 });
+
+  // Estados independientes para Notas de Pedido
+  const [resultadosNotas, setResultadosNotas] = useState([]);
+  const [paginationNotas, setPaginationNotas] = useState({ page: 1, pages: 1, total: 0, limit: 10 });
+  const [filtrosNotas, setFiltrosNotas] = useState({ status: '', limit: 10 });
 
   const [pdfUrl, setPdfUrl] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [notaSeleccionada, setNotaSeleccionada] = useState(null);
   const [editandoNota, setEditandoNota] = useState(false);
 
-  // Filtros para Facturas
-  const [filtrosFacturas, setFiltrosFacturas] = useState({
-    estado: '',
-    tipoComprobante: '',
-    desde: undefined,
-    hasta: undefined,
-    numero: undefined,
-    puntoVenta: undefined,
-    cuitReceptor: undefined,
-    cae: undefined,
-    limit: 10
-  });
-
-  // Filtros para Tickets
-  const [filtrosTickets, setFiltrosTickets] = useState({
-    search: '',
-    limit: 10
-  });
-
-  // Filtros para Notas de Pedido
-  const [filtrosNotas, setFiltrosNotas] = useState({
-    status: '',
-    limit: 10
-  });
-
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     if (tipoVista === 'facturas') {
-      setFiltrosFacturas(prev => ({
-        ...prev,
-        [name]: value === "" ? undefined : value
-      }));
+      setFiltrosFacturas(prev => ({ ...prev, [name]: value === "" ? undefined : value }));
     } else if (tipoVista === 'tickets') {
-      setFiltrosTickets(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFiltrosTickets(prev => ({ ...prev, [name]: value }));
     } else {
-      setFiltrosNotas(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFiltrosNotas(prev => ({ ...prev, [name]: value }));
     }
   };
 
-  const fetchDatos = useCallback(async (page = 1) => {
+  // --- Funciones de Carga Separadas ---
+
+  const fetchFacturas = useCallback(async (page = 1) => {
+    const userStorage = localStorage.getItem("user");
+    let idAfipActual = user?.idDbAfip;
+    
+    if (!idAfipActual && userStorage) {
+      try { idAfipActual = JSON.parse(userStorage).idDbAfip; } catch (e) {}
+    }
+    
+    if (!idAfipActual) return;
+    
     setLoading(true);
-    setResultados([]);
     try {
-      if (tipoVista === 'facturas') {
-        if (!user?.idDbAfip) return;
-        const filtrosFormateados = { ...filtrosFacturas };
-        if (filtrosFormateados.puntoVenta) filtrosFormateados.puntoVenta = filtrosFormateados.puntoVenta.toString().padStart(5, '0');
-        if (filtrosFormateados.numero) filtrosFormateados.numero = filtrosFormateados.numero.toString().padStart(8, '0');
-        const cleanFilters = Object.fromEntries(Object.entries(filtrosFormateados).filter(([_, v]) => v !== undefined && v !== ""));
-        const params = { userId: user.idDbAfip, ...cleanFilters, page: page.toString() };
-        const response = await facturasService.buscarFacturas(params);
-        setResultados(response.data.data || []);
-        if (response.data.paginacion) {
-          setPagination({ page: response.data.paginacion.page, total: response.data.paginacion.total, limit: response.data.paginacion.limit, pages: response.data.paginacion.totalPages });
-        }
-      } else if (tipoVista === 'tickets') {
-        if (!empresa?._id) return;
-        const params = { ...filtrosTickets, page: page.toString() };
-        const response = await ticketsService.getTickets(empresa._id, params);
-        setResultados(response.data.data || []);
-        if (response.data.paginacion) {
-          setPagination({ page: response.data.paginacion.page, total: response.data.paginacion.total, limit: response.data.paginacion.limit, pages: response.data.paginacion.totalPages });
-        }
-      } else {
-        if (!empresa?._id) return;
-        const params = { ...filtrosNotas, page: page.toString() };
-        const response = await ticketsService.getNotasPedido(empresa._id, params);
-        setResultados(response.data.data || []);
-        if (response.data.paginacion) {
-          setPagination({ page: response.data.paginacion.page, total: response.data.paginacion.total, limit: response.data.paginacion.limit, pages: response.data.paginacion.totalPages });
-        }
+      const filtrosFormateados = { ...filtrosFacturas };
+      if (filtrosFormateados.puntoVenta) filtrosFormateados.puntoVenta = filtrosFormateados.puntoVenta.toString().padStart(5, '0');
+      if (filtrosFormateados.numero) filtrosFormateados.numero = filtrosFormateados.numero.toString().padStart(8, '0');
+      const cleanFilters = Object.fromEntries(Object.entries(filtrosFormateados).filter(([_, v]) => v !== undefined && v !== ""));
+      const params = { userId: idAfipActual, ...cleanFilters, page: page.toString() };
+      
+      console.log("📡 API: Buscando Facturas...");
+      const response = await facturasService.buscarFacturas(params);
+      setResultadosFacturas(response.data.data || []);
+      if (response.data.paginacion) {
+        setPaginationFacturas({
+          page: response.data.paginacion.page,
+          total: response.data.paginacion.total,
+          limit: response.data.paginacion.limit,
+          pages: response.data.paginacion.totalPages
+        });
       }
     } catch (err) {
-      console.error(`Error en búsqueda de ${tipoVista}:`, err);
+      console.error("Error buscando facturas:", err);
     } finally {
       setLoading(false);
     }
-  }, [user?.idDbAfip, empresa?._id, tipoVista, filtrosFacturas, filtrosTickets, filtrosNotas]);
+  }, [user?.idDbAfip, filtrosFacturas]);
+
+  const fetchTickets = useCallback(async (page = 1) => {
+    const empresaStorage = localStorage.getItem("empresa");
+    let idEmpresaActual = empresa?._id;
+    
+    if (!idEmpresaActual && empresaStorage) {
+      try { 
+        const parsed = JSON.parse(empresaStorage);
+        idEmpresaActual = parsed._id || parsed.id;
+      } catch (e) {}
+    }
+
+    if (!idEmpresaActual) return;
+
+    setLoading(true);
+    try {
+      const params = { ...filtrosTickets, page: page.toString() };
+      console.log("📡 API: Buscando Tickets...");
+      const response = await ticketsService.getTickets(idEmpresaActual, params);
+      setResultadosTickets(response.data.data || []);
+      if (response.data.paginacion) {
+        setPaginationTickets({
+          page: response.data.paginacion.page,
+          total: response.data.paginacion.total,
+          limit: response.data.paginacion.limit,
+          pages: response.data.paginacion.totalPages
+        });
+      }
+    } catch (err) {
+      console.error("Error buscando tickets:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [empresa?._id, filtrosTickets]);
+
+  const fetchNotas = useCallback(async (page = 1) => {
+    const empresaStorage = localStorage.getItem("empresa");
+    let idEmpresaActual = empresa?._id;
+    
+    if (!idEmpresaActual && empresaStorage) {
+      try { 
+        const parsed = JSON.parse(empresaStorage);
+        idEmpresaActual = parsed._id || parsed.id;
+      } catch (e) {}
+    }
+
+    if (!idEmpresaActual) return;
+
+    setLoading(true);
+    try {
+      const params = { ...filtrosNotas, page: page.toString() };
+      console.log("📡 API: Buscando Notas de Pedido...");
+      const response = await ticketsService.getNotasPedido(idEmpresaActual, params);
+      setResultadosNotas(response.data.data || []);
+      if (response.data.paginacion) {
+        setPaginationNotas({
+          page: response.data.paginacion.page,
+          total: response.data.paginacion.total,
+          limit: response.data.paginacion.limit,
+          pages: response.data.paginacion.totalPages
+        });
+      }
+    } catch (err) {
+      console.error("Error buscando notas:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [empresa?._id, filtrosNotas]);
+
+  // Función principal de actualización (Llamada al inicio y al recargar)
+  const refreshAll = useCallback(async () => {
+    // Evitamos llamar si ya estamos cargando o si no hay IDs
+    if (loading) return;
+    
+    console.log("🔄 Ejecutando refreshAll para todos los comprobantes...");
+    // Ejecutamos en paralelo para eficiencia
+    await Promise.allSettled([
+      fetchFacturas(1),
+      fetchTickets(1),
+      fetchNotas(1)
+    ]);
+  }, [fetchFacturas, fetchTickets, fetchNotas, loading]);
 
   useEffect(() => {
-    fetchDatos(1);
-  }, [fetchDatos]);
+    let isMounted = true;
+    if (isMounted) {
+      refreshAll();
+    }
+    return () => { isMounted = false; };
+  }, []); // Solo una vez al montar, el cleanup previene llamadas si se desmonta rápido
+
+  const handleBuscarClick = () => {
+    if (tipoVista === 'facturas') fetchFacturas(1);
+    else if (tipoVista === 'tickets') fetchTickets(1);
+    else fetchNotas(1);
+  };
+
+  const handlePageChange = (p) => {
+    if (tipoVista === 'facturas') fetchFacturas(p);
+    else if (tipoVista === 'tickets') fetchTickets(p);
+    else fetchNotas(p);
+  };
+
+  // --- Helpers de UI ---
+  const currentResultados = tipoVista === 'facturas' ? resultadosFacturas : tipoVista === 'tickets' ? resultadosTickets : resultadosNotas;
+  const currentPagination = tipoVista === 'facturas' ? paginationFacturas : tipoVista === 'tickets' ? paginationTickets : paginationNotas;
+
 
   const handleVerPdf = async (item) => {
     if (tipoVista === 'notasPedido') {
@@ -156,7 +233,7 @@ const BuscadorFacturas = () => {
     try {
         await ticketsService.updateNotaPedidoData(idNota, nuevosDatos);
         Swal.fire('¡Actualizado!', 'La nota de pedido se ha guardado correctamente.', 'success');
-        fetchDatos(pagination.page);
+        fetchNotas(paginationNotas.page);
         cerrarModal();
     } catch (error) {
         Swal.fire('Error', error.response?.data?.message || 'No se pudo actualizar la nota.', 'error');
@@ -177,29 +254,18 @@ const BuscadorFacturas = () => {
   };
 
   const resetFiltros = (vista = tipoVista) => {
-    setResultados([]);
     if (vista === 'facturas') {
       setFiltrosFacturas({
-        estado: '',
-        tipoComprobante: '',
-        desde: undefined,
-        hasta: undefined,
-        numero: undefined,
-        puntoVenta: undefined,
-        cuitReceptor: undefined,
-        cae: undefined,
-        limit: 10
+        estado: '', tipoComprobante: '', desde: undefined, hasta: undefined, numero: undefined,
+        puntoVenta: undefined, cuitReceptor: undefined, cae: undefined, limit: 10
       });
+      setResultadosFacturas([]);
     } else if (vista === 'tickets') {
-      setFiltrosTickets({
-        search: '',
-        limit: 10
-      });
+      setFiltrosTickets({ search: '', limit: 10 });
+      setResultadosTickets([]);
     } else {
-      setFiltrosNotas({
-        status: '',
-        limit: 10
-      });
+      setFiltrosNotas({ status: '', limit: 10 });
+      setResultadosNotas([]);
     }
   };
 
@@ -213,14 +279,13 @@ const BuscadorFacturas = () => {
         
         if (nuevoEstado === 'ENTREGADO') {
             Swal.fire('¡Pedido Aprobado!', 'Se ha generado el comprobante PDF.', 'success');
-            // Si el backend devolvió el pdfPath, podemos intentar mostrarlo
             if (response.data.data.pdfPath) {
                 handleVerPdf(response.data.data);
             }
         } else {
             Swal.fire('¡Actualizado!', `El pedido ha sido marcado como ${nuevoEstado}`, 'success');
         }
-        fetchDatos(pagination.page);
+        fetchNotas(paginationNotas.page);
     } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estado del pedido.', 'error');
     }
@@ -272,7 +337,9 @@ const BuscadorFacturas = () => {
             } : {}
         });
         Swal.fire('¡Éxito!', `El pedido se ha convertido en ${tipoFacturacion === 'AFIP' ? 'una Factura AFIP' : 'un Ticket'} exitosamente.`, 'success');
-        fetchDatos(pagination.page);
+        fetchNotas(paginationNotas.page);
+        fetchFacturas(1);
+        fetchTickets(1);
     } catch (error) {
         Swal.fire('Error', error.response?.data?.message || 'No se pudo facturar el pedido.', 'error');
     } finally {
@@ -301,32 +368,22 @@ const BuscadorFacturas = () => {
         };
         await facturasService.reintentarFacturacion(factura._id, dataReintento);
         Swal.fire('¡Éxito!', 'La factura ha sido procesada correctamente.', 'success');
-        fetchDatos(pagination.page); 
+        fetchFacturas(paginationFacturas.page); 
     } catch (err) {
+        // ... error handling ...
         const errorResponse = err.response?.data;
         const detailLines = [];
-
         if (errorResponse?.errores && Array.isArray(errorResponse.errores)) {
             errorResponse.errores.forEach(item => {
                 if (!item) return;
-                if (typeof item === 'string') {
-                    detailLines.push(item);
-                } else {
-                    detailLines.push(item.mensaje || item.Msg || item.message || JSON.stringify(item));
-                }
+                detailLines.push(typeof item === 'string' ? item : (item.mensaje || item.Msg || item.message || JSON.stringify(item)));
             });
         }
-
         const message = errorResponse?.message || err.message || 'No se pudo reintentar la factura';
-        const html = `
-            <p>${message}</p>
-            ${detailLines.length > 0 ? `<ul style="text-align:left; margin: 0.5rem 0 0 0;">${detailLines.map(line => `<li>${line}</li>`).join('')}</ul>` : ''}
-        `;
-
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            html,
+            html: `<p>${message}</p>${detailLines.length > 0 ? `<ul style="text-align:left;">${detailLines.map(line => `<li>${line}</li>`).join('')}</ul>` : ''}`,
             confirmButtonText: 'Cerrar'
         });
     } finally {
@@ -350,62 +407,19 @@ const BuscadorFacturas = () => {
     setLoading(true);
     try {
         const tipo = parseInt(factura.afip?.tipoComprobante || factura.comprobante?.codigoTipo);
-
-        const ivaFormateado = ([11, 13].includes(tipo))
-            ? []
-            : (factura.iva && factura.iva.length > 0)
-                ? factura.iva.map(alicuota => ({
-                    id: alicuota.id || alicuota.Id,
-                    baseImponible: parseFloat(alicuota.baseImponible || alicuota.BaseImp || 0),
-                    importe: parseFloat(alicuota.importe || alicuota.Importe || 0)
-                }))
-                : Object.values((factura.items || []).reduce((acc, item) => {
-                    const id = item.alicuotaIVA === 21 ? 5 : item.alicuotaIVA === 10.5 ? 4 : item.alicuotaIVA;
-                    if (!acc[id]) acc[id] = { id, baseImponible: 0, importe: 0 };
-                    acc[id].baseImponible += parseFloat(item.precioUnitario * item.cantidad);
-                    acc[id].importe += parseFloat(item.importeIVA);
-                    return acc;
-                }, {})).map(v => ({
-                    id: v.id,
-                    baseImponible: Number(v.baseImponible.toFixed(2)),
-                    importe: Number(v.importe.toFixed(2))
-                }));
+        const ivaFormateado = ([11, 13].includes(tipo)) ? [] : (factura.iva && factura.iva.length > 0) ? factura.iva.map(alicuota => ({ id: alicuota.id || alicuota.Id, baseImponible: parseFloat(alicuota.baseImponible || alicuota.BaseImp || 0), importe: parseFloat(alicuota.importe || alicuota.Importe || 0) })) : Object.values((factura.items || []).reduce((acc, item) => { const id = item.alicuotaIVA === 21 ? 5 : item.alicuotaIVA === 10.5 ? 4 : item.alicuotaIVA; if (!acc[id]) acc[id] = { id, baseImponible: 0, importe: 0 }; acc[id].baseImponible += parseFloat(item.precioUnitario * item.cantidad); acc[id].importe += parseFloat(item.importeIVA); return acc; }, {})).map(v => ({ id: v.id, baseImponible: Number(v.baseImponible.toFixed(2)), importe: Number(v.importe.toFixed(2)) }));
 
         const datosAnulacion = {
-          id: user.idDbAfip,
-          cuit: empresa.cuit,
-          servicio: "wsfe",
-          facturaOriginal: {
-              _id: factura._id,
-              puntoVenta: factura.afip?.puntoVenta || factura.comprobante?.puntoVenta,
-              tipoComprobante: factura.afip?.tipoComprobante || factura.comprobante?.codigoTipo,
-              numero: factura.afip?.numero || factura.comprobante?.numero,
-              numeroNotaCredito: factura.numeroNotaCredito || 0,
-              concepto: factura.comprobante?.concepto || 1,
-              docTipo: factura.receptor?.tipoDocumento,
-              docNro: factura.receptor?.numeroDocumento,
-              condicionIVAReceptor: factura.receptor?.condicionIVA === 'Responsable Inscripto' ? 1 : 5,
-              importeNeto: factura.totales?.subtotal || factura.importeNeto,
-              importeIVA: factura.totales?.iva || factura.importeIVA,
-              importeTotal: factura.totales?.total || factura.importeTotal,
-              importeNoGravado: factura.totales?.noGravado || 0,
-              importeExento: factura.totales?.exento || 0,
-              importeTributos: factura.totales?.tributos || 0,
-              moneda: factura.comprobante?.moneda || "PES",
-              cotizacion: factura.comprobante?.cotizacion || 1,
-              fecha: factura.afip?.fecha || factura.comprobante?.fecha,
-              items: factura.items || [],
-              iva: ivaFormateado
-          }
-      };
-      console.log("Datos para anulación:", datosAnulacion);
-      await facturasService.anularFactura(datosAnulacion);
-      Swal.fire('Anulada', 'La Nota de Crédito se generó correctamente.', 'success');
-      fetchDatos(pagination.page);
+          id: user.idDbAfip, cuit: empresa.cuit, servicio: "wsfe",
+          facturaOriginal: { _id: factura._id, puntoVenta: factura.afip?.puntoVenta || factura.comprobante?.puntoVenta, tipoComprobante: factura.afip?.tipoComprobante || factura.comprobante?.codigoTipo, numero: factura.afip?.numero || factura.comprobante?.numero, numeroNotaCredito: factura.numeroNotaCredito || 0, concepto: factura.comprobante?.concepto || 1, docTipo: factura.receptor?.tipoDocumento, docNro: factura.receptor?.numeroDocumento, condicionIVAReceptor: factura.receptor?.condicionIVA === 'Responsable Inscripto' ? 1 : 5, importeNeto: factura.totales?.subtotal || factura.importeNeto, importeIVA: factura.totales?.iva || factura.importeIVA, importeTotal: factura.totales?.total || factura.importeTotal, importeNoGravado: factura.totales?.noGravado || 0, importeExento: factura.totales?.exento || 0, importeTributos: factura.totales?.tributos || 0, moneda: factura.comprobante?.moneda || "PES", cotizacion: factura.comprobante?.cotizacion || 1, fecha: factura.afip?.fecha || factura.comprobante?.fecha, items: factura.items || [], iva: ivaFormateado }
+        };
+        await facturasService.anularFactura(datosAnulacion);
+        Swal.fire('Anulada', 'La Nota de Crédito se generó correctamente.', 'success');
+        fetchFacturas(paginationFacturas.page);
     } catch (err) {
-      Swal.fire('Error', err.response?.data?.message || 'No se pudo anular la factura', 'error');
+        Swal.fire('Error', err.response?.data?.message || 'No se pudo anular la factura', 'error');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
@@ -414,31 +428,21 @@ const BuscadorFacturas = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="h3">Explorador de Comprobantes</h1>
         <div className="text-muted small bg-light p-2 rounded border">
-          Total: <strong>{pagination.total}</strong> | Pág: <strong>{pagination.page} de {pagination.pages}</strong>
+          Total: <strong>{currentPagination.total}</strong> | Pág: <strong>{currentPagination.page} de {currentPagination.pages}</strong>
         </div>
       </div>
 
-      {/* Switch de tipo de comprobante */}
       <div className="tab-switch-container mb-4">
-        <button 
-          className={`tab-btn ${tipoVista === 'facturas' ? 'active' : ''}`} 
-          onClick={() => { setTipoVista('facturas'); resetFiltros('facturas'); setPagination(prev => ({ ...prev, page: 1 })); }}
-        >
-          <i className="bi bi-file-earmark-text-fill me-2"></i>Facturas (AFIP)
+        <button className={`tab-btn ${tipoVista === 'facturas' ? 'active' : ''}`} onClick={() => setTipoVista('facturas')}>
+          <i className="bi bi-file-earmark-text-fill me-2"></i>Facturas ({paginationFacturas.total})
         </button>
-        <button 
-           className={`tab-btn ${tipoVista === 'tickets' ? 'active' : ''}`} 
-           onClick={() => { setTipoVista('tickets'); resetFiltros('tickets'); setPagination(prev => ({ ...prev, page: 1 })); }}
-         >
-           <i className="bi bi-receipt me-2"></i>Tickets Internos
-         </button>
-         <button 
-           className={`tab-btn ${tipoVista === 'notasPedido' ? 'active' : ''}`} 
-           onClick={() => { setTipoVista('notasPedido'); resetFiltros('notasPedido'); setPagination(prev => ({ ...prev, page: 1 })); }}
-         >
-           <i className="bi bi-journal-check me-2"></i>Notas de Pedido
-         </button>
-       </div>
+        <button className={`tab-btn ${tipoVista === 'tickets' ? 'active' : ''}`} onClick={() => setTipoVista('tickets')}>
+          <i className="bi bi-receipt me-2"></i>Tickets ({paginationTickets.total})
+        </button>
+        <button className={`tab-btn ${tipoVista === 'notasPedido' ? 'active' : ''}`} onClick={() => setTipoVista('notasPedido')}>
+          <i className="bi bi-journal-check me-2"></i>Pedidos ({paginationNotas.total})
+        </button>
+      </div>
 
       <div className="section-card mb-4 shadow-sm">
           <div className="filters-row">
@@ -454,7 +458,6 @@ const BuscadorFacturas = () => {
                         <option value="ANULADA">Anuladas</option>
                     </select>
                 </div>
-                {/* ... (rest of facturas filters) */}
                 <div className="col-filtro" style={{ flex: '1 0 200px', maxWidth: '300px' }}>
                     <label className="form-label-custom">Tipo Comprobante</label>
                     <select className="form-select" name="tipoComprobante" value={filtrosFacturas.tipoComprobante} onChange={handleFilterChange}>
@@ -488,14 +491,7 @@ const BuscadorFacturas = () => {
             ) : tipoVista === 'tickets' ? (
               <div className="col-filtro" style={{ flex: '1' }}>
                   <label className="form-label-custom">Buscar Ticket</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    name="search" 
-                    placeholder="ID Venta, Número, Cajero o Fecha (YYYY-MM-DD)" 
-                    value={filtrosTickets.search} 
-                    onChange={handleFilterChange} 
-                  />
+                  <input type="text" className="form-control" name="search" placeholder="ID Venta, Número, Cajero o Fecha" value={filtrosTickets.search} onChange={handleFilterChange} />
               </div>
             ) : (
                 <div className="col-filtro" style={{ flex: '1' }}>
@@ -512,10 +508,10 @@ const BuscadorFacturas = () => {
             )}
 
               <div className="botones-container">
-                  <button className="btn btn-light border" onClick={resetFiltros} title="Limpiar">
+                  <button className="btn btn-light border" onClick={() => resetFiltros()} title="Limpiar">
                       <i className="bi bi-eraser-fill"></i>
                   </button>
-                  <button className="btn btn-primary px-4 shadow-sm" onClick={() => fetchDatos(1)} disabled={loading}>
+                  <button className="btn btn-primary px-4 shadow-sm" onClick={handleBuscarClick} disabled={loading}>
                       {loading ? <span className="spinner-border spinner-border-sm"></span> : 'BUSCAR'}
                   </button>
               </div>
@@ -533,10 +529,10 @@ const BuscadorFacturas = () => {
         )}
         
         <GenericTable 
-          data={resultados} 
+          data={currentResultados} 
           type={tipoVista} 
-          pagination={pagination} 
-          onPageChange={(p) => fetchDatos(p)} 
+          pagination={currentPagination} 
+          onPageChange={handlePageChange} 
           onRowClick={handleVerPdf} 
           onReintentar={tipoVista === 'facturas' ? handleReintentar : undefined}
           onAnular={tipoVista === 'facturas' ? handleAnular : undefined}

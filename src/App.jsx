@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import AdminProtectedRoute from './components/auth/AdminProtectedRoute';
 
 
 //paginas login y register
@@ -8,7 +9,9 @@ import LoginUsuarios from './pages/auth/Register/register-usuarios.jsx';
 import RegisterEmpresa from './pages/auth/Register/Register-empresa.jsx';
 import IniciarSesion from './pages/auth/Login/sign-in.jsx';
 
-//paginas inventario
+//admin
+import AdminLogin from './pages/admin/AdminLogin.jsx';
+import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import BuscadorProductos from './pages/inventario/buscadorProductos.jsx';
 import CategoriasYMarcas from './pages/inventario/CategoriasYMarcas.jsx';
 import ImportacionMasiva from './pages/inventario/ImportacionMasiva.jsx';
@@ -51,6 +54,12 @@ function App() {
       <Route path="/login-usuarios" element={<IniciarSesion />} />
       <Route path="/register-empresa" element={<RegisterEmpresa />} />
       <Route path="/register-usuarios" element={<LoginUsuarios />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
+
+      {/* --- RUTAS DE ADMIN (Protegidas) --- */}
+      <Route element={<AdminProtectedRoute />}>
+        <Route path="/admin" element={<AdminDashboard />} />
+      </Route>
 
       {/* --- RUTAS PRIVADAS (Protegidas) --- */}
       <Route element={<ProtectedRoute />}>

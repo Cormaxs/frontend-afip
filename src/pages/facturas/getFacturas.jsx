@@ -74,6 +74,7 @@ export default function VerFacturasCompany() {
     const fetchFacturas = useCallback(async (page, itemsLimit, searchQuery, signal) => {
         setIsLoading(true);
         setError(null);
+        console.log("🔍 Debug: fetchFacturas iniciado", { page, itemsLimit, searchQuery });
         try {
             const companyId = JSON.parse(localStorage.getItem("dataEmpresa"))?._id;
             if (!companyId) throw new Error("ID de empresa no válido.");
@@ -85,7 +86,9 @@ export default function VerFacturasCompany() {
                 search: searchQuery,
             };
 
+            console.log("🔍 Debug: Llamando a getFacturas con opciones:", options);
             const response = await getFacturas(options, { signal });
+            console.log("🔍 Debug: Respuesta de getFacturas:", response);
 
             if (response && Array.isArray(response.data) && typeof response.total === 'number') {
                 setFacturas(response.data);
@@ -99,10 +102,12 @@ export default function VerFacturasCompany() {
                 };
                 setPaginationInfo(newPaginationInfo);
             } else {
+                console.error("🔍 Debug: Formato de respuesta inesperado:", response);
                 throw new Error("La respuesta de la API no tiene el formato esperado.");
             }
         } catch (e) {
             if (e.name !== 'AbortError' && !axios.isCancel(e)) {
+                console.error("🔍 Debug: Error en fetchFacturas:", e);
                 setError(e.message || 'Ocurrió un error desconocido.');
             }
         } finally {

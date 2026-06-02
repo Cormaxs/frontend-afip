@@ -11,6 +11,7 @@ const LoadingFallback = () => (
 // --- 1. Conversión de todos los imports a lazy ---
 const GetDashboardData = lazy(() => import("../pages/dashboard.jsx"));
 const MetricasNegocio = lazy(() => import("../pages/metricas.jsx"));
+const AdminDashboard = lazy(() => import("../pages/admin/AdminDashboard.jsx"));
 const LoginPage = lazy(() => import("../pages/propietario/login.jsx"));
 const RegisterPage = lazy(() => import("../pages/propietario/register.jsx"));
 const EmpresaRegister = lazy(() => import("../pages/empresa/empresa-register.jsx"));
@@ -36,6 +37,7 @@ export default function LoadRoutes() {
                 {/* Ruta principal */}
                 <Route path="/dashboard" element={<GetDashboardData />} />
                 <Route path="/metricas" element={<MetricasNegocio />} />
+                <Route path="/admin" element={<AdminDashboard />} />
                 
                 {/* Autenticación */}
                 <Route path="/login" element={<LoginPage />} />
