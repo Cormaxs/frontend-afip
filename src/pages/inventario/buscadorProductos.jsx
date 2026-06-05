@@ -30,17 +30,26 @@ const BuscadorProductos = () => {
     if (user?.empresa) handleSearch(1);
   }, [user?.empresa]);
 
-  const handleSearch = async (page = 1) => {
+  const handleSearch = async (page = 1, currentSearchTerm = searchTerm) => {
     if (!user?.empresa) return;
     setLoading(true);
     try {
       const response = await ProductosService.buscadorgeneralProduct({
-        empresa: user.empresa, q: searchTerm, page
+        empresa: user.empresa, q: currentSearchTerm, page
       });
       setResultados(response.data.productos || []);
       setPagination(response.data.pagination);
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }
+  };
+
+  const handlePaste = (e) => {
+    const pastedData = e.clipboardData.getData('text');
+    if (pastedData) {
+      setSearchTerm(pastedData);
+      // Disparamos la búsqueda inmediatamente con el dato pegado
+      handleSearch(1, pastedData);
+    }
   };
 
   // --- FUNCIÓN PARA ELIMINAR ---
@@ -200,8 +209,10 @@ const BuscadorProductos = () => {
       <form onSubmit={(e) => { e.preventDefault(); handleSearch(1); }} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
         <input 
           type="text" className="input-field" style={{ maxWidth: '350px' }} 
-          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-          placeholder="Buscar producto..." 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
+          onPaste={handlePaste}
+          placeholder="Buscar producto o pegue código..." 
         />
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? '...' : 'Buscar'}

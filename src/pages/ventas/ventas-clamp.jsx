@@ -115,23 +115,62 @@ export default function VentasClampCompact() {
     const handleSearchAndAddItem = useCallback(async () => {
         if (loading || !puntoSeleccionado || !codBarra.trim()) return;
         
-        setLoading(true);
+        // No bloqueamos con loading global para no congelar la UI durante el escaneo rápido
+        const currentBarcode = codBarra.trim();
+        setCodBarra(''); // Limpiamos inmediatamente para el siguiente escaneo
+        
         try {
-            const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, codBarra.trim());
+            const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, currentBarcode);
             const product = productResponse?.data || productResponse;
             
             if (product && product._id) {
                 addItem(product);
-                setCodBarra(''); 
+                // Feedback visual rápido y no bloqueante
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true,
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: `${product.producto} agregado`
+                });
             } else {
-                Swal.fire('Info', 'Producto no encontrado.', 'info');
+                // Feedback de error no bloqueante
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true,
+                });
+                Toast.fire({
+                    icon: 'warning',
+                    title: 'Producto no encontrado'
+                });
             }
         } catch (error) {
-            Swal.fire('Error', `Fallo al buscar producto: ${error.message || 'Error desconocido'}`, 'error');
+            console.error('Error al buscar producto:', error);
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+            });
+            Toast.fire({
+                icon: 'error',
+                title: `Error: ${error.message || 'Fallo en la búsqueda'}`
+            });
         } finally {
-            setLoading(false);
-            setCodBarra(''); 
-            inputRef.current?.focus();
+            // Aseguramos que el input recupere el foco inmediatamente
+            setTimeout(() => {
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                    inputRef.current.select(); // Seleccionar texto por si quedó algo
+                }
+            }, 50);
         }
     }, [loading, puntoSeleccionado, codBarra, empresaId, getProductCodBarra, addItem]);
 
@@ -141,6 +180,51 @@ export default function VentasClampCompact() {
             handleSearchAndAddItem();
         }
     }, [handleSearchAndAddItem]);
+
+    const handlePaste = useCallback((e) => {
+        const pastedData = e.clipboardData.getData('text');
+        if (pastedData) {
+            // Usamos un pequeño delay para que el estado se actualice antes de buscar
+            // o pasamos el valor directamente
+            setCodBarra(pastedData);
+            // No podemos llamar a handleSearchAndAddItem directamente porque usa el estado codBarra
+            // Así que implementamos la búsqueda inmediata aquí para agilizar
+            if (!loading && puntoSeleccionado && pastedData.trim()) {
+                const searchPasted = async () => {
+                    const barcode = pastedData.trim();
+                    setCodBarra(''); // Limpiamos inmediatamente
+                    try {
+                        const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, barcode);
+                        const product = productResponse?.data || productResponse;
+                        if (product && product._id) {
+                            addItem(product);
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                timerProgressBar: true,
+                            });
+                            Toast.fire({ icon: 'success', title: `${product.producto} agregado` });
+                        } else {
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000,
+                            });
+                            Toast.fire({ icon: 'warning', title: 'Producto no encontrado' });
+                        }
+                    } catch (error) {
+                        console.error('Error al buscar producto pegado:', error);
+                    } finally {
+                        setTimeout(() => inputRef.current?.focus(), 50);
+                    }
+                };
+                searchPasted();
+            }
+        }
+    }, [loading, puntoSeleccionado, empresaId, getProductCodBarra, addItem]);
     
     const handleQuantityChange = useCallback((index, value) => {
         let newQuantity = parseInt(value, 10);
@@ -428,7 +512,7 @@ export default function VentasClampCompact() {
                     <div className="mb-5">
                         <label className="block text-gray-700 text-sm font-bold mb-2">Agregar Producto</label>
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <input ref={inputRef} type="text" value={codBarra} onChange={(e) => setCodBarra(e.target.value)} onKeyDown={handleKeyDown} placeholder="Escanear o ingresar código de barras" disabled={!puntoSeleccionado} className="flex-grow shadow border rounded w-full py-2 px-3 focus:ring-[var(--principal)] focus:border-[var(--principal)]" autoFocus />
+                            <input ref={inputRef} type="text" value={codBarra} onChange={(e) => setCodBarra(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="Escanea o pega código de barras" disabled={!puntoSeleccionado} className="flex-grow shadow border rounded w-full py-2 px-3 focus:ring-[var(--principal)] focus:border-[var(--principal)]" autoFocus />
                             <div className="flex gap-3">
                                 <button type="button" onClick={handleSearchAndAddItem} disabled={!puntoSeleccionado || !codBarra.trim() || loading} className="w-full sm:w-auto bg-[var(--principal)] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded whitespace-nowrap disabled:bg-gray-400">
                                     {loading && codBarra.trim() ? 'Buscando...' : 'Agregar'}

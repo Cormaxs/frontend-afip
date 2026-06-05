@@ -10,9 +10,10 @@ import {
     getCompanyCajas,
     getCompanyPuntosVenta,
     getCompanyPagosProveedor,
-    getCompanyCuentasPagar
+    getCompanyCuentasPagar,
+    getCompanyPayments
 } from '../../services/admin/admin.service.js';
-import { LogOut, Users, Package, FileText, ClipboardList, ShoppingBag, Banknote, Building, ClipboardCheck, Store, DollarSign, Zap } from 'lucide-react';
+import { LogOut, Users, Package, FileText, ClipboardList, ShoppingBag, Banknote, Building, ClipboardCheck, Store, DollarSign, Zap, CreditCard } from 'lucide-react';
 import AdminDataView from './AdminDataView.jsx';
 import PlanLimitsView from './PlanLimitsView.jsx';
 import PlanManagementView from './PlanManagementView.jsx';
@@ -105,6 +106,9 @@ export default function AdminDashboard() {
                 case 'cuentas':
                     data = await getCompanyCuentasPagar(selectedCompany);
                     break;
+                case 'payments':
+                    data = await getCompanyPayments(selectedCompany);
+                    break;
             }
 
             setTabData(data);
@@ -131,8 +135,9 @@ export default function AdminDashboard() {
         { id: 'notas', label: 'Notas de Pedido', icon: ClipboardCheck, iconJSX: <ClipboardCheck size={18} />, dataKey: 'notas' },
         { id: 'cajas', label: 'Cajas', icon: ShoppingBag, iconJSX: <ShoppingBag size={18} />, dataKey: 'cajas' },
         { id: 'puntos', label: 'P. Venta', icon: Store, iconJSX: <Store size={18} />, dataKey: 'puntos' },
-        { id: 'pagos', label: 'Pagos', icon: DollarSign, iconJSX: <DollarSign size={18} />, dataKey: 'pagos' },
+        { id: 'pagos', label: 'Pagos Prov.', icon: DollarSign, iconJSX: <DollarSign size={18} />, dataKey: 'pagos' },
         { id: 'cuentas', label: 'C. Pagar', icon: Banknote, iconJSX: <Banknote size={18} />, dataKey: 'cuentas' },
+        { id: 'payments', label: 'Pagos MP', icon: CreditCard, iconJSX: <CreditCard size={18} />, dataKey: 'payments' },
     ];
 
     return (
@@ -294,6 +299,22 @@ export default function AdminDashboard() {
                                                     <label>Provincia</label>
                                                     <p>{companyDetails.company?.provincia || 'N/A'}</p>
                                                 </div>
+                                                <div className="admin-info-card">
+                                                    <label>Estado MP</label>
+                                                    <p>
+                                                        <span className={`admin-badge ${
+                                                            companyDetails.company?.mpStatus === 'authorized' 
+                                                                ? 'admin-badge--success' 
+                                                                : 'admin-badge--warning'
+                                                        }`}>
+                                                            {companyDetails.company?.mpStatus || 'No vinculado'}
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                                <div className="admin-info-card">
+                                                    <label>Próximo Pago</label>
+                                                    <p>{companyDetails.company?.proximoPago ? new Date(companyDetails.company.proximoPago).toLocaleDateString('es-AR') : 'N/A'}</p>
+                                                </div>
                                                 <div className="admin-info-card admin-info-card--full">
                                                     <label>Dirección</label>
                                                     <p>{companyDetails.company?.direccion || 'N/A'}</p>
@@ -314,7 +335,8 @@ export default function AdminDashboard() {
                                                         { label: 'P. Venta', value: companyDetails.counts?.puntosVenta || 0, icon: <Store size={20} />, color: '#ec4899' },
                                                         { label: 'Cajas', value: companyDetails.counts?.cajas || 0, icon: <ShoppingBag size={20} />, color: '#6366f1' },
                                                         { label: 'C. Pagar', value: companyDetails.counts?.cuentasPagar || 0, icon: <ClipboardCheck size={20} />, color: '#ef4444' },
-                                                        { label: 'Pagos', value: companyDetails.counts?.pagosProveedor || 0, icon: <DollarSign size={20} />, color: '#16a34a' },
+                                                        { label: 'Pagos Prov.', value: companyDetails.counts?.pagosProveedor || 0, icon: <DollarSign size={20} />, color: '#16a34a' },
+                                                        { label: 'Pagos MP', value: companyDetails.counts?.payments || 0, icon: <CreditCard size={20} />, color: '#3b82f6' },
                                                     ].map((stat, idx) => (
                                                         <div key={idx} className="admin-stat-card" style={{ borderLeftColor: stat.color }}>
                                                             <div className="admin-stat-icon">{stat.icon}</div>
@@ -474,6 +496,14 @@ function getColumnsForTab(tabId) {
             { key: 'montoPendiente', label: 'Pendiente' },
             { key: 'estado', label: 'Estado' },
             { key: 'fechaVencimiento', label: 'Vencimiento' },
+        ],
+        payments: [
+            { key: 'monto', label: 'Monto' },
+            { key: 'moneda', label: 'Moneda' },
+            { key: 'fechaPago', label: 'Fecha' },
+            { key: 'metodoPago', label: 'Método' },
+            { key: 'estado', label: 'Estado' },
+            { key: 'referenciaPago', label: 'Ref. MP' },
         ],
     };
     return columnsMap[tabId] || [];

@@ -46,25 +46,41 @@ const UploadForm = ({ empresaId, puntoVentaId, onSuccess }) => {
 
     setUploading(true);
     try {
-      const respuesta = await ImportacionService.importarProductos(
+      const response = await ImportacionService.importarProductos(
         empresaId,
         puntoVentaId,
         archivo
       );
 
-      Swal.fire({
-        title: '¡Importación Exitosa!',
-        html: `
-          <div style="text-align: left;">
-            <p><strong>Insertados:</strong> ${respuesta.data.insertados}</p>
-            <p><strong>Errores:</strong> ${respuesta.data.errores}</p>
-          </div>
-        `,
-        icon: 'success'
-      });
+      const result = response.data;
+
+      if (result.success) {
+        Swal.fire({
+          title: '¡Importación Finalizada!',
+          html: `
+            <div style="text-align: left; font-size: 0.95rem;">
+              <p style="color: #16a34a; font-weight: 600;">✅ Éxito: ${result.exitosos} productos importados.</p>
+              ${result.erroresValidacion?.length > 0 ? `
+                <p style="color: #ca8a04; font-weight: 600; margin-top: 10px;">⚠️ Errores de Validación (${result.erroresValidacion.length}):</p>
+                <ul style="max-height: 150px; overflow-y: auto; background: #fffbeb; padding: 10px 25px; border-radius: 4px; font-size: 0.85rem;">
+                  ${result.erroresValidacion.slice(0, 5).map(err => `<li>${err}</li>`).join('')}
+                  ${result.erroresValidacion.length > 5 ? '<li>... y otros más.</li>' : ''}
+                </ul>
+              ` : ''}
+              ${result.erroresDB?.length > 0 ? `
+                <p style="color: #dc2626; font-weight: 600; margin-top: 10px;">❌ Errores de Base de Datos (${result.erroresDB.length}):</p>
+                <p style="font-size: 0.85rem;">Algunos productos no pudieron guardarse (posiblemente códigos duplicados).</p>
+              ` : ''}
+            </div>
+          `,
+          icon: result.exitosos > 0 ? 'success' : 'warning'
+        });
+      } else {
+        Swal.fire('Atención', result.message || 'No se pudieron procesar productos', 'warning');
+      }
 
       setArchivo(null);
-      if (onSuccess) onSuccess(respuesta.data);
+      if (onSuccess) onSuccess(result);
     } catch (error) {
       Swal.fire('Error', error.response?.data?.message || 'Error en la importación', 'error');
     } finally {

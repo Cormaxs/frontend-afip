@@ -14,8 +14,16 @@ export default function PlanLimitsView({ companyId, companyName }) {
     const loadPlanData = async () => {
         try {
             setLoading(true);
-            const data = await getCompanyPlanLimits(companyId);
-            setPlanData(data.planLimits);
+            const response = await getCompanyPlanLimits(companyId);
+            // El backend ahora devuelve { success: true, planLimits: { ... } }
+            if (response && response.planLimits) {
+                setPlanData(response.planLimits);
+            } else if (response && !response.planLimits && response.nombrePlan) {
+                // Fallback por si la estructura es directa (compatibilidad)
+                setPlanData(response);
+            } else {
+                throw new Error('Estructura de respuesta inválida');
+            }
             setError(null);
         } catch (err) {
             setError('Error al cargar información del plan');

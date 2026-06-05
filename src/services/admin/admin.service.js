@@ -163,6 +163,16 @@ export const getCompanyCuentasPagar = async (companyId) => {
     }
 };
 
+export const getCompanyPayments = async (companyId) => {
+    try {
+        const response = await adminApi.get(`/company/${companyId}/payments`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener pagos de MP:', error);
+        throw error;
+    }
+};
+
 export const getAllUsers = async () => {
     try {
         const response = await adminApi.get('/users');

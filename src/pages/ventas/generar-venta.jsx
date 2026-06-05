@@ -55,18 +55,16 @@ export default function GenerarVentas() {
   // --- Manejador para buscar y agregar producto a la factura ---
   const handleSearchAndAddItem = async () => {
     if (loading || errorConfig || !empresaId || !puntoSeleccionado || !codBarra.trim()) {
-      Swal.fire('Atención', 'Asegura que la empresa, el punto de venta y el código de barras estén completos.', 'warning');
       return;
     }
 
-    setLoading(true);
-    try {
-      console.log(`Intentando buscar producto: Empresa ID=${empresaId}, Punto ID=${puntoSeleccionado}, Código de Barras=${codBarra.trim()}`);
-      
-      const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, codBarra.trim());
-      
-      console.log("Respuesta completa de getProductCodBarra:", productResponse); 
+    const currentBarcode = codBarra.trim();
+    setCodBarra(''); // Limpiamos inmediatamente para agilizar
 
+    try {
+      console.log(`Intentando buscar producto: Empresa ID=${empresaId}, Punto ID=${puntoSeleccionado}, Código de Barras=${currentBarcode}`);
+      
+      const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, currentBarcode);
       const product = productResponse?.data || productResponse; 
 
       if (product && product._id && product.producto && product.precioLista !== undefined) { 
@@ -77,7 +75,6 @@ export default function GenerarVentas() {
           const updatedItems = [...itemsFactura];
           updatedItems[existingItemIndex].cantidad += 1;
           setItemsFactura(updatedItems);
-          Swal.fire('Éxito', `Cantidad de ${product.producto} actualizada a ${updatedItems[existingItemIndex].cantidad}.`, 'success');
         } else {
           setItemsFactura(prevItems => [...prevItems, { 
             _id: product._id, 
@@ -88,18 +85,46 @@ export default function GenerarVentas() {
             codigoBarra: product.codigoBarra || 'N/A', 
             marca: product.marca || 'N/A' 
           }]);
-          Swal.fire('Éxito', `${product.producto} agregado a la factura.`, 'success');
         }
+
+        // Feedback visual rápido y no bloqueante
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1000,
+          timerProgressBar: true,
+        });
+        Toast.fire({
+          icon: 'success',
+          title: `${product.producto} agregado`
+        });
+
       } else {
-        Swal.fire('Info', 'Producto no encontrado o datos incompletos. Revisa la consola para más detalles.', 'info');
-        console.warn('Producto recibido no válido o con propiedades faltantes (esperando _id, producto, precioLista):', product); 
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+        });
+        Toast.fire({
+          icon: 'info',
+          title: 'Producto no encontrado'
+        });
       }
     } catch (error) {
       console.error('Error al buscar o agregar producto:', error);
-      Swal.fire('Error', `Fallo al buscar producto: ${error.message || 'Error desconocido'}`, 'error');
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+      });
+      Toast.fire({
+        icon: 'error',
+        title: `Error: ${error.message || 'Fallo en la búsqueda'}`
+      });
     } finally {
-      setLoading(false);
-      setCodBarra('');
       inputRef.current?.focus(); 
     }
   };
@@ -125,6 +150,45 @@ export default function GenerarVentas() {
     if (e.key === 'Enter') {
       e.preventDefault(); 
       handleSearchAndAddItem();
+    }
+  };
+
+  const handlePaste = (e) => {
+    const pastedData = e.clipboardData.getData('text');
+    if (pastedData) {
+      setCodBarra(pastedData);
+      // Disparamos la búsqueda inmediata al pegar
+      if (!loading && !errorConfig && empresaId && puntoSeleccionado && pastedData.trim()) {
+        const searchPasted = async () => {
+          const barcode = pastedData.trim();
+          setCodBarra('');
+          try {
+            const productResponse = await getProductCodBarra(empresaId, puntoSeleccionado, barcode);
+            const product = productResponse?.data || productResponse;
+            if (product && product._id && product.producto) {
+              const existingItemIndex = itemsFactura.findIndex(item => item._id === product._id);
+              if (existingItemIndex > -1) {
+                const updatedItems = [...itemsFactura];
+                updatedItems[existingItemIndex].cantidad += 1;
+                setItemsFactura(updatedItems);
+              } else {
+                setItemsFactura(prevItems => [...prevItems, { 
+                  _id: product._id, producto: product.producto, precio: parseFloat(product.precioLista), 
+                  cantidad: 1, categoria: product.categoria || 'N/A', codigoBarra: product.codigoBarra || 'N/A', 
+                  marca: product.marca || 'N/A' 
+                }]);
+              }
+              const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000, timerProgressBar: true });
+              Toast.fire({ icon: 'success', title: `${product.producto} agregado` });
+            } else {
+              const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+              Toast.fire({ icon: 'info', title: 'Producto no encontrado' });
+            }
+          } catch (error) { console.error(error); }
+          finally { inputRef.current?.focus(); }
+        };
+        searchPasted();
+      }
     }
   };
 
@@ -205,7 +269,8 @@ export default function GenerarVentas() {
             value={codBarra}
             onChange={(e) => setCodBarra(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escanea o ingresa el código"
+            onPaste={handlePaste}
+            placeholder="Escanea o pega código..."
             disabled={loading || !puntoSeleccionado}
             style={styles.input}
             autoFocus
