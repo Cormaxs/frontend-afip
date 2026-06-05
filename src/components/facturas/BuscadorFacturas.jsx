@@ -51,13 +51,13 @@ const BuscadorFacturas = () => {
 
   const fetchFacturas = useCallback(async (page = 1) => {
     const userStorage = localStorage.getItem("user");
-    let idAfipActual = user?.idDbAfip;
+    let idEmpresaActual = user?.empresa;
     
-    if (!idAfipActual && userStorage) {
-      try { idAfipActual = JSON.parse(userStorage).idDbAfip; } catch (e) {}
+    if (!idEmpresaActual && userStorage) {
+      try { idEmpresaActual = JSON.parse(userStorage).empresa; } catch (e) {}
     }
     
-    if (!idAfipActual) return;
+    if (!idEmpresaActual) return;
     
     setLoading(true);
     try {
@@ -65,9 +65,9 @@ const BuscadorFacturas = () => {
       if (filtrosFormateados.puntoVenta) filtrosFormateados.puntoVenta = filtrosFormateados.puntoVenta.toString().padStart(5, '0');
       if (filtrosFormateados.numero) filtrosFormateados.numero = filtrosFormateados.numero.toString().padStart(8, '0');
       const cleanFilters = Object.fromEntries(Object.entries(filtrosFormateados).filter(([_, v]) => v !== undefined && v !== ""));
-      const params = { userId: idAfipActual, ...cleanFilters, page: page.toString() };
+      const params = { idEmpresa: idEmpresaActual, ...cleanFilters, page: page.toString() };
       
-      console.log("📡 API: Buscando Facturas...");
+      console.log("📡 API: Buscando Facturas para empresa:", idEmpresaActual);
       const response = await facturasService.buscarFacturas(params);
       setResultadosFacturas(response.data.data || []);
       if (response.data.paginacion) {
@@ -83,25 +83,27 @@ const BuscadorFacturas = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.idDbAfip, filtrosFacturas]);
+  }, [user?.empresa, filtrosFacturas]);
 
   const fetchTickets = useCallback(async (page = 1) => {
-    const empresaStorage = localStorage.getItem("empresa");
-    let idEmpresaActual = empresa?._id;
+    const userStorage = localStorage.getItem("user");
+    let idEmpresaActual = user?.empresa;
     
-    if (!idEmpresaActual && empresaStorage) {
+    if (!idEmpresaActual && userStorage) {
       try { 
-        const parsed = JSON.parse(empresaStorage);
-        idEmpresaActual = parsed._id || parsed.id;
+        idEmpresaActual = JSON.parse(userStorage).empresa;
       } catch (e) {}
     }
 
-    if (!idEmpresaActual) return;
+    if (!idEmpresaActual) {
+      console.warn("⚠️ No se encontró ID de empresa para buscar tickets");
+      return;
+    }
 
     setLoading(true);
     try {
       const params = { ...filtrosTickets, page: page.toString() };
-      console.log("📡 API: Buscando Tickets...");
+      console.log("📡 API: Buscando Tickets para empresa:", idEmpresaActual);
       const response = await ticketsService.getTickets(idEmpresaActual, params);
       setResultadosTickets(response.data.data || []);
       if (response.data.paginacion) {
@@ -112,30 +114,32 @@ const BuscadorFacturas = () => {
           pages: response.data.paginacion.totalPages
         });
       }
-    } catch (err) {
+    } catch (err) { 
       console.error("Error buscando tickets:", err);
     } finally {
       setLoading(false);
     }
-  }, [empresa?._id, filtrosTickets]);
+  }, [user?.empresa, filtrosTickets]);
 
   const fetchNotas = useCallback(async (page = 1) => {
-    const empresaStorage = localStorage.getItem("empresa");
-    let idEmpresaActual = empresa?._id;
+    const userStorage = localStorage.getItem("user");
+    let idEmpresaActual = user?.empresa;
     
-    if (!idEmpresaActual && empresaStorage) {
+    if (!idEmpresaActual && userStorage) {
       try { 
-        const parsed = JSON.parse(empresaStorage);
-        idEmpresaActual = parsed._id || parsed.id;
+        idEmpresaActual = JSON.parse(userStorage).empresa;
       } catch (e) {}
     }
 
-    if (!idEmpresaActual) return;
+    if (!idEmpresaActual) {
+      console.warn("⚠️ No se encontró ID de empresa para buscar notas de pedido");
+      return;
+    }
 
     setLoading(true);
     try {
       const params = { ...filtrosNotas, page: page.toString() };
-      console.log("📡 API: Buscando Notas de Pedido...");
+      console.log("📡 API: Buscando Notas de Pedido para empresa:", idEmpresaActual);
       const response = await ticketsService.getNotasPedido(idEmpresaActual, params);
       setResultadosNotas(response.data.data || []);
       if (response.data.paginacion) {
@@ -151,7 +155,7 @@ const BuscadorFacturas = () => {
     } finally {
       setLoading(false);
     }
-  }, [empresa?._id, filtrosNotas]);
+  }, [user?.empresa, filtrosNotas]);
 
   // Función principal de actualización (Llamada al inicio y al recargar)
   const refreshAll = useCallback(async () => {
@@ -325,9 +329,16 @@ const BuscadorFacturas = () => {
 
     setLoading(true);
     try {
+        const userId = user?._id || user?.id;
+        const empresaId = empresa?._id || empresa?.id || user?.empresa;
+
+        if (!userId || !empresaId) {
+            throw new Error("No se pudo obtener la información del usuario o la empresa.");
+        }
+
         await ticketsService.facturarNotaPedido(nota._id, {
-            idUsuario: user._id || user.id,
-            idEmpresa: empresa._id,
+            idUsuario: userId,
+            idEmpresa: empresaId,
             tipoFacturacion,
             afipData: tipoFacturacion === 'AFIP' ? {
                 idDbAfip: user.idDbAfip,

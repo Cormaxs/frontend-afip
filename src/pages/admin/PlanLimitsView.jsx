@@ -159,7 +159,9 @@ export default function PlanLimitsView({ companyId, companyName }) {
                     </h3>
                     {renderLimitCard('Productos', planData.limites.productos)}
                     {renderLimitCard('Usuarios', planData.limites.usuarios)}
-                    {renderLimitCard('Facturas/Mes', planData.limites.facturas)}
+                    {renderLimitCard('Facturas AFIP/Mes', planData.limites.facturas)}
+                    {renderLimitCard('Tickets Internos/Mes', planData.limites.tickets)}
+                    {renderLimitCard('Notas de Pedido/Mes', planData.limites.notasPedido)}
                     {renderLimitCard('Puntos de Venta', planData.limites.puntosVenta)}
                     {renderLimitCard('Cajas', planData.limites.cajas)}
                 </div>

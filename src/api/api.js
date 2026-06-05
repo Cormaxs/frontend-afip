@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const desarrollo ="https://dev.facstock.com/";//'http://localhost:3010'
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3010" , // Usa variable de entorno https://api.facstock.com
+  baseURL: (import.meta.env.VITE_API_URL || "http://localhost:3010").replace(/\/$/, ""), // Usa variable de entorno
   headers: {
     'Content-Type': 'application/json',
   },

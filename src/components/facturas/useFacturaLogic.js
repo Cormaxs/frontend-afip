@@ -252,6 +252,7 @@ export const useFacturaLogic = ({ user, empresa }) => {
         });
 
         const payload = {
+            idEmpresa: user.empresa,
             id: user.idDbAfip,
             cuit: empresa.cuit,                    // CUIT siempre presente
             servicio: "wsfe",

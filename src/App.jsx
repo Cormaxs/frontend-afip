@@ -44,6 +44,7 @@ import Despachador from './pages/ventas/Despachador.jsx';
 import Proveedores from './pages/proveedores/Proveedores.jsx';
 import CuentasPorPagar from './pages/cuentas/CuentasPorPagar.jsx';
 import GestionClientes from './pages/crm/GestionClientes.jsx';
+import PlanView from './pages/plan/PlanView.jsx';
 
 
 function App() {
@@ -91,6 +92,7 @@ function App() {
           {/* Configuración */}
           <Route path="/datosUsuario" element={<DatosUsuarios />} />
           <Route path="/DatosEmpresa" element={<DatosEmpresa />} />
+          <Route path="/plan" element={<PlanView />} />
         </Route>
       </Route>
 

@@ -1,15 +1,25 @@
 import axios from 'axios';
 
-// Usa variable de entorno o detecta puerto automáticamente
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3010';
-const ADMIN_CREDENTIALS = 'YWRtaW46YWRtaW4='; // admin:admin en base64
+// Usa variable de entorno o detecta puerto automáticamente (fallback a desarrollo local)
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3010").replace(/\/$/, "");
 
 const adminApi = axios.create({
     baseURL: `${API_BASE_URL}/api/v1/admin`,
     headers: {
-        'Authorization': `Basic ${ADMIN_CREDENTIALS}`,
         'Content-Type': 'application/json'
     }
+});
+
+// Interceptor para añadir el token dinámicamente
+adminApi.interceptors.request.use((config) => {
+    const token = localStorage.getItem('adminAuthToken');
+    if (token) {
+        config.headers.Authorization = token;
+    } else {
+        // Fallback por si acaso, aunque lo ideal es que el login lo setee
+        config.headers.Authorization = 'Basic YWRtaW46YWRtaW4='; 
+    }
+    return config;
 });
 
 export const getCompaniesSummary = async () => {
@@ -98,6 +108,47 @@ export const getCompanyPagosProveedor = async (companyId) => {
         return response.data;
     } catch (error) {
         console.error('Error al obtener pagos a proveedores:', error);
+        throw error;
+    }
+};
+
+// Gestión de Planes
+export const getAdminPlans = async () => {
+    try {
+        const response = await adminApi.get('/plans');
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener planes:', error);
+        throw error;
+    }
+};
+
+export const createAdminPlan = async (planData) => {
+    try {
+        const response = await adminApi.post('/plans', planData);
+        return response.data;
+    } catch (error) {
+        console.error('Error al crear plan:', error);
+        throw error;
+    }
+};
+
+export const updateAdminPlan = async (id, planData) => {
+    try {
+        const response = await adminApi.put(`/plans/${id}`, planData);
+        return response.data;
+    } catch (error) {
+        console.error('Error al actualizar plan:', error);
+        throw error;
+    }
+};
+
+export const deleteAdminPlan = async (id) => {
+    try {
+        const response = await adminApi.delete(`/plans/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al eliminar plan:', error);
         throw error;
     }
 };

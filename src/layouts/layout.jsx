@@ -3,7 +3,7 @@ import { Outlet, NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/auth/authContext.jsx';
 import { 
   FilePlus, List, Package, User, MapPin, 
-  Settings, Menu, LogOut 
+  Settings, Menu, LogOut, CreditCard 
 } from 'lucide-react';
 // Importamos el CSS principal (que a su vez importa todo)
 import '../styles/main.css';
@@ -46,6 +46,7 @@ const Layout = () => {
     {
       title: 'Configuración',
       items: [
+        { path: '/plan', label: 'Mi Plan y Consumo', icon: <CreditCard /> },
         { path: '/puntos-de-ventas', label: 'Puntos de Venta', icon: <MapPin /> },
         { path: '/datosEmpresa', label: 'Datos de Empresa', icon: <Settings /> },
         { path: '/datosUsuario', label: 'Mi Perfil', icon: <User /> },

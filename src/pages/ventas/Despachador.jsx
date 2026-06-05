@@ -571,7 +571,7 @@ const Despachador = () => {
   };
 
   const getNotaPedidoPayload = () => ({
-    idEmpresa: empresa?._id || empresa?.id || user?.empresa,
+    idEmpresa: user?.empresa,
     idUsuario: user._id || user.id,
     puntoDeVenta: pvSeleccionado?.nombre || '',
     items: items.map((item) => ({

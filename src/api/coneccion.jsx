@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-// Determina la URL base según el entorno (desarrollo vs. producción) http://localhost:3000/api/v1  https://api.facstock.com/api/v1
-const URL_BACKEND = "https://api.facstock.com/api/v1"
+// Determina la URL base según el entorno (desarrollo vs. producción)
+// Prioriza la variable de entorno de Vite. Si no existe, usa localhost para desarrollo.
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3010").replace(/\/$/, "");
+const URL_BACKEND = `${API_BASE_URL}/api/v1`;
 
 const axiosInstance = axios.create({
     baseURL: URL_BACKEND,
-    // headers: { 'Content-Type': 'application/json' } // Puedes añadir headers por defecto aquí
 });
 // --- Interceptor de Petición (Request) ---
 // Se ejecuta ANTES de que cada petición sea enviada. Ideal para añadir tokens.
@@ -181,8 +182,29 @@ export async function getEmpresaDataId(idEmpresa) {
     return response.data;
 }
 
+export async function getPlanStatusApi(idEmpresa) {
+    const response = await axiosInstance.get(`/companies/plan-status/${idEmpresa}`);
+    return response.data;
+}
+
 export async function getProductCodBarraApi(idEmpresa, puntoDeVenta, codBarra) {
     const response = await axiosInstance.get(`/products/get/${codBarra}/${idEmpresa}/${puntoDeVenta}`);
+    return response.data;
+}
+
+// --- Mercado Pago y Pagos ---
+export async function subscribeToPlanApi(empresaId, planId, email) {
+    const response = await axiosInstance.post('/payments/subscribe', { empresaId, planId, email });
+    return response.data;
+}
+
+export async function getPaymentHistoryApi(empresaId) {
+    const response = await axiosInstance.get(`/payments/history/${empresaId}`);
+    return response.data;
+}
+
+export async function getPlanStatusPaymentApi(empresaId) {
+    const response = await axiosInstance.get(`/payments/status/${empresaId}`);
     return response.data;
 }
 

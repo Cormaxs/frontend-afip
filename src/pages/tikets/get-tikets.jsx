@@ -66,9 +66,19 @@ export default function VerTiketsCompany() {
     setIsLoading(true);
     setError(null);
     try {
-      const companyId = JSON.parse(localStorage.getItem("dataEmpresa"))?._id;
-      if (!companyId) throw new Error("ID de empresa no válido.");
+      // Usar empresa de los datos del usuario como idEmpresa principal
+      let companyId = userData?.empresa;
+      
+      if (!companyId) {
+        const storedUser = localStorage.getItem("userData");
+        if (storedUser) {
+          companyId = JSON.parse(storedUser).empresa;
+        }
+      }
 
+      if (!companyId) throw new Error("ID de empresa no encontrado en los datos del usuario.");
+
+      console.log("📡 API: Buscando Tickets para empresa:", companyId);
       const response = await fetchTicketsFromAPI(companyId, page, itemsLimit, searchQuery, { signal });
 
       if (response && Array.isArray(response.tickets) && response.pagination) {

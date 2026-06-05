@@ -15,6 +15,7 @@ import {
 import { LogOut, Users, Package, FileText, ClipboardList, ShoppingBag, Banknote, Building, ClipboardCheck, Store, DollarSign, Zap } from 'lucide-react';
 import AdminDataView from './AdminDataView.jsx';
 import PlanLimitsView from './PlanLimitsView.jsx';
+import PlanManagementView from './PlanManagementView.jsx';
 import '../../styles/admin.css';
 
 export default function AdminDashboard() {
@@ -25,6 +26,7 @@ export default function AdminDashboard() {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
+    const [mainView, setMainView] = useState('companies'); // 'companies' o 'plans'
     const [tabData, setTabData] = useState(null);
     const [tabLoading, setTabLoading] = useState(false);
     const navigate = useNavigate();
@@ -46,7 +48,8 @@ export default function AdminDashboard() {
             setCompanies(data.companies || []);
             setError(null);
         } catch (err) {
-            setError('Error al cargar las empresas. Verifica la conexión con el backend.');
+            const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:3010").replace(/\/$/, "");
+            setError(`Error al cargar las empresas. Verifica la conexión con el backend en ${apiBase}.`);
             console.error(err);
         } finally {
             setLoading(false);
@@ -137,8 +140,28 @@ export default function AdminDashboard() {
             {/* Header */}
             <header className="admin-header">
                 <div className="admin-header-left">
-                    <h1>Panel de Administración</h1>
-                    <p>Gestión centralizada del SaaS</p>
+                    <div className="flex items-center gap-6">
+                        <div>
+                            <h1>Panel de Administración</h1>
+                            <p>Gestión centralizada del SaaS</p>
+                        </div>
+                        <nav className="flex gap-4">
+                            <button 
+                                onClick={() => setMainView('companies')}
+                                className={`btn ${mainView === 'companies' ? 'btn-primary' : 'btn-outline'}`}
+                                style={{ margin: 0, padding: '8px 16px' }}
+                            >
+                                <Building size={18} className="mr-2" /> Empresas
+                            </button>
+                            <button 
+                                onClick={() => setMainView('plans')}
+                                className={`btn ${mainView === 'plans' ? 'btn-primary' : 'btn-outline'}`}
+                                style={{ margin: 0, padding: '8px 16px' }}
+                            >
+                                <Zap size={18} className="mr-2" /> Gestión de Planes
+                            </button>
+                        </nav>
+                    </div>
                 </div>
                 <button
                     onClick={handleLogout}
@@ -160,9 +183,14 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                <div className="admin-grid">
-                    {/* Panel Izquierdo - Lista de Empresas */}
-                    <div className="admin-sidebar">
+                {mainView === 'plans' ? (
+                    <div className="p-6">
+                        <PlanManagementView />
+                    </div>
+                ) : (
+                    <div className="admin-grid">
+                        {/* Panel Izquierdo - Lista de Empresas */}
+                        <div className="admin-sidebar">
                         <div className="admin-sidebar-header">
                             <h2>Empresas ({companies.length})</h2>
                         </div>
@@ -381,9 +409,10 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </div>
-            </div>
+            )}
         </div>
-    );
+    </div>
+);
 }
 
 // Función auxiliar para obtener columnas según el tab
