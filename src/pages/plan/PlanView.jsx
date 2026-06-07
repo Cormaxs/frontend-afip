@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getPlanStatusApi, subscribeToPlanApi } from '../../api/coneccion.jsx';
-import { CreditCard, Package, Users, FileText, CheckCircle, AlertCircle, Clock, ExternalLink } from 'lucide-react';
+import { getPlanStatusApi, subscribeToPlanApi, payOnceToPlanApi } from '../../api/coneccion.jsx';
+import { CreditCard, Package, Users, FileText, CheckCircle, AlertCircle, Clock, ExternalLink, RefreshCw, Hand, MessageCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import '../../pages/auth/entrada.css';
 import '../../components/tables/tablas.css';
@@ -67,9 +67,38 @@ const PlanView = () => {
 
         if (!email) return; // El usuario canceló
 
+        // 2. Elegir modo de pago: Automático o Manual
+        const { value: paymentMode } = await Swal.fire({
+            title: 'Elige tu forma de pago',
+            text: '¿Cómo prefieres pagar tu plan?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Continuar',
+            cancelButtonText: 'Cancelar',
+            input: 'radio',
+            inputOptions: {
+                'automatic': 'Automático (Suscripción mensual - Requiere tarjeta habilitada para débito automático)',
+                'manual': 'Manual (Pago único por 30 días - QR, Efectivo, Tarjeta)'
+            },
+            footer: '<div style="font-size: 0.8em; color: #666;">Nota: Algunas tarjetas (como Naranja o locales) pueden rechazar suscripciones automáticas por seguridad. Si falla, usa el modo <b>Manual</b>.</div>',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Debes elegir una opción para continuar';
+                }
+            }
+        });
+
+        if (!paymentMode) return;
+
         try {
             setIsSubscribing(planId);
-            const response = await subscribeToPlanApi(empresaId, planId, email);
+            
+            let response;
+            if (paymentMode === 'automatic') {
+                response = await subscribeToPlanApi(empresaId, planId, email);
+            } else {
+                response = await payOnceToPlanApi(empresaId, planId, email);
+            }
 
             if (response.success) {
                 if (response.isFree) {
@@ -519,11 +548,61 @@ const PlanView = () => {
                                             margin: 0,
                                             fontWeight: '700',
                                             borderRadius: '8px',
-                                            padding: '12px'
+                                            padding: '12px',
+                                            marginBottom: '10px'
                                         }}
                                     >
                                         Cambiar Plan
                                     </button>
+
+                                    {/* Link de pago manual para el próximo mes */}
+                                    <button 
+                                        onClick={() => handleSubscribe(plan?._id)}
+                                        className="btn"
+                                        style={{ 
+                                            backgroundColor: 'rgba(255,255,255,0.15)', 
+                                            color: 'white', 
+                                            width: '100%', 
+                                            margin: 0,
+                                            fontWeight: '600',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            border: '1px solid rgba(255,255,255,0.3)',
+                                            marginBottom: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}
+                                    >
+                                        <CreditCard size={18} />
+                                        Pagar Próximo Mes
+                                    </button>
+
+                                    {/* Link de WhatsApp para enviar comprobante */}
+                                    <a 
+                                        href={`https://wa.me/543834901162?text=Hola!%20Envío%20comprobante%20de%20pago%20de%20mi%20plan%20en%20FacStock.%20Empresa:%20${encodeURIComponent(empresa?.nombre || 'No especificada')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn"
+                                        style={{ 
+                                            backgroundColor: '#25d366', 
+                                            color: 'white', 
+                                            width: '100%', 
+                                            margin: 0,
+                                            fontWeight: '600',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            textDecoration: 'none'
+                                        }}
+                                    >
+                                        <MessageCircle size={18} />
+                                        Enviar Comprobante
+                                    </a>
                                 </div>
 
                                 <div className="door-card" style={{ width: '100%', textAlign: 'left', padding: '24px', borderRadius: '12px' }}>

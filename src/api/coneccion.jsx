@@ -198,6 +198,11 @@ export async function subscribeToPlanApi(empresaId, planId, email) {
     return response.data;
 }
 
+export async function payOnceToPlanApi(empresaId, planId, email) {
+    const response = await axiosInstance.post('/payments/pay-once', { empresaId, planId, email });
+    return response.data;
+}
+
 export async function getPaymentHistoryApi(empresaId) {
     const response = await axiosInstance.get(`/payments/history/${empresaId}`);
     return response.data;

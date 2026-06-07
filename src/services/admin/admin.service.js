@@ -153,6 +153,16 @@ export const deleteAdminPlan = async (id) => {
     }
 };
 
+export const updateCompanyPlanAdmin = async (companyId, data) => {
+    try {
+        const response = await adminApi.put(`/company/${companyId}/update-plan`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error al actualizar plan de empresa:', error);
+        throw error;
+    }
+};
+
 export const getCompanyCuentasPagar = async (companyId) => {
     try {
         const response = await adminApi.get(`/company/${companyId}/cuentas-pagar`);

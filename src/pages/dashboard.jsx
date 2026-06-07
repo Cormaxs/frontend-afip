@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiContext } from "../context/api_context.jsx";
+import Swal from 'sweetalert2';
 
 // --- Componente de Ícono Reutilizable ---
 const Icon = ({ path, className = "w-6 h-6" }) => (
@@ -124,6 +125,39 @@ export default function GetDashboardData() {
     useEffect(() => {
         fetchProgress();
     }, [fetchProgress]);
+
+    // Manejar notificaciones de pago de Mercado Pago
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentStatus = urlParams.get('payment');
+        
+        if (paymentStatus === 'success') {
+            Swal.fire({
+                title: '¡Pago Exitoso!',
+                text: 'Tu suscripción se ha procesado correctamente. Los cambios pueden tardar unos minutos en reflejarse.',
+                icon: 'success',
+                confirmButtonText: 'Genial'
+            });
+            // Limpiar la URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (paymentStatus === 'failure') {
+            Swal.fire({
+                title: 'Pago Fallido',
+                text: 'Hubo un problema al procesar tu pago. Por favor, intenta nuevamente.',
+                icon: 'error',
+                confirmButtonText: 'Entendido'
+            });
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (paymentStatus === 'pending') {
+            Swal.fire({
+                title: 'Pago Pendiente',
+                text: 'Tu pago está siendo procesado por Mercado Pago.',
+                icon: 'info',
+                confirmButtonText: 'Ok'
+            });
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
 
     // ✨ LÓGICA DE PROGRESO: Ahora basada solo en los pasos requeridos
     const { nextStep, completedCount, allStepsCompleted } = useMemo(() => {
